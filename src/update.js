@@ -3,12 +3,13 @@
   "use strict";
   var C = Game.config, S = Game.state, U = Game.utils;
   Game.spawnWaveEnemy = function () {
-    var session = S.session, plan = C.waves[session.wave - 1];
+    var session = S.session, plan = session.waves[session.wave - 1];
     if (!plan || session.spawnCount >= plan.total) return;
     var type;
-    if (plan.elite && !session.eliteSpawned && session.spawnCount >= Math.floor(plan.total / 2)) {
-      type = plan.elite;
-      session.eliteSpawned = true;
+    if (!session.eliteSpawned && session.spawnCount >= Math.floor(plan.total / 2)) {
+      var eliteType = plan.elite || (plan.elitePool && plan.elitePool.length ? U.choose(plan.elitePool) : null);
+      if (eliteType) { type = eliteType; session.eliteSpawned = true; }
+      else type = U.choose(plan.mix);
     } else type = U.choose(plan.mix);
     Game.spawnEnemy(type);
     session.spawnCount++;
@@ -17,8 +18,17 @@
   Game.update = function (dt) {
     if (S.screen !== "playing") return;
     var session = S.session, p = S.player, wall = S.wall; session.elapsed += dt; if (session.messageTimer > 0) session.messageTimer -= dt;
-    var plan = C.waves[session.wave - 1];
-    if (plan) { session.spawnTimer -= dt; if (session.spawnTimer <= 0) Game.spawnWaveEnemy(); if (plan.boss && !session.bossSpawned && session.spawnCount >= plan.total && S.enemies.filter(function (e) { return e.type !== "boss"; }).length < 8) { Game.spawnEnemy("boss"); session.bossSpawned = true; session.message = "尸潮领主出现！"; session.messageTimer = 2.6; } }
+    var plan = session.waves[session.wave - 1];
+    if (plan) {
+      session.spawnTimer -= dt;
+      if (session.spawnTimer <= 0) Game.spawnWaveEnemy();
+      if (plan.boss && !session.bossSpawned && session.spawnCount >= Math.floor(plan.total / 2)) {
+        Game.spawnEnemy("boss");
+        session.bossSpawned = true;
+        session.message = "尸潮领主出现！";
+        session.messageTimer = 2.6;
+      }
+    }
     Game.updateAim(dt);
     Game.updateSkills(dt);
     if (p.reloadTimer > 0) {
@@ -54,6 +64,7 @@
         current.hp -= (current.burnDps || 10 + p.burn * 3) * dt;
         if (current.hp <= 0) { Game.killEnemy(k); continue; }
       }
+      if (current.regenPerSecond > 0) current.hp = Math.min(current.maxHp, current.hp + current.regenPerSecond * dt);
       current.slow = Math.max(0, current.slow - dt);
       if (current.slow === 0) current.slowFactor = .58;
       var speed = info.speed * (current.slow > 0 ? current.slowFactor || .58 : 1) * (current.type === "boss" && current.hp < current.maxHp * .5 ? 1.5 : 1);
@@ -70,8 +81,23 @@
         if (current.y > C.height + info.radius + 24) S.enemies.splice(k, 1);
       }
     }
+    Game.flushPendingSpawns();
     Game.updateEffects(dt);
-    if (S.screen === "playing" && plan && session.spawnCount >= plan.total && S.enemies.length === 0 && (!plan.boss || session.bossSpawned)) { if (session.wave >= C.waves.length) S.screen = "victory"; else { session.wave++; session.spawnCount = 0; session.spawnTimer = 1.4; session.eliteSpawned = false; session.bossSpawned = false; session.message = "第 " + session.wave + " 波"; session.messageTimer = 1.8; } }
+    var waveSpawned = !!plan && session.spawnCount >= plan.total && (!plan.boss || session.bossSpawned);
+    if (S.screen !== "playing" || !waveSpawned) return;
+    if (session.wave < session.waves.length) {
+      session.wave++;
+      session.spawnCount = 0;
+      session.spawnTimer = 1.4;
+      session.eliteSpawned = false;
+      session.bossSpawned = false;
+      session.message = "第 " + session.wave + " 波";
+      session.messageTimer = 1.8;
+      return;
+    }
+    if (S.enemies.length > 0 || S.pendingSpawns.length > 0) return;
+    if (p.level < C.maxLevel) Game.grantMaxLevel();
+    Game.winLevel();
   };
   Game.burst = function (x, y, count, color) { for (var i = 0; i < count; i++) { var angle = U.rand(0, Math.PI * 2), speed = U.rand(25, 105); S.particles.push({ x: x, y: y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: U.rand(.25, .65), maxLife: .65, color: color, size: U.rand(1.5, 4) }); } };
   Game.addText = function (x, y, text, color) { S.texts.push({ x: x, y: y, text: text, color: color, life: 1 }); };

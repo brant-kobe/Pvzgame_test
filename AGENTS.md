@@ -53,12 +53,15 @@ git diff --check
 
 - **瞄准**：自动索敌用预判 + 武器实际挂点（`Game.getWeaponMount`）；齐射时锁定一条真实弹道，用 `Game.getAimAngleForShot`，不要用两条弹道的角平分线。
 - **弹药**：每个基础攻击周期只扣 1 发；齐射/连发额外弹丸不额外扣弹；最后一发连发完成后才换弹。
-- **齐射**：相邻弹道角间隔为 `config.spreadAngle`（当前 0.2 弧度）。
+- **齐射**：相邻弹道角间隔为 `config.spreadAngle`（当前 0.12 弧度），步枪齐射与干冰弹齐射共用该值。
 - **连发**：沿同一锁定方向按短间隔依次发射，子弹前后排列而非横向并排。
 - **技能解锁**：温压弹、干冰弹默认 `unlocked: false`，必须通过局内解锁词条获得；解锁时 `level = 1`，之后每个同技能专属词条 `level++`。未解锁时 `Game.updateSkills` 不得发射。
 - **词条池**：`Game.rollTraits` 会过滤已满级词条、未满足解锁条件的技能词条、以及已解锁技能的解锁词条；不出现重复。
-- **精英/首领规则**：每种小怪都要有对应精英（体型大、数值不弱于基础）；精英固定第 4 波每局 1 只；首领是独立类别、固定第 7 波每局 1 只。当前原型只有 5 波，首领暂在第 5 波。
+- **精英/首领规则**：每种小怪都要有对应精英（体型大、数值不弱于基础）；精英固定第 4 波每局 1 只（可配置 `elitePool` 随机选一种）；首领是独立类别、每局 1 只，首领波在本波小怪投放到 `floor(plan.total / 2)` 时登场，之后小怪继续按 `total` 投放（`total` 只计常规名额，首领额外 +1）。第 1 关首领在第 5 波，第 2 关在第 7 波。
+- **分裂与回血**：`Game.killEnemy` 依据 `info.splitInto/splitCount` 把子体写入 `S.pendingSpawns`，由 `Game.flushPendingSpawns` 在 `update` 末尾统一生成，避免遍历中修改 `S.enemies`；带 `regenPerSecond` 的敌人在燃烧结算后按 `dt` 回血且不超过最大生命。
 - **HUD 技能槽**：右上枪械图标下方固定两个技能槽，未解锁显示空槽，解锁后显示图标 + `Lv.N`。
+- **通关判定**：升到 `config.maxLevel` **不立即胜利**，只切到 `LV.MAX` 并提示清剿；胜利必须同时满足「满级 + 末波全部计划投放完成 + 首领波的首领已登场并被击杀 + `S.enemies` 与 `S.pendingSpawns` 均为空」，统一由 `update.js` 在 `flushPendingSpawns` 之后调用 `Game.winLevel`（`winLevel` 自带 `screen === "playing"` 守卫，失败优先）。末波清场但经验不足时先 `Game.grantMaxLevel` 补足满级再结算，避免无怪可打。每关用 `levels[].xpScale` 校准经验，使清场时通常刚好满级（升到 10 级累计 1735 XP）。
+- **关卡波次与解锁**：波次定义在 `config.levels[].waves`，`Game.reset` 存入 `S.session.waves`，逻辑与 HUD 只读它；解锁进度存 `localStorage`（`blockline.progress`）并带内存回退，用 `Game.isLevelUnlocked` 判断。每关缩放：`levels[].xpScale` 缩放获得经验，`levels[].hpScale` 缩放敌人生命（`Game.spawnEnemy` 按 `Math.round(info.hp * hpScale)` 生成 `hp/maxHp`，只影响生命，不动伤害/速度/经验/回血；前两关为 1，第 3 关 1.35）。
 
 ## 常见扩展路径
 
@@ -82,8 +85,10 @@ git diff --check
 - 精灵尺寸、锚点、挂载点都在 `config.sprites`；`muzzleDistance` 应等于枪口到握把锚点的距离；幻形位置改 `config.skillRing.offsetX/offsetY`。
 - 替换人物：更新 `assets/man.png` 后生成透明裁切图（`player-man.png`/`player-body.png`），再按比例调锚点。
 
-**调整分辨率**
-- 只改 `config.width`/`config.height`；渲染按设备像素比自动缩放，逻辑坐标不变。
+**调整分辨率与战场高度**
+- 逻辑宽度固定为 `config.width`（360）；`config.height` 是基准值，`render.js` 的 `resizeCanvas` 会按画布显示比例把逻辑高度重算为 `width * 显示高 / 显示宽` 并夹在 640–960，再按设备像素比设置实际分辨率。
+- 画布铺满浏览器高度由 `styles/main.css` 的 `#game-shell` 控制；改变战场长度会影响城墙/人物位置，它们由 `Game.layoutWorld` 依据 `C.height` 重排（城墙 `C.height-125`、人物 `C.height-58`），窗口缩放时会自动调用。
+- 顶部战斗 HUD 使用紧凑布局，位于 `drawHud`；改动 HUD 尺寸时同步更新 `input.js` 中暂停按钮等点击区。
 
 ## 文档同步要求
 
@@ -92,7 +97,6 @@ git diff --check
 
 ## 已知限制
 
-- 第 2、3 关仅有锁定入口，无实际内容。
 - 区域轰炸、装甲车等核心技能尚未接入战斗。
-- 分裂僵尸、投掷僵尸、音效、长期养成、联网等均未实现。
+- 投掷僵尸、音效、长期养成、联网等均未实现。
 - 人物与步枪使用 `assets/` PNG，敌人、城墙、幻形仍为 Canvas 程序化绘制。

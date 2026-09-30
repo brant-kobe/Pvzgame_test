@@ -2,15 +2,34 @@
 (function (Game) {
   "use strict";
   var C = Game.config, S = Game.state, U = Game.utils;
-  Game.spawnEnemy = function (type) {
-    var info = C.enemies[type], enemy = { type: type, x: U.rand(22, C.width - 22), y: -info.radius - 8, hp: info.hp, maxHp: info.hp, slow: 0, slowFactor: .58, burn: 0, burnDps: 0, hitFlash: 0, attackTimer: 0 };
+  Game.spawnEnemy = function (type, options) {
+    var info = C.enemies[type], opts = options || {}, radius = info.radius;
+    var edge = Math.max(22, radius + 4);
+    var x = opts.x === undefined ? U.rand(edge, C.width - edge) : U.clamp(opts.x, radius, C.width - radius);
+    var y = opts.y === undefined ? -radius - 8 : U.clamp(opts.y, -radius, S.wall ? S.wall.y - S.wall.height / 2 - radius - 3 : C.height);
+    var maxHp = Math.round(info.hp * ((S.session && S.session.hpScale) || 1));
+    var enemy = { type: type, x: x, y: y, hp: maxHp, maxHp: maxHp, slow: 0, slowFactor: .58, burn: 0, burnDps: 0, hitFlash: 0, attackTimer: 0, regenPerSecond: info.regenPerSecond || 0 };
     if (type === "boss") enemy.x = C.width / 2;
     S.enemies.push(enemy);
-    if (info.codexCategory === "elite") {
+    if (info.codexCategory === "elite" && !opts.silent) {
       S.session.message = "精英来袭：" + info.name + "！";
       S.session.messageTimer = 2.5;
       Game.burst(enemy.x, enemy.y, 18, info.accent);
     }
+  };
+  Game.queueSplitSpawns = function (enemy, info) {
+    if (!info.splitInto || !info.splitCount) return;
+    var parentRadius = C.enemies[enemy.type].radius, childRadius = C.enemies[info.splitInto].radius, gap = parentRadius + childRadius + 6;
+    for (var i = 0; i < info.splitCount; i++) {
+      var offset = info.splitCount === 1 ? 0 : (i - (info.splitCount - 1) / 2) * gap;
+      S.pendingSpawns.push({ type: info.splitInto, x: enemy.x + offset, y: enemy.y });
+    }
+  };
+  Game.flushPendingSpawns = function () {
+    if (!S.pendingSpawns || !S.pendingSpawns.length) return;
+    var queue = S.pendingSpawns;
+    S.pendingSpawns = [];
+    queue.forEach(function (item) { Game.spawnEnemy(item.type, { x: item.x, y: item.y, silent: true }); });
   };
   Game.getWeaponMount = function (p) {
     var rifle = C.sprites && C.sprites.playerRifle;
@@ -230,7 +249,34 @@
       if (removed) S.skillProjectiles.splice(i, 1);
     }
   };
-  Game.gainXp = function (amount) { var p = S.player; if (p.level >= C.maxLevel) return; p.xp += amount; while (p.xp >= p.nextXp && p.level < C.maxLevel) { p.xp -= p.nextXp; p.level++; p.nextXp = Math.floor(p.nextXp * 1.22 + 10); S.screen = "upgrade"; S.upgradeCards = Game.rollTraits(); break; } };
+  Game.gainXp = function (amount) {
+    var p = S.player;
+    if (p.level >= C.maxLevel) return;
+    p.xp += amount * (S.session.xpScale || 1);
+    while (p.xp >= p.nextXp && p.level < C.maxLevel) {
+      p.xp -= p.nextXp;
+      p.level++;
+      p.nextXp = Math.floor(p.nextXp * 1.22 + 10);
+      if (p.level >= C.maxLevel) {
+        p.xp = p.nextXp;
+        S.session.message = "LV.MAX · 清空剩余尸潮";
+        S.session.messageTimer = 2.6;
+        break;
+      }
+      S.screen = "upgrade";
+      S.upgradeCards = Game.rollTraits();
+      break;
+    }
+  };
+  Game.grantMaxLevel = function () {
+    var p = S.player;
+    while (p.level < C.maxLevel) {
+      p.xp -= p.nextXp;
+      p.level++;
+      p.nextXp = Math.floor(p.nextXp * 1.22 + 10);
+    }
+    p.xp = p.nextXp;
+  };
   Game.rollTraits = function () {
     var p = S.player, allTraits = C.traits.concat(C.skillTraits || []);
     var pool = allTraits.filter(function (trait) {
@@ -255,6 +301,12 @@
     Game.addText(p.x, p.y - 38, trait.name + (trait.skillId ? " Lv." + p.skills[trait.skillId].level : " Lv." + p.traits[trait.id]), C.colors.green);
     S.screen = "playing";
   };
+  Game.getCodexEnemyIds = function (category) {
+    return Object.keys(C.enemies).filter(function (id) {
+      var info = C.enemies[id];
+      return !info.codexHidden && (info.codexCategory || "minion") === category;
+    });
+  };
   Game.getSkillGroups = function () {
     var groups = [{ id: "rifle", name: "步枪强化", icon: "✦", status: "已实装", detail: "主角步枪的基础强化词条，覆盖伤害、射速、齐射、连发、穿透、暴击与特殊弹种，是每局构筑的起点。", traits: C.traits }];
     (C.coreSkills || []).forEach(function (skill) {
@@ -262,6 +314,15 @@
     });
     return groups;
   };
-  Game.killEnemy = function (index) { var enemy = S.enemies[index], info = C.enemies[enemy.type]; S.session.kills++; Game.gainXp(info.xp); Game.addText(enemy.x, enemy.y, "+" + info.xp + " XP", C.colors.yellow); Game.burst(enemy.x, enemy.y, enemy.type === "boss" ? 24 : 8, info.accent); if (enemy.type === "boss") { S.screen = "victory"; S.session.message = "街区安全"; } S.enemies.splice(index, 1); };
+  Game.killEnemy = function (index) {
+    var enemy = S.enemies[index], info = C.enemies[enemy.type];
+    S.session.kills++;
+    Game.gainXp(info.xp);
+    Game.addText(enemy.x, enemy.y, "+" + info.xp + " XP", C.colors.yellow);
+    Game.burst(enemy.x, enemy.y, enemy.type === "boss" ? 24 : info.splitInto ? 14 : 8, info.splitInto ? C.colors.purple : info.accent);
+    if (info.splitInto) Game.addText(enemy.x, enemy.y - 20, "分裂 ×" + info.splitCount, C.colors.purple);
+    Game.queueSplitSpawns(enemy, info);
+    S.enemies.splice(index, 1);
+  };
   Game.damageEnemy = function (enemy, amount, bullet) { enemy.hp -= amount; enemy.hitFlash = .08; if (S.player.burn) Game.applyBurn(enemy, 10 + S.player.burn * 3, 1.5 + S.player.burn * .4); if (S.player.freeze) { enemy.slow = Math.max(enemy.slow, 1.2 + S.player.freeze * .25); enemy.slowFactor = Math.min(enemy.slowFactor || .58, .58); } Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, bullet.critical ? Math.ceil(amount) + " 暴击" : String(Math.ceil(amount)), bullet.critical ? C.colors.yellow : C.colors.text); };
 })(window.Game = window.Game || {});

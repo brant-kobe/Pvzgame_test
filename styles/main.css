@@ -15,8 +15,9 @@ body {
 
 #game-shell {
   position: relative;
-  width: min(92vw, 56.25vh, 460px);
-  height: min(92vh, 177.7778vw, 818px);
+  --game-width: min(100vw, 30rem);
+  width: var(--game-width);
+  height: clamp(calc(var(--game-width) * 1.7778), 100vh, calc(var(--game-width) * 2.6667));
   filter: drop-shadow(0 26px 48px rgba(0, 0, 0, .4));
 }
 

@@ -14,7 +14,7 @@
   }
   function getCodexPageCount(screen) {
     if (screen === "zombieCodex") {
-      var count = Object.keys(C.enemies).filter(function (id) { return (C.enemies[id].codexCategory || "minion") === S.zombieCodexCategory; }).length;
+      var count = Game.getCodexEnemyIds(S.zombieCodexCategory).length;
       return Math.max(1, Math.ceil(count / 4));
     }
     var group = getSkillCodexGroup();
@@ -58,7 +58,7 @@
       var column = point.x >= 26 && point.x <= 174 ? 0 : point.x >= 186 && point.x <= 334 ? 1 : -1;
       var row = point.y >= 155 && point.y <= 303 ? 0 : point.y >= 315 && point.y <= 463 ? 1 : -1;
       if (column >= 0 && row >= 0) {
-        var entryIds = Object.keys(C.enemies).filter(function (id) { return (C.enemies[id].codexCategory || "minion") === S.zombieCodexCategory; });
+        var entryIds = Game.getCodexEnemyIds(S.zombieCodexCategory);
         var entryId = entryIds[(S.codexPage || 0) * 4 + row * 2 + column];
         if (entryId) S.selectedZombieCodexId = entryId;
         return;
@@ -72,7 +72,7 @@
     var point = Game.pointerPosition(event), center = C.width / 2;
 
     if (S.screen === "menu") {
-      if (point.x > center - 100 && point.x < center + 100 && point.y >= 245 && point.y <= 300) Game.start(1);
+      if (point.x > center - 100 && point.x < center + 100 && point.y >= 245 && point.y <= 300) Game.start(Game.getLatestUnlockedLevel());
       else if (point.x > center - 100 && point.x < center + 100 && point.y >= 306 && point.y <= 356) Game.openLevelSelect();
       else if (point.x >= 22 && point.x <= 172 && point.y >= 365 && point.y <= 409) Game.openZombieCodex();
       else if (point.x >= 188 && point.x <= 338 && point.y >= 365 && point.y <= 409) Game.openSkillCodex();
@@ -80,8 +80,11 @@
     }
     if (S.screen === "zombieCodex" || S.screen === "skillCodex") { handleCodexPointer(point, S.screen); return; }
     if (S.screen === "levelSelect") {
-      if (point.y >= 180 && point.y <= 262) Game.start(1);
-      else if (point.y >= 510 && point.y <= 570) Game.backToMenu();
+      for (var li = 0; li < C.levels.length; li++) {
+        var cardY = 180 + li * 100;
+        if (point.y >= cardY && point.y <= cardY + 82) { Game.start(C.levels[li].id); return; }
+      }
+      if (point.y >= 510 && point.y <= 570) Game.backToMenu();
       return;
     }
     if (S.screen === "upgrade") {
@@ -98,11 +101,14 @@
       return;
     }
     if (S.screen === "victory" || S.screen === "defeat") {
-      if (point.x > center - 105 && point.x < center + 105 && point.y > 290 && point.y < 390) Game.start(S.selectedLevel);
+      if (point.y >= 305 && point.y <= 349) {
+        if (point.x >= 42 && point.x <= 172) { Game.start(S.selectedLevel); return; }
+        if (point.x >= 188 && point.x <= 318) { Game.exitToMenu(); return; }
+      }
       return;
     }
     if (S.screen === "playing") {
-      if (point.x >= 17 && point.x <= 49 && point.y >= 20 && point.y <= 52) { Game.pause(); return; }
+      if (point.x >= 14 && point.x <= 42 && point.y >= 15 && point.y <= 43) { Game.pause(); return; }
       Game.setManualAim(point.x, point.y);
     }
   });
