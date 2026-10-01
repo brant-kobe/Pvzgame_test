@@ -71,7 +71,7 @@
       { id: "unlockThermobaric", skillId: "thermobaric", unlocksSkill: true, name: "温压弹", rarity: "稀有", max: 1, icon: "♨", desc: "解锁温压弹技能", detail: "首次获取后解锁温压弹，技能槽显示 Lv1；之后可获取温压弹专属词条继续升级。", apply: function () {} },
       { id: "thermoBlast", skillId: "thermobaric", name: "爆炸增伤", rarity: "稀有", max: 5, icon: "✹", desc: "温压弹爆炸伤害 +25%", detail: "每级提升温压弹爆炸伤害 25%，最高 5 级；不影响命中时的冲击伤害。", apply: function (p) { p.skills.thermobaric.explosionDamage *= 1.25; } },
       { id: "thermoPierce", skillId: "thermobaric", name: "温压弹穿透", rarity: "稀有", max: 3, icon: "↠", desc: "温压弹穿透 +1", detail: "每级增加 1 次穿透；温压弹先对沿途目标造成冲击，穿透耗尽后再爆炸。", apply: function (p) { p.skills.thermobaric.pierce += 1; } },
-      { id: "thermoBurst", skillId: "thermobaric", name: "温压弹连发", rarity: "稀有", max: 3, icon: "➤", desc: "每轮额外发射 1 颗温压弹", detail: "每级在一次温压弹攻击周期中追加 1 颗炮弹，沿相同方向依次发射，最高 3 级。", apply: function (p) { p.skills.thermobaric.burst += 1; } },
+      { id: "thermoBurst", skillId: "thermobaric", name: "温压弹连发", rarity: "稀有", max: 3, icon: "➤", desc: "每轮额外发射 1 颗温压弹", detail: "每级在一次温压弹攻击周期中追加 1 颗炮弹；每发重新索敌，并优先选择与本轮已发炮弹方向差异较大的目标，最高 3 级。", apply: function (p) { p.skills.thermobaric.burst += 1; } },
       { id: "thermoRadius", skillId: "thermobaric", name: "爆炸范围增大", rarity: "稀有", max: 3, icon: "◉", desc: "温压弹爆炸范围 +20%", detail: "每级扩大温压弹爆炸半径 20%，最高 3 级，可覆盖更密集的敌群。", apply: function (p) { p.skills.thermobaric.explosionRadius *= 1.2; } },
       { id: "thermoKnockback", skillId: "thermobaric", name: "击退强化", rarity: "稀有", max: 3, icon: "⇢", desc: "温压弹击退距离 +25%", detail: "每级强化温压弹命中冲击和爆炸冲击的击退距离 25%，最高 3 级。", apply: function (p) { p.skills.thermobaric.impactKnockback *= 1.25; p.skills.thermobaric.explosionKnockback *= 1.25; } },
       { id: "thermoImpact", skillId: "thermobaric", name: "冲击伤害增加", rarity: "稀有", max: 5, icon: "✦", desc: "温压弹冲击伤害 +25%", detail: "每级提升温压弹炮弹直接命中的冲击伤害 25%，最高 5 级；爆炸伤害由爆炸增伤强化。", apply: function (p) { p.skills.thermobaric.impactDamage *= 1.25; } },
@@ -81,7 +81,7 @@
       { id: "icePierce", skillId: "dryIce", name: "干冰弹穿透", rarity: "稀有", max: 4, icon: "↠", desc: "干冰弹穿透 +1", detail: "每级增加 1 次额外穿透；基础干冰弹已可穿透 3 次。", apply: function (p) { p.skills.dryIce.pierce += 1; } },
       { id: "iceSplit", skillId: "dryIce", name: "分裂小冰弹", rarity: "稀有", max: 3, icon: "❄", desc: "干冰弹命中后分裂", detail: "干冰弹首次命中后分裂出 2 枚小冰弹，每级再增加 2 枚，最高 3 级；小冰弹造成部分伤害。", apply: function (p) { p.skills.dryIce.splitCount += 2; } },
       { id: "iceSpread", skillId: "dryIce", name: "干冰弹齐射", rarity: "稀有", max: 3, icon: "✣", desc: "每级增加 1 枚分角干冰弹", detail: "每级增加 1 枚同时发射的干冰弹，角度分开形成扇形覆盖，最高 3 级。", apply: function (p) { p.skills.dryIce.spread += 1; } },
-      { id: "iceBurst", skillId: "dryIce", name: "干冰弹连发", rarity: "稀有", max: 3, icon: "➤", desc: "每轮额外发射 1 枚干冰弹", detail: "每级在一次干冰弹攻击周期中沿锁定方向追加 1 轮发射，最高 3 级。", apply: function (p) { p.skills.dryIce.burst += 1; } }
+      { id: "iceBurst", skillId: "dryIce", name: "干冰弹连发", rarity: "稀有", max: 3, icon: "➤", desc: "每轮额外发射 1 枚干冰弹", detail: "每级在一次干冰弹攻击周期中追加 1 轮发射；每轮重新索敌，并优先选择与本轮已发弹丸方向差异较大的目标，最高 3 级。", apply: function (p) { p.skills.dryIce.burst += 1; } }
     ],
     coreSkills: [
       { id: "bombardment", name: "区域轰炸", icon: "✹", status: "筹备中", detail: "呼叫指定区域的连续炮击，对范围内敌人造成多段伤害。计划支持强化爆炸范围、落弹数量与伤害，尚未接入战斗。" },

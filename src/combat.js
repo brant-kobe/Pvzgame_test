@@ -125,26 +125,38 @@
     var ring = C.skillRing || {};
     return { x: C.width / 2 + (ring.offsetX || 86), y: C.height + (ring.offsetY || -102) };
   };
-  Game.getSkillTargetAngle = function (type, origin) {
-    var skill = S.player.skills[type], target = null, targetX = 0, targetY = 0, bestTime = Infinity;
+  Game.getSkillTargetAngle = function (type, origin, preferredAwayFrom) {
+    var skill = S.player.skills[type], targetAngle = null, bestTime = Infinity, bestDiversity = -1;
     S.enemies.forEach(function (enemy) {
       var info = C.enemies[enemy.type], speed = info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
       if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
       var attackY = S.wall ? S.wall.y - S.wall.height / 2 - info.radius - 3 : C.height;
-      var predictedX = enemy.x, predictedY = enemy.y, flightTime = 0;
+      var predictedX = enemy.x, predictedY = enemy.y, flightTime = 0, targetX, targetY;
       for (var i = 0; i < 3; i++) {
         var dx = predictedX - origin.x, dy = predictedY - origin.y;
         flightTime = Math.max(0, (Math.sqrt(dx * dx + dy * dy) - skill.projectileRadius) / skill.projectileSpeed);
         predictedY = Math.min(attackY, enemy.y + speed * flightTime);
+        targetX = predictedX;
+        targetY = predictedY;
       }
-      if (flightTime < bestTime) { bestTime = flightTime; target = enemy; targetX = predictedX; targetY = predictedY; }
+      var angle = Math.atan2(targetY - origin.y, targetX - origin.x);
+      if (type === "dryIce" && skill.spread > 0) {
+        var lanes = 1 + skill.spread, lockLane = Math.floor((lanes - 1) / 2);
+        angle -= (lockLane - (lanes - 1) / 2) * C.spreadAngle;
+      }
+      var diversity = Infinity;
+      if (preferredAwayFrom && preferredAwayFrom.length) {
+        preferredAwayFrom.forEach(function (previousAngle) {
+          var angleDifference = Math.atan2(Math.sin(angle - previousAngle), Math.cos(angle - previousAngle));
+          diversity = Math.min(diversity, Math.abs(angleDifference));
+        });
+      } else diversity = 0;
+      if (targetAngle === null || diversity > bestDiversity + .000001 || (Math.abs(diversity - bestDiversity) <= .000001 && flightTime < bestTime)) {
+        bestTime = flightTime;
+        bestDiversity = diversity;
+        targetAngle = angle;
+      }
     });
-    if (!target) return null;
-    var targetAngle = Math.atan2(targetY - origin.y, targetX - origin.x);
-    if (type === "dryIce" && skill.spread > 0) {
-      var lanes = 1 + skill.spread, lockLane = Math.floor((lanes - 1) / 2);
-      targetAngle -= (lockLane - (lanes - 1) / 2) * C.spreadAngle;
-    }
     return targetAngle;
   };
   Game.launchSkillVolley = function (type, angle) {
@@ -167,9 +179,14 @@
       if (skill.burstShotsRemaining > 0) {
         skill.burstTimer -= dt;
         if (skill.burstTimer <= 0) {
-          Game.launchSkillVolley(type, skill.burstAngle);
+          var burstOrigin = Game.getSkillMuzzle(), burstAngles = skill.burstAngles || [], burstAngle = Game.getSkillTargetAngle(type, burstOrigin, burstAngles);
+          if (burstAngle !== null) {
+            Game.launchSkillVolley(type, burstAngle);
+            burstAngles.push(burstAngle);
+          }
           skill.burstShotsRemaining--;
           if (skill.burstShotsRemaining > 0) skill.burstTimer = .18;
+          else skill.burstAngles = [];
         }
         return;
       }
@@ -179,9 +196,9 @@
       if (angle === null) return;
       Game.launchSkillVolley(type, angle);
       skill.fireTimer = skill.fireInterval;
-      skill.burstAngle = angle;
       skill.burstShotsRemaining = skill.burst;
       skill.burstTimer = skill.burst > 0 ? .18 : 0;
+      skill.burstAngles = skill.burst > 0 ? [angle] : [];
     });
   };
   Game.applyKnockback = function (enemy, sourceX, sourceY, distance) {
