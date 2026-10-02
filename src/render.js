@@ -50,6 +50,7 @@
   Game.draw = function () {
     Game.drawBackground();
     Game.drawEnemies();
+    Game.drawArmoredCars();
     Game.drawWall();
     Game.drawSkillRing();
     Game.drawBullets();
@@ -209,6 +210,13 @@
         ctx.beginPath(); ctx.arc(0, 0, r + 4, 0, Math.PI * 2); ctx.stroke();
         ctx.shadowBlur = 0;
       }
+      if (enemy.slow > 0 || enemy.stun > 0) {
+        ctx.strokeStyle = enemy.stun > 0 ? C.colors.yellow : C.colors.ice;
+        ctx.lineWidth = enemy.stun > 0 ? 2.5 : 1.5;
+        ctx.setLineDash(enemy.stun > 0 ? [3, 2] : [5, 4]);
+        ctx.beginPath(); ctx.arc(0, 0, r + 7, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+      }
       if (enemy.type === "boss") { ctx.shadowColor = "rgba(255, 107, 107, .65)"; ctx.shadowBlur = 18; }
       if (enemy.hitFlash > 0) ctx.globalAlpha = .45;
 
@@ -247,7 +255,38 @@
         ctx.restore();
       }
       ctx.restore();
+      if (enemy.stun > 0) text("晕", enemy.x, enemy.y - r - 17, "bold 10px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
       if (enemy.type !== "boss" && !enemy.hideHealthBar) { ctx.fillStyle = "rgba(0, 0, 0, .5)"; ctx.fillRect(enemy.x - r, enemy.y - r - 13, r * 2, 3); ctx.fillStyle = C.colors.green; ctx.fillRect(enemy.x - r, enemy.y - r - 13, r * 2 * U.clamp(enemy.hp / enemy.maxHp, 0, 1), 3); }
+    });
+  };
+  Game.drawArmoredCars = function () {
+    (S.armoredCars || []).forEach(function (car) {
+      var w = car.width, l = car.length;
+      ctx.save();
+      ctx.translate(car.x, car.y);
+      ctx.fillStyle = "rgba(0, 0, 0, .42)";
+      ctx.beginPath(); ctx.ellipse(2, l * .12, w * .66, l * .43, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#18252a";
+      U.roundedRect(ctx, -w * .52, -l * .47, w * .22, l * .9, 4, "#18252a", "#78908c");
+      U.roundedRect(ctx, w * .3, -l * .47, w * .22, l * .9, 4, "#18252a", "#78908c");
+      for (var wheelY = -l * .34; wheelY < l * .42; wheelY += l * .23) {
+        ctx.fillStyle = "#b1c0b1"; ctx.fillRect(-w * .5, wheelY, w * .17, 3); ctx.fillRect(w * .33, wheelY, w * .17, 3);
+      }
+      var bodyGradient = ctx.createLinearGradient(-w / 2, -l / 2, w / 2, l / 2);
+      bodyGradient.addColorStop(0, car.impactFlash > 0 ? "#fff0aa" : "#b1c8a2");
+      bodyGradient.addColorStop(.45, car.impactFlash > 0 ? "#e5bd69" : "#617d6d");
+      bodyGradient.addColorStop(1, "#293e3b");
+      ctx.shadowColor = "rgba(0, 0, 0, .55)"; ctx.shadowBlur = 8;
+      U.roundedRect(ctx, -w * .4, -l / 2, w * .8, l, Math.max(4, w * .14), bodyGradient, "#d1e1c3");
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(17, 35, 40, .86)";
+      ctx.beginPath(); ctx.moveTo(-w * .29, -l * .24); ctx.lineTo(w * .29, -l * .24); ctx.lineTo(w * .23, -l * .03); ctx.lineTo(-w * .23, -l * .03); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(220, 242, 207, .65)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-w * .27, -l * .22); ctx.lineTo(0, -l * .13); ctx.lineTo(w * .27, -l * .22); ctx.stroke();
+      ctx.fillStyle = "#52665c"; U.roundedRect(ctx, -w * .22, l * .02, w * .44, l * .34, 4, "#52665c", "#c1d2b7");
+      ctx.fillStyle = "#d9e8be"; ctx.fillRect(-w * .1, -l * .44, w * .2, 3);
+      ctx.fillStyle = "#ffcf72"; ctx.fillRect(-w * .27, -l * .45, w * .12, 3); ctx.fillRect(w * .15, -l * .45, w * .12, 3);
+      ctx.restore();
     });
   };
 
@@ -424,8 +463,9 @@
       U.roundedRect(ctx, 300, 38, 36, 3, 2, "rgba(255,255,255,.14)");
       U.roundedRect(ctx, 300, 38, 36 * (1 - p.reloadTimer / p.reloadDuration), 3, 2, C.colors.yellow);
     }
-    drawSkillSlot(228, 45, 46, 19, p.skills.thermobaric, "♨", C.colors.fire);
-    drawSkillSlot(278, 45, 46, 19, p.skills.dryIce, "❄", C.colors.ice);
+    drawSkillSlot(210, 45, 46, 19, p.skills.thermobaric, "♨", C.colors.fire);
+    drawSkillSlot(260, 45, 46, 19, p.skills.dryIce, "❄", C.colors.ice);
+    drawSkillSlot(310, 45, 46, 19, p.skills.armoredCar, "▰", C.colors.green);
     var boss = S.enemies.find(function (enemy) { return enemy.type === "boss"; });
     if (boss) { badge("BOSS  ·  尸潮领主", 104, 72, 152, C.colors.red); U.roundedRect(ctx, 44, 96, C.width - 88, 7, 4, "rgba(0,0,0,.5)"); U.roundedRect(ctx, 44, 96, (C.width - 88) * U.clamp(boss.hp / boss.maxHp, 0, 1), 7, 4, C.colors.red); }
     if (session.messageTimer > 0) text(session.message, C.width / 2, boss ? 126 : 108, "bold 16px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");

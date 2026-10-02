@@ -9,28 +9,28 @@
     { total: 28, interval: .5, mix: ["normal", "runner", "normal", "runner"], boss: true }
   ];
   var levelTwoWaves = [
-    { total: 12, interval: .72, mix: ["normal"] },
-    { total: 16, interval: .68, mix: ["normal", "runner"] },
-    { total: 20, interval: .64, mix: ["normal", "runner", "splitter"] },
-    { total: 24, interval: .6, mix: ["normal", "runner", "splitter"], elite: "runnerElite" },
-    { total: 26, interval: .58, mix: ["splitter", "runner"] },
-    { total: 28, interval: .56, mix: ["normal", "splitter", "runner"] },
-    { total: 30, interval: .54, mix: ["runner", "splitter"], boss: true },
-    { total: 32, interval: .52, mix: ["normal", "runner", "splitter"] },
-    { total: 34, interval: .5, mix: ["runner", "splitter", "runner"] },
-    { total: 36, interval: .48, mix: ["normal", "runner", "splitter"] }
+    { total: 8, interval: 1.2, mix: ["normal"] },
+    { total: 11, interval: 1.1, mix: ["normal", "runner"] },
+    { total: 15, interval: 1, mix: ["normal", "runner", "splitter"] },
+    { total: 19, interval: .6, mix: ["normal", "runner", "splitter"], elite: "runnerElite" },
+    { total: 22, interval: .58, mix: ["splitter", "runner"] },
+    { total: 32, interval: .56, mix: ["normal", "splitter", "runner"] },
+    { total: 34, interval: .54, mix: ["runner", "splitter"], boss: true },
+    { total: 36, interval: .52, mix: ["normal", "runner", "splitter"] },
+    { total: 38, interval: .5, mix: ["runner", "splitter", "runner"] },
+    { total: 43, interval: .48, mix: ["normal", "runner", "splitter"] }
   ];
   var levelThreeWaves = [
-    { total: 16, interval: .66, mix: ["normal"] },
-    { total: 20, interval: .62, mix: ["normal", "runner"] },
-    { total: 26, interval: .58, mix: ["normal", "runner", "splitter"] },
-    { total: 30, interval: .55, mix: ["normal", "runner", "splitter"], elite: "splitterElite" },
-    { total: 34, interval: .52, mix: ["splitter", "runner"] },
-    { total: 38, interval: .5, mix: ["normal", "splitter", "runner"] },
-    { total: 42, interval: .48, mix: ["runner", "splitter"], boss: true },
-    { total: 46, interval: .46, mix: ["normal", "runner", "splitter"] },
-    { total: 50, interval: .45, mix: ["runner", "splitter", "runner"] },
-    { total: 56, interval: .42, mix: ["normal", "runner", "splitter"] }
+    { total: 10, interval: 1.6, mix: ["normal"] },
+    { total: 14, interval: 1.45, mix: ["normal", "runner"] },
+    { total: 19, interval: 1.3, mix: ["normal", "runner", "splitter"] },
+    { total: 23, interval: .55, mix: ["normal", "runner", "splitter"], elite: "splitterElite" },
+    { total: 27, interval: .52, mix: ["splitter", "runner"] },
+    { total: 44, interval: .5, mix: ["normal", "splitter", "runner"] },
+    { total: 48, interval: .48, mix: ["runner", "splitter"], boss: true },
+    { total: 53, interval: .46, mix: ["normal", "runner", "splitter"] },
+    { total: 58, interval: .45, mix: ["runner", "splitter", "runner"] },
+    { total: 62, interval: .42, mix: ["normal", "runner", "splitter"] }
   ];
   Game.config = {
     width: 360, height: 640, maxLevel: 10, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12,
@@ -53,7 +53,8 @@
     },
     skillDefaults: {
       thermobaric: { unlocked: false, level: 0, fireInterval: 5, projectileSpeed: 250, projectileRadius: 8, impactDamage: 32, impactKnockback: 24, explosionDamage: 58, explosionRadius: 68, explosionKnockback: 42, burnDps: 10, burnDuration: 2.5, pierce: 0, burst: 0 },
-      dryIce: { unlocked: false, level: 0, fireInterval: 4.2, projectileSpeed: 300, projectileRadius: 7, damage: 28, knockback: 12, pierce: 3, freezeDuration: 0, slowFactor: .58, splitCount: 0, spread: 0, burst: 0 }
+      dryIce: { unlocked: false, level: 0, fireInterval: 4.2, projectileSpeed: 300, projectileRadius: 7, damage: 28, knockback: 12, pierce: 3, freezeDuration: 0, slowFactor: .58, splitCount: 0, spread: 0, burst: 0 },
+      armoredCar: { unlocked: false, level: 0, fireInterval: 7, speed: 140, carWidth: 34, carLength: 64, damage: 4, hitInterval: .16, slowFactor: .55, slowDuration: 1.2, stunChance: 0, stunDuration: .6, extraCars: 0, sizeLevel: 0 }
     },
     traits: [
       { id: "damage", name: "增伤", rarity: "普通", max: 5, icon: "✦", desc: "子弹伤害 +25%", detail: "每级使所有步枪子弹伤害提高 25%，最高 5 级。稳定提升清理普通敌人和攻击首领的效率。", apply: function (p) { p.damage *= 1.25; } },
@@ -81,13 +82,19 @@
       { id: "icePierce", skillId: "dryIce", name: "干冰弹穿透", rarity: "稀有", max: 4, icon: "↠", desc: "干冰弹穿透 +1", detail: "每级增加 1 次额外穿透；基础干冰弹已可穿透 3 次。", apply: function (p) { p.skills.dryIce.pierce += 1; } },
       { id: "iceSplit", skillId: "dryIce", name: "分裂小冰弹", rarity: "稀有", max: 3, icon: "❄", desc: "干冰弹命中后分裂", detail: "干冰弹首次命中后分裂出 2 枚小冰弹，每级再增加 2 枚，最高 3 级；小冰弹造成部分伤害。", apply: function (p) { p.skills.dryIce.splitCount += 2; } },
       { id: "iceSpread", skillId: "dryIce", name: "干冰弹齐射", rarity: "稀有", max: 3, icon: "✣", desc: "每级增加 1 枚分角干冰弹", detail: "每级增加 1 枚同时发射的干冰弹，角度分开形成扇形覆盖，最高 3 级。", apply: function (p) { p.skills.dryIce.spread += 1; } },
-      { id: "iceBurst", skillId: "dryIce", name: "干冰弹连发", rarity: "稀有", max: 3, icon: "➤", desc: "每轮额外发射 1 枚干冰弹", detail: "每级在一次干冰弹攻击周期中追加 1 轮发射；每轮重新索敌，并优先选择与本轮已发弹丸方向差异较大的目标，最高 3 级。", apply: function (p) { p.skills.dryIce.burst += 1; } }
+      { id: "iceBurst", skillId: "dryIce", name: "干冰弹连发", rarity: "稀有", max: 3, icon: "➤", desc: "每轮额外发射 1 枚干冰弹", detail: "每级在一次干冰弹攻击周期中追加 1 轮发射；每轮重新索敌，并优先选择与本轮已发弹丸方向差异较大的目标，最高 3 级。", apply: function (p) { p.skills.dryIce.burst += 1; } },
+      { id: "unlockArmoredCar", skillId: "armoredCar", unlocksSkill: true, name: "装甲车支援", rarity: "稀有", max: 1, icon: "▰", desc: "解锁装甲车支援", detail: "首次获取后解锁装甲车，技能槽显示 Lv1；之后可获取装甲车专属词条继续升级。", apply: function () {} },
+      { id: "armoredCarDamage", skillId: "armoredCar", name: "装甲车增伤", rarity: "稀有", max: 5, icon: "✦", desc: "装甲车碾压伤害 +20%", detail: "每级提升装甲车每次碾压伤害 20%，保留多段命中机制，最高 5 级。", apply: function (p) { p.skills.armoredCar.damage *= 1.2; } },
+      { id: "armoredCarReinforcement", skillId: "armoredCar", name: "车辆增援", rarity: "稀有", max: 2, icon: "▰", desc: "每轮多派遣 1 辆装甲车", detail: "每级使每轮派遣的装甲车数量增加 1 辆，多车会分散在不同车道，最高 2 级。", apply: function (p) { p.skills.armoredCar.extraCars++; } },
+      { id: "armoredCarSlow", skillId: "armoredCar", name: "减速延长", rarity: "稀有", max: 4, icon: "❄", desc: "碾压减速时间 +0.4 秒", detail: "每级延长装甲车碾压附加的减速时间 0.4 秒，重复命中会刷新减速，最高 4 级。", apply: function (p) { p.skills.armoredCar.slowDuration += .4; } },
+      { id: "armoredCarStun", skillId: "armoredCar", name: "眩晕冲撞", rarity: "稀有", max: 3, icon: "✹", desc: "碾压眩晕概率 +10%", detail: "每级使装甲车首次接触敌人时有额外 10% 概率将其眩晕 0.6 秒；同一辆车不会对同一目标重复判定，最高 3 级。", apply: function (p) { p.skills.armoredCar.stunChance += .1; } },
+      { id: "armoredCarChassis", skillId: "armoredCar", name: "重型底盘", rarity: "稀有", max: 3, icon: "⬟", desc: "装甲车体型 +15%", detail: "每级同步增大装甲车车身与碾压范围 15%，最高 3 级。", apply: function (p) { p.skills.armoredCar.sizeLevel++; } }
     ],
     coreSkills: [
       { id: "bombardment", name: "区域轰炸", icon: "✹", status: "筹备中", detail: "呼叫指定区域的连续炮击，对范围内敌人造成多段伤害。计划支持强化爆炸范围、落弹数量与伤害，尚未接入战斗。" },
       { id: "thermobaric", name: "温压弹", icon: "♨", status: "已实装", detail: "幻形自动发射红色炮弹。命中后造成冲击伤害与击退，穿透耗尽后发生范围爆炸，对范围内敌人造成爆炸伤害并施加燃烧。" },
       { id: "dryIce", name: "干冰弹", icon: "❄", status: "已实装", detail: "幻形自动发射蓝色圆锥弹，初始可额外穿透 3 个目标。命中造成伤害与微弱击退，可通过冰冻、分裂、齐射和连发词条强化。" },
-      { id: "armoredCar", name: "装甲车支援", icon: "▰", status: "筹备中", detail: "召唤装甲车沿战线冲撞敌群，造成路径伤害并缓解城墙压力，尚未接入战斗。" }
+      { id: "armoredCar", name: "装甲车支援", icon: "▰", status: "已实装", detail: "自动从城墙前方派遣装甲车驶向尸潮，沿途多段碾压并减速敌人；可强化伤害、派遣数量、减速、眩晕与车身尺寸。" }
     ],
     levels: [
       { id: 1, name: "街区警戒线", subtitle: "基础尸潮防守", unlocked: true, hpScale: 1, xpScale: 1.76, waves: levelOneWaves },

@@ -55,12 +55,13 @@ git diff --check
 - **弹药**：每个基础攻击周期只扣 1 发；齐射/连发额外弹丸不额外扣弹；最后一发连发完成后才换弹。
 - **齐射**：相邻弹道角间隔为 `config.spreadAngle`（当前 0.12 弧度），步枪齐射与干冰弹齐射共用该值。
 - **连发**：步枪沿同一锁定方向按短间隔依次发射，子弹前后排列而非横向并排；干冰弹和温压弹每次连发重新索敌，并优先选择与本轮已发弹方向差异较大的目标。
-- **技能解锁**：温压弹、干冰弹默认 `unlocked: false`，必须通过局内解锁词条获得；解锁时 `level = 1`，之后每个同技能专属词条 `level++`。未解锁时 `Game.updateSkills` 不得发射。
+- **技能解锁**：温压弹、干冰弹、装甲车默认 `unlocked: false`，必须通过局内解锁词条获得；解锁时 `level = 1`，之后每个同技能专属词条 `level++`。未解锁时 `Game.updateSkills` 不得触发。
 - **词条池**：`Game.rollTraits` 会过滤已满级词条、未满足解锁条件的技能词条、以及已解锁技能的解锁词条；不出现重复。
 - **精英/首领规则**：每种小怪都要有对应精英（体型大、数值不弱于基础）；精英固定第 4 波每局 1 只（可配置 `elitePool` 随机选一种）；首领是独立类别、每局 1 只，首领波在本波小怪投放到 `floor(plan.total / 2)` 时登场，之后小怪继续按 `total` 投放（`total` 只计常规名额，首领额外 +1）。第 1 关首领在第 5 波，第 2 关在第 7 波。
 - **分裂与回血**：`Game.killEnemy` 依据 `info.splitInto/splitCount` 把子体写入 `S.pendingSpawns`，由 `Game.flushPendingSpawns` 在 `update` 末尾统一生成，避免遍历中修改 `S.enemies`；带 `regenPerSecond` 的敌人在燃烧结算后按 `dt` 回血且不超过最大生命。
-- **HUD 技能槽**：右上枪械图标下方固定两个技能槽，未解锁显示空槽，解锁后显示图标 + `Lv.N`。
-- **通关判定**：升到 `config.maxLevel` **不立即胜利**，只切到 `LV.MAX` 并提示清剿；胜利必须同时满足「满级 + 末波全部计划投放完成 + 首领波的首领已登场并被击杀 + `S.enemies` 与 `S.pendingSpawns` 均为空」，统一由 `update.js` 在 `flushPendingSpawns` 之后调用 `Game.winLevel`（`winLevel` 自带 `screen === "playing"` 守卫，失败优先）。末波清场但经验不足时先 `Game.grantMaxLevel` 补足满级再结算，避免无怪可打。每关用 `levels[].xpScale` 校准经验，使清场时通常刚好满级（升到 10 级累计 1735 XP）。
+- **HUD 技能槽**：右上枪械图标下方固定三个技能槽，未解锁显示空槽，解锁后显示图标 + `Lv.N`。
+- **装甲车**：解锁后按独立冷却从城墙前随机车道派车，车辆是独立实体而非技能弹丸；同一辆车对单个目标按 `hitInterval` 多段造成低伤害，首次接触只判定一次眩晕。碾压减速不覆盖更强的冰冻；车辆伤害不得继承步枪燃烧/冰冻词条，击杀仍走 `Game.killEnemy`。眩晕期间敌人不移动、不攻击城墙，但仍可受伤、燃烧和回血；车辆和状态在 `Game.reset` 时清空。
+- **经验与通关判定**：初始升级门槛为 35 XP，每次升级后将下一等级门槛设为 `Math.floor(nextXp * 1.22 + 10)`，升到 10 级累计需要 1382 XP，HUD 经验条按当前 `nextXp` 显示进度。升到 `config.maxLevel` **不立即胜利**，只切到 `LV.MAX` 并提示清剿；胜利必须同时满足「满级 + 末波全部计划投放完成 + 首领波的首领已登场并被击杀 + `S.enemies` 与 `S.pendingSpawns` 均为空」，统一由 `update.js` 在 `flushPendingSpawns` 之后调用 `Game.winLevel`（`winLevel` 自带 `screen === "playing"` 守卫，失败优先）。末波清场但经验不足时先 `Game.grantMaxLevel` 补足满级再结算，避免无怪可打。当前各关经验缩放值按旧门槛配置，经验可能早于清场达到满级。
 - **关卡波次与解锁**：波次定义在 `config.levels[].waves`，`Game.reset` 存入 `S.session.waves`，逻辑与 HUD 只读它；解锁进度存 `localStorage`（`blockline.progress`）并带内存回退，用 `Game.isLevelUnlocked` 判断。每关缩放：`levels[].xpScale` 缩放获得经验，`levels[].hpScale` 缩放敌人生命（`Game.spawnEnemy` 按 `Math.round(info.hp * hpScale)` 生成 `hp/maxHp`，只影响生命，不动伤害/速度/经验/回血；前两关为 1，第 3 关 1.35）。
 
 ## 常见扩展路径
@@ -97,6 +98,6 @@ git diff --check
 
 ## 已知限制
 
-- 区域轰炸、装甲车等核心技能尚未接入战斗。
+- 区域轰炸核心技能尚未接入战斗。
 - 投掷僵尸、音效、长期养成、联网等均未实现。
-- 人物与步枪使用 `assets/` PNG，敌人、城墙、幻形仍为 Canvas 程序化绘制。
+- 人物与步枪使用 `assets/` PNG，敌人、装甲车、城墙、幻形仍为 Canvas 程序化绘制。

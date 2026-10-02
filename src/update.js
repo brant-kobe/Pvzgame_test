@@ -67,6 +67,8 @@
       if (current.regenPerSecond > 0) current.hp = Math.min(current.maxHp, current.hp + current.regenPerSecond * dt);
       current.slow = Math.max(0, current.slow - dt);
       if (current.slow === 0) current.slowFactor = .58;
+      current.stun = Math.max(0, (current.stun || 0) - dt);
+      if (current.stun > 0) continue;
       var speed = info.speed * (current.slow > 0 ? current.slowFactor || .58 : 1) * (current.type === "boss" && current.hp < current.maxHp * .5 ? 1.5 : 1);
       var attackY = wall.y - wall.height / 2 - info.radius - 3;
       if (current.y >= attackY) {
@@ -81,6 +83,7 @@
         if (current.y > C.height + info.radius + 24) S.enemies.splice(k, 1);
       }
     }
+    Game.updateArmoredCars(dt);
     Game.flushPendingSpawns();
     Game.updateEffects(dt);
     var waveSpawned = !!plan && session.spawnCount >= plan.total && (!plan.boss || session.bossSpawned);
@@ -98,6 +101,37 @@
     if (S.enemies.length > 0 || S.pendingSpawns.length > 0) return;
     if (p.level < C.maxLevel) Game.grantMaxLevel();
     Game.winLevel();
+  };
+  Game.updateArmoredCars = function (dt) {
+    for (var i = S.armoredCars.length - 1; i >= 0; i--) {
+      var car = S.armoredCars[i];
+      car.y -= car.speed * dt;
+      car.impactFlash = Math.max(0, car.impactFlash - dt);
+      car.contacts.forEach(function (contact) { contact.hitTimer = Math.max(0, contact.hitTimer - dt); });
+      for (var j = S.enemies.length - 1; j >= 0; j--) {
+        var enemy = S.enemies[j], radius = C.enemies[enemy.type].radius;
+        var nearestX = U.clamp(enemy.x, car.x - car.width / 2, car.x + car.width / 2);
+        var nearestY = U.clamp(enemy.y, car.y - car.length / 2, car.y + car.length / 2);
+        var dx = enemy.x - nearestX, dy = enemy.y - nearestY;
+        if (dx * dx + dy * dy > radius * radius) continue;
+        var contact = null;
+        for (var k = 0; k < car.contacts.length; k++) if (car.contacts[k].enemy === enemy) { contact = car.contacts[k]; break; }
+        if (!contact) { contact = { enemy: enemy, hitTimer: 0, stunChecked: false }; car.contacts.push(contact); }
+        if (contact.hitTimer > 0) continue;
+        Game.damageEnemy(enemy, car.damage, { critical: false, noWeaponEffects: true, silentText: true });
+        enemy.slow = Math.max(enemy.slow || 0, car.slowDuration);
+        enemy.slowFactor = Math.min(enemy.slowFactor || .58, car.slowFactor);
+        if (!contact.stunChecked) {
+          contact.stunChecked = true;
+          if (Math.random() < car.stunChance) enemy.stun = Math.max(enemy.stun || 0, car.stunDuration);
+        }
+        contact.hitTimer = car.hitInterval;
+        car.impactFlash = .1;
+        Game.burst(enemy.x, enemy.y, 2, C.colors.yellow);
+        if (enemy.hp <= 0) { Game.killEnemy(j); continue; }
+      }
+      if (car.y + car.length / 2 < 0) S.armoredCars.splice(i, 1);
+    }
   };
   Game.burst = function (x, y, count, color) { for (var i = 0; i < count; i++) { var angle = U.rand(0, Math.PI * 2), speed = U.rand(25, 105); S.particles.push({ x: x, y: y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: U.rand(.25, .65), maxLife: .65, color: color, size: U.rand(1.5, 4) }); } };
   Game.addText = function (x, y, text, color) { S.texts.push({ x: x, y: y, text: text, color: color, life: 1 }); };

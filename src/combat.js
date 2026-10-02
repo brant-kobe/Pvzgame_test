@@ -53,7 +53,7 @@
     var mount = Game.getWeaponMount(p), target = null, targetX = 0, targetY = 0, bestTime = Infinity;
     S.enemies.forEach(function (enemy) {
       var info = C.enemies[enemy.type];
-      var speed = info.speed * (enemy.slow > 0 ? .58 : 1);
+      var speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
       if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
       var attackY = S.wall ? S.wall.y - S.wall.height / 2 - info.radius - 3 : C.height;
       var predictedX = enemy.x, predictedY = enemy.y, flightTime = 0;
@@ -128,7 +128,7 @@
   Game.getSkillTargetAngle = function (type, origin, preferredAwayFrom) {
     var skill = S.player.skills[type], targetAngle = null, bestTime = Infinity, bestDiversity = -1;
     S.enemies.forEach(function (enemy) {
-      var info = C.enemies[enemy.type], speed = info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
+      var info = C.enemies[enemy.type], speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
       if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
       var attackY = S.wall ? S.wall.y - S.wall.height / 2 - info.radius - 3 : C.height;
       var predictedX = enemy.x, predictedY = enemy.y, flightTime = 0, targetX, targetY;
@@ -171,11 +171,25 @@
       S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(bulletAngle) * skill.projectileSpeed, vy: Math.sin(bulletAngle) * skill.projectileSpeed, radius: skill.projectileRadius, damage: skill.damage, knockback: skill.knockback, pierce: skill.pierce, splitCount: skill.splitCount, freezeDuration: skill.freezeDuration, slowFactor: skill.slowFactor, critical: false, hitEnemies: [] });
     }
   };
+  Game.launchArmoredCars = function (skill) {
+    var wall = S.wall, count = 1 + skill.extraCars, scale = 1 + skill.sizeLevel * .15;
+    var minX = wall.x - wall.width / 2 + skill.carWidth * scale / 2, maxX = wall.x + wall.width / 2 - skill.carWidth * scale / 2;
+    var laneWidth = (maxX - minX) / count, startY = wall.y - wall.height / 2 - skill.carLength * scale / 2;
+    for (var i = 0; i < count; i++) {
+      var x = count === 1 ? U.rand(minX, maxX) : minX + laneWidth * (i + .5) + U.rand(-laneWidth * .18, laneWidth * .18);
+      S.armoredCars.push({ x: U.clamp(x, minX, maxX), y: startY, speed: skill.speed, width: skill.carWidth * scale, length: skill.carLength * scale, damage: skill.damage, hitInterval: skill.hitInterval, slowFactor: skill.slowFactor, slowDuration: skill.slowDuration, stunChance: skill.stunChance, stunDuration: skill.stunDuration, contacts: [], impactFlash: 0 });
+    }
+  };
   Game.updateSkills = function (dt) {
     var p = S.player;
     Object.keys(p.skills).forEach(function (type) {
       var skill = p.skills[type];
       if (!skill.unlocked) return;
+      if (type === "armoredCar") {
+        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        if (skill.fireTimer <= 0) { Game.launchArmoredCars(skill); skill.fireTimer = skill.fireInterval; }
+        return;
+      }
       if (skill.burstShotsRemaining > 0) {
         skill.burstTimer -= dt;
         if (skill.burstTimer <= 0) {
@@ -341,5 +355,5 @@
     Game.queueSplitSpawns(enemy, info);
     S.enemies.splice(index, 1);
   };
-  Game.damageEnemy = function (enemy, amount, bullet) { enemy.hp -= amount; enemy.hitFlash = .08; if (S.player.burn) Game.applyBurn(enemy, 10 + S.player.burn * 3, 1.5 + S.player.burn * .4); if (S.player.freeze) { enemy.slow = Math.max(enemy.slow, 1.2 + S.player.freeze * .25); enemy.slowFactor = Math.min(enemy.slowFactor || .58, .58); } Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, bullet.critical ? Math.ceil(amount) + " 暴击" : String(Math.ceil(amount)), bullet.critical ? C.colors.yellow : C.colors.text); };
+  Game.damageEnemy = function (enemy, amount, bullet) { enemy.hp -= amount; enemy.hitFlash = .08; if (!bullet.noWeaponEffects && S.player.burn) Game.applyBurn(enemy, 10 + S.player.burn * 3, 1.5 + S.player.burn * .4); if (!bullet.noWeaponEffects && S.player.freeze) { enemy.slow = Math.max(enemy.slow, 1.2 + S.player.freeze * .25); enemy.slowFactor = Math.min(enemy.slowFactor || .58, .58); } if (!bullet.silentText) Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, bullet.critical ? Math.ceil(amount) + " 暴击" : String(Math.ceil(amount)), bullet.critical ? C.colors.yellow : C.colors.text); };
 })(window.Game = window.Game || {});
