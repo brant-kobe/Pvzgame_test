@@ -41,20 +41,21 @@
     skillRing: { offsetX: 86, offsetY: -102 },
     colors: { bg: "#0b202c", text: "#f4f8fb", muted: "#9ab0bc", green: "#63e6a0", yellow: "#ffd166", red: "#ff6b6b", cyan: "#68d8ff", ice: "#58aaff", fire: "#ff9b52", purple: "#c9a1ff" },
     enemies: {
-      normal: { name: "普通僵尸", codexCategory: "minion", description: "尸潮中的基础单位，生命与速度均衡，会持续向防线推进。", tactics: "优先利用自动锁定快速清理；单体威胁低，数量增加后会给城墙造成压力。", hp: 28, speed: 25, radius: 14, damage: 10, xp: 8, color: "#6eaa7b", accent: "#b1e4a0" },
-      runner: { name: "快跑僵尸", codexCategory: "minion", description: "体型轻巧、生命较低，但移动速度明显快于普通僵尸。", tactics: "尽早击杀以免快速逼近城墙；齐射、连发和冰冻效果都能有效应对。", hp: 16, speed: 52, radius: 11, damage: 7, xp: 7, color: "#e5a052", accent: "#ffe0a7" },
-      splitter: { name: "分裂僵尸", codexCategory: "minion", description: "两个头共用一个身体的变异僵尸，被击杀后会分裂成两个更小的分裂幼体。", tactics: "分裂会立刻补充敌人数量，建议用穿透、齐射或范围技能一次清理本体与幼体，尽量在它们靠近城墙前解决。", hp: 60, speed: 27, radius: 16, damage: 10, xp: 12, color: "#6f6398", accent: "#c9b6ff", splitInto: "splitterChild", splitCount: 2 },
-      splitterChild: { name: "分裂僵尸幼体", codexCategory: "minion", codexHidden: true, description: "分裂僵尸死亡后产生的单头幼体，体型和生命较低，但移动更快。", tactics: "数量较多，注意不要让它们同时抵达防线；范围伤害能高效清除。", hp: 18, speed: 38, radius: 9, damage: 5, xp: 3, color: "#8478ad", accent: "#d8ccff" },
-      normalElite: { name: "普通僵尸精英", codexCategory: "elite", description: "普通僵尸的精英强化形态，体型更大，生命、移速和攻击力全面提升，仍以稳定推进为主要特性。", tactics: "精英单位更耐打且对城墙威胁更高，应集中火力尽早消灭。", hp: 420, speed: 32, radius: 22, damage: 20, xp: 35, color: "#647847", accent: "#ffd166" },
-      runnerElite: { name: "快跑僵尸精英", codexCategory: "elite", description: "快跑僵尸的精英强化形态，保留高速冲锋特性，并拥有更大的体型、更高的生命和更强的攻击。", tactics: "速度与耐久兼备，出现后应优先集火；冰冻效果可以压制其推进速度。", hp: 300, speed: 68, radius: 19, damage: 16, xp: 30, color: "#a86735", accent: "#ffe08a" },
-      splitterElite: { name: "分裂僵尸精英", codexCategory: "elite", description: "分裂僵尸的精英形态，体型更大并持续回复生命；死亡后分裂出两个同样会自愈的精英幼体。", tactics: "自愈会拉长战斗时间，需要集中持续输出；击杀本体后立即处理两个精英幼体，避免它们回满生命。", hp: 620, speed: 34, radius: 25, damage: 22, xp: 55, color: "#5d4f8a", accent: "#ffd166", splitInto: "splitterEliteChild", splitCount: 2, regenPerSecond: 8 },
-      splitterEliteChild: { name: "分裂僵尸精英幼体", codexCategory: "elite", codexHidden: true, description: "分裂僵尸精英死亡后产生的精英幼体，体型较小但保留精英特征并会持续回复生命。", tactics: "尽快击杀防止回血堆积，冰冻、眩晕和爆发伤害都很有效。", hp: 100, speed: 42, radius: 12, damage: 10, xp: 10, color: "#7767a5", accent: "#ffe08a", regenPerSecond: 3 },
-      boss: { name: "尸潮领主", codexCategory: "boss", description: "关卡首领，体型巨大、生命值极高；生命低于一半时进入狂暴状态，移动速度提升。", tactics: "持续输出并留意其接近城墙；燃烧、暴击与高伤害构筑有助于缩短战斗时间。", hp: 3000, speed: 12, radius: 34, damage: 24, xp: 100, color: "#9d5264", accent: "#ffb0bc" }
+      normal: { name: "普通僵尸", codexCategory: "minion", description: "尸潮中的基础单位，生命与速度均衡，会持续向防线推进。", tactics: "优先利用自动锁定快速清理；单体威胁低，数量增加后会给城墙造成压力。", hp: 28, speed: 20, radius: 14, damage: 10, xp: 8, color: "#6eaa7b", accent: "#b1e4a0" },
+      runner: { name: "快跑僵尸", codexCategory: "minion", description: "体型轻巧、生命较低，但移动速度明显快于普通僵尸。", tactics: "尽早击杀以免快速逼近城墙；齐射、连发和冰冻效果都能有效应对。", hp: 16, speed: 42, radius: 11, damage: 7, xp: 7, color: "#e5a052", accent: "#ffe0a7" },
+      splitter: { name: "分裂僵尸", codexCategory: "minion", description: "两个头共用一个身体的变异僵尸，被击杀后会分裂成两个更小的分裂幼体。", tactics: "分裂会立刻补充敌人数量，建议用穿透、齐射或范围技能一次清理本体与幼体，尽量在它们靠近城墙前解决。", hp: 60, speed: 22, radius: 16, damage: 10, xp: 12, color: "#6f6398", accent: "#c9b6ff", splitInto: "splitterChild", splitCount: 2 },
+      splitterChild: { name: "分裂僵尸幼体", codexCategory: "minion", codexHidden: true, description: "分裂僵尸死亡后产生的单头幼体，体型和生命较低，但移动更快。", tactics: "数量较多，注意不要让它们同时抵达防线；范围伤害能高效清除。", hp: 18, speed: 30, radius: 9, damage: 5, xp: 3, color: "#8478ad", accent: "#d8ccff" },
+      normalElite: { name: "普通僵尸精英", codexCategory: "elite", description: "普通僵尸的精英强化形态，体型更大，生命、移速和攻击力全面提升，仍以稳定推进为主要特性。", tactics: "精英单位更耐打且对城墙威胁更高，应集中火力尽早消灭。", hp: 420, speed: 26, radius: 22, damage: 20, xp: 35, color: "#647847", accent: "#ffd166" },
+      runnerElite: { name: "快跑僵尸精英", codexCategory: "elite", description: "快跑僵尸的精英强化形态，保留高速冲锋特性，并拥有更大的体型、更高的生命和更强的攻击。", tactics: "速度与耐久兼备，出现后应优先集火；冰冻效果可以压制其推进速度。", hp: 300, speed: 54, radius: 19, damage: 16, xp: 30, color: "#a86735", accent: "#ffe08a" },
+      splitterElite: { name: "分裂僵尸精英", codexCategory: "elite", description: "分裂僵尸的精英形态，体型更大并持续回复生命；死亡后分裂出两个同样会自愈的精英幼体。", tactics: "自愈会拉长战斗时间，需要集中持续输出；击杀本体后立即处理两个精英幼体，避免它们回满生命。", hp: 620, speed: 27, radius: 25, damage: 22, xp: 55, color: "#5d4f8a", accent: "#ffd166", splitInto: "splitterEliteChild", splitCount: 2, regenPerSecond: 8 },
+      splitterEliteChild: { name: "分裂僵尸精英幼体", codexCategory: "elite", codexHidden: true, description: "分裂僵尸精英死亡后产生的精英幼体，体型较小但保留精英特征并会持续回复生命。", tactics: "尽快击杀防止回血堆积，冰冻、眩晕和爆发伤害都很有效。", hp: 100, speed: 34, radius: 12, damage: 10, xp: 10, color: "#7767a5", accent: "#ffe08a", regenPerSecond: 3 },
+      boss: { name: "尸潮领主", codexCategory: "boss", description: "关卡首领，体型巨大、生命值极高；生命低于一半时进入狂暴状态，移动速度提升。", tactics: "持续输出并留意其接近城墙；燃烧、暴击与高伤害构筑有助于缩短战斗时间。", hp: 3000, speed: 10, radius: 34, damage: 24, xp: 100, color: "#9d5264", accent: "#ffb0bc" }
     },
     skillDefaults: {
       thermobaric: { unlocked: false, level: 0, fireInterval: 5, projectileSpeed: 250, projectileRadius: 8, impactDamage: 32, impactKnockback: 24, explosionDamage: 58, explosionRadius: 68, explosionKnockback: 42, burnDps: 10, burnDuration: 2.5, pierce: 0, burst: 0 },
       dryIce: { unlocked: false, level: 0, fireInterval: 4.2, projectileSpeed: 300, projectileRadius: 7, damage: 28, knockback: 12, pierce: 3, freezeDuration: 0, slowFactor: .58, splitCount: 0, spread: 0, burst: 0 },
-      armoredCar: { unlocked: false, level: 0, fireInterval: 7, speed: 140, carWidth: 34, carLength: 64, damage: 4, hitInterval: .16, slowFactor: .55, slowDuration: 1.2, stunChance: 0, stunDuration: .6, extraCars: 0, sizeLevel: 0 }
+      armoredCar: { unlocked: false, level: 0, fireInterval: 7, speed: 140, carWidth: 34, carLength: 64, damage: 4, hitInterval: .16, slowFactor: .55, slowDuration: 1.2, stunChance: 0, stunDuration: .6, extraCars: 0, sizeLevel: 0 },
+      bombardment: { unlocked: false, level: 0, fireInterval: 16, bombSpeed: 560, damage: 180, blastRadius: 82, centerRadius: 30, knockback: 105, extraBombs: 0, stunDuration: 0, centerDamageMultiplier: 1, thermonuclear: false, heatDuration: 4, heatDps: 25, heatSlowFactor: .5 }
     },
     traits: [
       { id: "damage", name: "增伤", rarity: "普通", max: 5, icon: "✦", desc: "子弹伤害 +25%", detail: "每级使所有步枪子弹伤害提高 25%，最高 5 级。稳定提升清理普通敌人和攻击首领的效率。", apply: function (p) { p.damage *= 1.25; } },
@@ -88,10 +89,17 @@
       { id: "armoredCarReinforcement", skillId: "armoredCar", name: "车辆增援", rarity: "稀有", max: 2, icon: "▰", desc: "每轮多派遣 1 辆装甲车", detail: "每级使每轮派遣的装甲车数量增加 1 辆，多车会分散在不同车道，最高 2 级。", apply: function (p) { p.skills.armoredCar.extraCars++; } },
       { id: "armoredCarSlow", skillId: "armoredCar", name: "减速延长", rarity: "稀有", max: 4, icon: "❄", desc: "碾压减速时间 +0.4 秒", detail: "每级延长装甲车碾压附加的减速时间 0.4 秒，重复命中会刷新减速，最高 4 级。", apply: function (p) { p.skills.armoredCar.slowDuration += .4; } },
       { id: "armoredCarStun", skillId: "armoredCar", name: "眩晕冲撞", rarity: "稀有", max: 3, icon: "✹", desc: "碾压眩晕概率 +10%", detail: "每级使装甲车首次接触敌人时有额外 10% 概率将其眩晕 0.6 秒；同一辆车不会对同一目标重复判定，最高 3 级。", apply: function (p) { p.skills.armoredCar.stunChance += .1; } },
-      { id: "armoredCarChassis", skillId: "armoredCar", name: "重型底盘", rarity: "稀有", max: 3, icon: "⬟", desc: "装甲车体型 +15%", detail: "每级同步增大装甲车车身与碾压范围 15%，最高 3 级。", apply: function (p) { p.skills.armoredCar.sizeLevel++; } }
+      { id: "armoredCarChassis", skillId: "armoredCar", name: "重型底盘", rarity: "稀有", max: 3, icon: "⬟", desc: "装甲车体型 +15%", detail: "每级同步增大装甲车车身与碾压范围 15%，最高 3 级。", apply: function (p) { p.skills.armoredCar.sizeLevel++; } },
+      { id: "unlockBombardment", skillId: "bombardment", unlocksSkill: true, name: "空投轰炸", rarity: "稀有", max: 1, icon: "✹", desc: "解锁空投轰炸", detail: "首次获取后解锁空投轰炸，技能槽显示 Lv.1；技能就绪后自动索敌并轰炸敌群。", apply: function () {} },
+      { id: "bombardmentDamage", skillId: "bombardment", name: "轰炸增伤", rarity: "稀有", max: 3, icon: "✦", desc: "轰炸伤害 +60%", detail: "每级使空投轰炸伤害提高 60%，最高 3 级。", apply: function (p) { p.skills.bombardment.damage *= 1.6; } },
+      { id: "bombardmentExtra", skillId: "bombardment", name: "连续轰炸", rarity: "稀有", max: 2, icon: "✹", desc: "额外投下一枚炸弹", detail: "每级使一次空投轰炸额外投下一枚炸弹，依次轰击自动选定的敌群区域，最高 2 级。", apply: function (p) { p.skills.bombardment.extraBombs++; } },
+      { id: "bombardmentRadius", skillId: "bombardment", name: "轰炸扩张", rarity: "稀有", max: 1, icon: "◉", desc: "爆炸范围 +105%", detail: "空投轰炸爆炸半径扩大 105%。", apply: function (p) { p.skills.bombardment.blastRadius *= 2.05; } },
+      { id: "bombardmentStun", skillId: "bombardment", name: "轰炸震荡", rarity: "稀有", max: 1, icon: "⚡", desc: "爆炸造成眩晕", detail: "空投轰炸命中范围内的敌人时使其眩晕 1.5 秒。", apply: function (p) { p.skills.bombardment.stunDuration = 1.5; } },
+      { id: "bombardmentPrecision", skillId: "bombardment", name: "精准打击", rarity: "稀有", max: 1, icon: "◎", desc: "轰炸中心伤害 +200%", detail: "轰炸中心 30 像素范围内的敌人受到 3 倍伤害。", apply: function (p) { p.skills.bombardment.centerDamageMultiplier = 3; } },
+      { id: "bombardmentThermonuclear", skillId: "bombardment", name: "热核轰炸", rarity: "稀有", max: 1, icon: "♨", desc: "留下灼烧减速区域", detail: "爆炸后留下持续 4 秒的热核区域，每秒造成 25 点伤害并将敌人移速降低 50%。", apply: function (p) { p.skills.bombardment.thermonuclear = true; } }
     ],
     coreSkills: [
-      { id: "bombardment", name: "区域轰炸", icon: "✹", status: "筹备中", detail: "呼叫指定区域的连续炮击，对范围内敌人造成多段伤害。计划支持强化爆炸范围、落弹数量与伤害，尚未接入战斗。" },
+      { id: "bombardment", name: "空投轰炸", icon: "✹", status: "已实装", detail: "冷却就绪后自动索敌，优先轰炸预计爆炸时敌人更密集的区域；炸弹落地造成高额范围伤害与击退，并可强化伤害、连续投弹、爆炸范围、眩晕、中心伤害及热核灼烧减速区域。" },
       { id: "thermobaric", name: "温压弹", icon: "♨", status: "已实装", detail: "幻形自动发射红色炮弹。命中后造成冲击伤害与击退，穿透耗尽后发生范围爆炸，对范围内敌人造成爆炸伤害并施加燃烧。" },
       { id: "dryIce", name: "干冰弹", icon: "❄", status: "已实装", detail: "幻形自动发射蓝色圆锥弹，初始可额外穿透 3 个目标。命中造成伤害与微弱击退，可通过冰冻、分裂、齐射和连发词条强化。" },
       { id: "armoredCar", name: "装甲车支援", icon: "▰", status: "已实装", detail: "自动从城墙前方派遣装甲车驶向尸潮，沿途多段碾压并减速敌人；可强化伤害、派遣数量、减速、眩晕与车身尺寸。" }

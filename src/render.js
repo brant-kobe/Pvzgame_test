@@ -39,8 +39,12 @@
   function drawSkillSlot(x, y, w, h, skill, icon, color) {
     U.roundedRect(ctx, x, y, w, h, 5, skill.unlocked ? "rgba(18, 39, 49, .96)" : "rgba(5, 16, 23, .58)", skill.unlocked ? color : "rgba(153,205,218,.2)");
     if (skill.unlocked) {
-      text(icon, x + 10, y + 13, "bold 12px Segoe UI, Microsoft YaHei", color, "center");
-      text("Lv." + skill.level, x + w - 4, y + 13, "bold 8px Segoe UI, Microsoft YaHei", C.colors.text, "right");
+      text(icon, x + 8, y + 13, "bold 11px Segoe UI, Microsoft YaHei", color, "center");
+      text("Lv." + skill.level, x + w - 2, y + 12, "bold 7px Segoe UI, Microsoft YaHei", C.colors.text, "right");
+      if (skill.fireInterval && skill.fireTimer > 0) {
+        U.roundedRect(ctx, x + 3, y + h - 4, w - 6, 2, 1, "rgba(255,255,255,.14)");
+        U.roundedRect(ctx, x + 3, y + h - 4, (w - 6) * U.clamp(1 - skill.fireTimer / skill.fireInterval, 0, 1), 2, 1, color);
+      }
     } else text("—", x + w / 2, y + 13, "10px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
   }
 
@@ -171,6 +175,7 @@
       }
       ctx.restore();
     });
+    Game.drawBombardment();
   };
 
   function drawZombieHead(r, info, cx, cy, scale) {
@@ -422,11 +427,17 @@
   };
 
   Game.drawEffects = function () {
+    (S.bombZones || []).forEach(function (zone) {
+      var fade = U.clamp(zone.life / zone.duration, 0, 1), pulse = .96 + Math.sin(S.session.elapsed * 7) * .04;
+      ctx.save(); ctx.globalAlpha = .2 + fade * .13; ctx.fillStyle = "#ff6a32"; ctx.beginPath(); ctx.arc(zone.x, zone.y, zone.radius * pulse, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = .22 + fade * .3; ctx.strokeStyle = "#ffbe5e"; ctx.lineWidth = 3; ctx.setLineDash([7, 5]); ctx.beginPath(); ctx.arc(zone.x, zone.y, zone.radius * pulse, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.restore();
+    });
     (S.explosions || []).forEach(function (explosion) {
       var progress = 1 - U.clamp(explosion.life / explosion.duration, 0, 1), radius = explosion.radius * (.45 + progress * .55);
       ctx.save(); ctx.globalAlpha = (1 - progress) * .62;
-      ctx.fillStyle = "rgba(255, 75, 42, .42)"; ctx.beginPath(); ctx.arc(explosion.x, explosion.y, radius, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1 - progress; ctx.strokeStyle = "#ffbf6b"; ctx.lineWidth = Math.max(2, 8 * (1 - progress));
+      ctx.fillStyle = explosion.type === "bombardment" ? "rgba(255, 174, 54, .48)" : "rgba(255, 75, 42, .42)"; ctx.beginPath(); ctx.arc(explosion.x, explosion.y, radius, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1 - progress; ctx.strokeStyle = explosion.type === "bombardment" ? "#fff0a0" : "#ffbf6b"; ctx.lineWidth = Math.max(2, 8 * (1 - progress));
       ctx.beginPath(); ctx.arc(explosion.x, explosion.y, radius * .84, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
     });
@@ -436,6 +447,17 @@
     ctx.globalAlpha = 1;
   };
 
+  Game.drawBombardment = function () {
+    (S.bombDrops || []).forEach(function (bomb) {
+      var pulse = .97 + Math.sin(S.session.elapsed * 8) * .03;
+      ctx.save(); ctx.globalAlpha = .38; ctx.strokeStyle = "#ffbd58"; ctx.lineWidth = 2; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.arc(bomb.targetX, bomb.targetY, bomb.radius * pulse, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+      if (bomb.delay > 0) return;
+      ctx.save(); ctx.strokeStyle = "rgba(255, 118, 49, .72)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bomb.x, bomb.y - 18); ctx.lineTo(bomb.x, bomb.y - 7); ctx.stroke();
+      ctx.shadowColor = "#ffb74f"; ctx.shadowBlur = 12; U.roundedRect(ctx, bomb.x - 6, bomb.y - 8, 12, 20, 4, "#39434a", "#ffd26a");
+      ctx.shadowBlur = 0; ctx.fillStyle = "#ff7737"; ctx.beginPath(); ctx.moveTo(bomb.x - 4, bomb.y + 11); ctx.lineTo(bomb.x + 4, bomb.y + 11); ctx.lineTo(bomb.x, bomb.y + 20); ctx.closePath(); ctx.fill(); ctx.restore();
+    });
+  };
+
   Game.drawHud = function () {
     var p = S.player, session = S.session;
     if (!p || S.screen === "menu" || S.screen === "zombieCodex" || S.screen === "skillCodex") return;
@@ -443,7 +465,7 @@
     Game.drawPauseButton(14, 15, 28, 28);
     ctx.save();
     ctx.shadowColor = "rgba(0, 0, 0, .72)"; ctx.shadowBlur = 6;
-    text(level ? level.name : "未知区域", C.width / 2, 27, "bold 15px Segoe UI, Microsoft YaHei", C.colors.text, "center");
+    text(level ? level.id + " " + level.name : "未知区域", C.width / 2, 27, "bold 15px Segoe UI, Microsoft YaHei", C.colors.text, "center");
     text("第 " + session.wave + " / " + session.waves.length + " 波", C.width - 14, 25, "bold 9px Segoe UI, Microsoft YaHei", C.colors.muted, "right");
     ctx.restore();
     U.roundedRect(ctx, 54, 40, 148, 8, 4, "rgba(255,255,255,.12)");
@@ -463,9 +485,10 @@
       U.roundedRect(ctx, 300, 38, 36, 3, 2, "rgba(255,255,255,.14)");
       U.roundedRect(ctx, 300, 38, 36 * (1 - p.reloadTimer / p.reloadDuration), 3, 2, C.colors.yellow);
     }
-    drawSkillSlot(210, 45, 46, 19, p.skills.thermobaric, "♨", C.colors.fire);
-    drawSkillSlot(260, 45, 46, 19, p.skills.dryIce, "❄", C.colors.ice);
-    drawSkillSlot(310, 45, 46, 19, p.skills.armoredCar, "▰", C.colors.green);
+    drawSkillSlot(204, 45, 36, 19, p.skills.thermobaric, "♨", C.colors.fire);
+    drawSkillSlot(242, 45, 36, 19, p.skills.dryIce, "❄", C.colors.ice);
+    drawSkillSlot(280, 45, 36, 19, p.skills.armoredCar, "▰", C.colors.green);
+    drawSkillSlot(318, 45, 36, 19, p.skills.bombardment, "✹", C.colors.yellow);
     var boss = S.enemies.find(function (enemy) { return enemy.type === "boss"; });
     if (boss) { badge("BOSS  ·  尸潮领主", 104, 72, 152, C.colors.red); U.roundedRect(ctx, 44, 96, C.width - 88, 7, 4, "rgba(0,0,0,.5)"); U.roundedRect(ctx, 44, 96, (C.width - 88) * U.clamp(boss.hp / boss.maxHp, 0, 1), 7, 4, C.colors.red); }
     if (session.messageTimer > 0) text(session.message, C.width / 2, boss ? 126 : 108, "bold 16px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");

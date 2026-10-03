@@ -109,6 +109,7 @@
     }
     if (S.screen === "playing") {
       if (point.x >= 14 && point.x <= 42 && point.y >= 15 && point.y <= 43) { Game.pause(); return; }
+      if (point.x >= 204 && point.x <= 354 && point.y >= 45 && point.y <= 64) return;
       Game.setManualAim(point.x, point.y);
     }
   });

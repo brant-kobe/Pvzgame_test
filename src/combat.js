@@ -190,6 +190,11 @@
         if (skill.fireTimer <= 0) { Game.launchArmoredCars(skill); skill.fireTimer = skill.fireInterval; }
         return;
       }
+      if (type === "bombardment") {
+        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        if (skill.fireTimer <= 0 && S.enemies.length) Game.launchBombardment();
+        return;
+      }
       if (skill.burstShotsRemaining > 0) {
         skill.burstTimer -= dt;
         if (skill.burstTimer <= 0) {
@@ -278,6 +283,81 @@
         }
       }
       if (removed) S.skillProjectiles.splice(i, 1);
+    }
+  };
+  Game.getBombardmentTarget = function (skill) {
+    if (!S.enemies.length) return null;
+    var minY = 82, maxY = S.wall.y - S.wall.height / 2 - C.enemies.boss.radius, best = null, bestScore = -1;
+    S.enemies.forEach(function (candidate) {
+      var candidateInfo = C.enemies[candidate.type], candidateSpeed = candidate.stun > 0 ? 0 : candidateInfo.speed * (candidate.slow > 0 ? candidate.slowFactor || .58 : 1);
+      if (candidate.type === "boss" && candidate.hp < candidate.maxHp * .5) candidateSpeed *= 1.5;
+      var candidateAttackY = S.wall.y - S.wall.height / 2 - candidateInfo.radius - 3, targetY = candidate.y;
+      for (var step = 0; step < 3; step++) {
+        var estimateY = U.clamp(targetY, minY, maxY), dropTime = (estimateY + 24) / skill.bombSpeed;
+        targetY = Math.min(candidateAttackY, candidate.y + candidateSpeed * dropTime);
+      }
+      var targetX = U.clamp(candidate.x, C.enemies.boss.radius, C.width - C.enemies.boss.radius);
+      targetY = U.clamp(targetY, minY, maxY);
+      var impactTime = (targetY + 24) / skill.bombSpeed, score = 0;
+      S.enemies.forEach(function (enemy) {
+        var info = C.enemies[enemy.type], speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
+        if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
+        var attackY = S.wall.y - S.wall.height / 2 - info.radius - 3, predictedY = Math.min(attackY, enemy.y + speed * impactTime);
+        var dx = enemy.x - targetX, dy = predictedY - targetY, distance = Math.sqrt(dx * dx + dy * dy), reach = skill.blastRadius + info.radius;
+        if (distance > reach) return;
+        var weight = enemy.type === "boss" ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
+        score += weight * (1.1 - distance / reach);
+      });
+      if (score > bestScore) { bestScore = score; best = { x: targetX, y: targetY }; }
+    });
+    return best;
+  };
+  Game.launchBombardment = function () {
+    var skill = S.player.skills.bombardment;
+    if (!skill.unlocked || skill.fireTimer > 0) return false;
+    var target = Game.getBombardmentTarget(skill);
+    if (!target) return false;
+    var x = target.x, y = target.y;
+    for (var i = 0; i <= skill.extraBombs; i++) {
+      S.bombDrops.push({ x: x, y: -24, targetX: x, targetY: y, delay: i * .42, speed: skill.bombSpeed, damage: skill.damage, radius: skill.blastRadius, centerRadius: skill.centerRadius, knockback: skill.knockback, centerDamageMultiplier: skill.centerDamageMultiplier, stunDuration: skill.stunDuration, thermonuclear: skill.thermonuclear, heatDuration: skill.heatDuration, heatDps: skill.heatDps, heatSlowFactor: skill.heatSlowFactor });
+    }
+    skill.fireTimer = skill.fireInterval;
+    return true;
+  };
+  Game.explodeBombardment = function (bomb) {
+    S.explosions.push({ type: "bombardment", x: bomb.targetX, y: bomb.targetY, radius: bomb.radius, life: .62, duration: .62 });
+    for (var i = S.enemies.length - 1; i >= 0; i--) {
+      var enemy = S.enemies[i], dx = enemy.x - bomb.targetX, dy = enemy.y - bomb.targetY, distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance > bomb.radius + C.enemies[enemy.type].radius) continue;
+      var damage = bomb.damage * (distance <= bomb.centerRadius ? bomb.centerDamageMultiplier : 1);
+      Game.damageEnemy(enemy, damage, { critical: false, noWeaponEffects: true });
+      if (bomb.stunDuration > 0) enemy.stun = Math.max(enemy.stun || 0, bomb.stunDuration);
+      if (distance > .001) Game.applyKnockback(enemy, bomb.targetX, bomb.targetY, bomb.knockback * (1 - Math.min(distance / (bomb.radius * 1.5), .45)));
+      else enemy.y = Math.max(-C.enemies[enemy.type].radius, enemy.y - bomb.knockback);
+      if (enemy.hp <= 0) Game.killEnemy(i);
+    }
+    if (bomb.thermonuclear) S.bombZones.push({ x: bomb.targetX, y: bomb.targetY, radius: bomb.radius, life: bomb.heatDuration, duration: bomb.heatDuration, damage: bomb.heatDps, slowFactor: bomb.heatSlowFactor });
+    Game.burst(bomb.targetX, bomb.targetY, 24, C.colors.yellow);
+  };
+  Game.updateBombardment = function (dt) {
+    for (var i = S.bombDrops.length - 1; i >= 0; i--) {
+      var bomb = S.bombDrops[i];
+      if (bomb.delay > 0) { bomb.delay = Math.max(0, bomb.delay - dt); continue; }
+      bomb.y += bomb.speed * dt;
+      if (bomb.y >= bomb.targetY) { Game.explodeBombardment(bomb); S.bombDrops.splice(i, 1); }
+    }
+    for (var j = S.bombZones.length - 1; j >= 0; j--) {
+      var zone = S.bombZones[j];
+      zone.life -= dt;
+      if (zone.life <= 0) { S.bombZones.splice(j, 1); continue; }
+      for (var k = S.enemies.length - 1; k >= 0; k--) {
+        var enemy = S.enemies[k], dx = enemy.x - zone.x, dy = enemy.y - zone.y, reach = zone.radius + C.enemies[enemy.type].radius;
+        if (dx * dx + dy * dy > reach * reach) continue;
+        Game.damageEnemy(enemy, zone.damage * dt, { critical: false, noWeaponEffects: true, silentText: true });
+        enemy.slow = Math.max(enemy.slow || 0, .24);
+        enemy.slowFactor = Math.min(enemy.slowFactor || .58, zone.slowFactor);
+        if (enemy.hp <= 0) Game.killEnemy(k);
+      }
     }
   };
   Game.gainXp = function (amount) {
