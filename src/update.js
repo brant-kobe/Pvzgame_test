@@ -57,6 +57,7 @@
     Game.updateSkillProjectiles(dt);
     Game.updateBombardment(dt);
     Game.updateElectromagneticZones(dt);
+    Game.updateWhirlwinds(dt);
     for (var k = S.enemies.length - 1; k >= 0; k--) {
       var current = S.enemies[k], info = C.enemies[current.type];
       current.hitFlash = Math.max(0, current.hitFlash - dt);

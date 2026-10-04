@@ -32,13 +32,30 @@
     { total: 58, interval: .45, mix: ["runner", "splitter", "runner"] },
     { total: 62, interval: .42, mix: ["normal", "runner", "splitter"] }
   ];
+  var levelFourWaves = [
+    { total: 10, interval: 1.6, mix: ["normal"] },
+    { total: 14, interval: 1.45, mix: ["normal", "runner"] },
+    { total: 19, interval: 1.3, mix: ["normal", "runner", "splitter"] },
+    { total: 23, interval: .55, mix: ["normal", "runner", "splitter"], elite: "splitterElite" },
+    { total: 27, interval: .52, mix: ["splitter", "runner"] },
+    { total: 52, interval: .46, mix: ["normal", "splitter", "runner"], hpScale: 1.15 },
+    { total: 58, interval: .44, mix: ["runner", "splitter"], boss: true, hpScale: 1.25 },
+    { total: 66, interval: .42, mix: ["normal", "runner", "splitter"], hpScale: 1.4 },
+    { total: 74, interval: .4, mix: ["runner", "splitter", "runner"], hpScale: 1.5 },
+    { total: 84, interval: .38, mix: ["normal", "runner", "splitter"], hpScale: 1.6 }
+  ];
   Game.config = {
-    width: 360, height: 640, maxLevel: 10, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12,
+    width: 360, height: 640, maxLevel: 15, maxSkillSlots: 4, wallMaxHp: 1000, xpBase: 15, xpMultiplier: 1.13, xpBonus: 6, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12,
     sprites: {
       playerBody: { src: ["assets/player-man.png", "assets/player-body.png", "assets/man.png"], width: 74, height: 131, anchorX: 37, anchorY: 78 },
       playerRifle: { src: "assets/player-rifle.png", width: 18, height: 46, anchorX: 9, anchorY: 38, mountX: -6, mountY: -40 }
     },
-    skillRing: { offsetX: 86, offsetY: -102 },
+    skillRing: { offsetX: 64, offsetY: -100 },
+    skillSlots: { offsetX: -54, y: 46, width: 48, height: 18, gap: 3 },
+    levelSelect: { panelX: 16, panelY: 56, panelWidth: 328, panelHeight: 538, cardX: 30, cardWidth: 300, cardHeight: 82, cardTop: 172, cardGap: 88, backY: 540, backHeight: 40 },
+    ranges: { far: 480, mid: 320, near: 125 },
+    rifleRange: "far",
+    skillRangeHoldMs: 350,
     colors: { bg: "#0b202c", text: "#f4f8fb", muted: "#9ab0bc", green: "#63e6a0", yellow: "#ffd166", red: "#ff6b6b", cyan: "#68d8ff", ice: "#58aaff", fire: "#ff9b52", purple: "#c9a1ff" },
     enemies: {
       normal: { name: "普通僵尸", codexCategory: "minion", description: "尸潮中的基础单位，生命与速度均衡，会持续向防线推进。", tactics: "优先利用自动锁定快速清理；单体威胁低，数量增加后会给城墙造成压力。", hp: 28, speed: 20, radius: 14, damage: 10, xp: 8, color: "#6eaa7b", accent: "#b1e4a0" },
@@ -55,9 +72,10 @@
       thermobaric: { unlocked: false, level: 0, fireInterval: 5, projectileSpeed: 250, projectileRadius: 8, impactDamage: 32, impactKnockback: 24, explosionDamage: 58, explosionRadius: 68, explosionKnockback: 42, burnDps: 10, burnDuration: 2.5, pierce: 0, burst: 0 },
       dryIce: { unlocked: false, level: 0, fireInterval: 3.5, projectileSpeed: 300, projectileRadius: 7, damage: 28, knockback: 12, pierce: 3, freezeDuration: 0, slowFactor: .58, splitCount: 0, spread: 0, burst: 0 },
       armoredCar: { unlocked: false, level: 0, fireInterval: 6.3, speed: 140, carWidth: 34, carLength: 64, damage: 4, hitInterval: .16, slowFactor: .55, slowDuration: 1.2, stunChance: 0, stunDuration: .6, extraCars: 0, sizeLevel: 0 },
-      bombardment: { unlocked: false, level: 0, fireInterval: 11, bombSpeed: 560, damage: 180, blastRadius: 82, centerRadius: 30, knockback: 105, extraBombs: 0, stunDuration: 0, centerDamageMultiplier: 1, thermonuclear: false, heatDuration: 4, heatDps: 25, heatSlowFactor: .5 },
+      bombardment: { unlocked: false, level: 0, fireInterval: 11, bombSpeed: 560, damage: 180, blastRadius: 45, centerRadius: 17, knockback: 105, extraBombs: 0, stunDuration: 0, centerDamageMultiplier: 1, thermonuclear: false, heatDuration: 4, heatDps: 25, heatSlowFactor: .5, bombDropDelay: .42, bombMinSeparationRatio: .9, bombAltScoreRatio: .45 },
       electromagnetic: { unlocked: false, level: 0, fireInterval: 3, damage: 72, stunDuration: 2.5, extraTargets: 0, explosion: false, explosionDamage: 44, explosionRadius: 54, matrix: false, matrixDuration: 4, matrixDps: 12, matrixRadius: 38, matrixSlowFactor: .5 },
-      highEnergyBeam: { unlocked: false, level: 0, fireInterval: 3, damage: 6, baseDamageHits: 20, bonusDamageHits: 0, damageHits: 20, beamWidth: 16, duration: 4, slowEnabled: false, slowFactor: .1, slowDuration: 1, crippleEnabled: false, damageTakenMultiplier: 1.25, damageTakenDuration: 5, overcharged: false }
+      highEnergyBeam: { unlocked: false, level: 0, fireInterval: 3, damage: 6, baseDamageHits: 20, bonusDamageHits: 0, damageHits: 20, beamWidth: 16, duration: 4, slowEnabled: false, slowFactor: .1, slowDuration: 1, crippleEnabled: false, damageTakenMultiplier: 1.25, damageTakenDuration: 5, overcharged: false },
+      whirlwindCannon: { unlocked: false, level: 0, fireInterval: 12, duration: 10, speed: 72, radius: 40, damage: 20, hitInterval: .35, pullSpeed: 18, clusterRadius: 58, clusterWeight: 130, threatWeight: 60, clusterJitter: .55, extraTornadoes: 0, stormGather: false, stormDuration: 2, stormRadiusScale: 1.7, stormDamageScale: 1, stormPullScale: 1.2 }
     },
     traits: [
       { id: "damage", name: "增伤", rarity: "普通", max: 5, icon: "✦", desc: "子弹伤害 +25%", detail: "每级使所有步枪子弹伤害提高 25%，最高 5 级。稳定提升清理普通敌人和攻击首领的效率。", apply: function (p) { p.damage *= 1.25; } },
@@ -110,20 +128,28 @@
       { id: "highEnergyBeamSlow", skillId: "highEnergyBeam", name: "减速射线", rarity: "稀有", max: 1, icon: "❄", desc: "命中目标减速 90%，持续 1 秒", detail: "高能射线命中目标后使其移动速度降低 90%，持续 1 秒。", apply: function (p) { p.skills.highEnergyBeam.slowEnabled = true; p.skills.highEnergyBeam.slowFactor = .1; p.skills.highEnergyBeam.slowDuration = 1; } },
       { id: "highEnergyBeamCripple", skillId: "highEnergyBeam", name: "致残射线", rarity: "稀有", max: 1, icon: "ϟ", desc: "命中目标受到的伤害 +25%，持续 5 秒", detail: "高能射线命中目标后，使其受到的所有伤害提高 25%，持续 5 秒。", apply: function (p) { p.skills.highEnergyBeam.crippleEnabled = true; p.skills.highEnergyBeam.damageTakenMultiplier = 1.25; p.skills.highEnergyBeam.damageTakenDuration = 5; } },
       { id: "highEnergyBeamCharge", skillId: "highEnergyBeam", name: "充能", rarity: "稀有", max: 1, icon: "＋", desc: "射线伤害次数 +5", detail: "高能射线持续时间内造成的伤害次数增加 5 次。", apply: function (p) { var skill = p.skills.highEnergyBeam; skill.bonusDamageHits += 5; skill.damageHits = (skill.baseDamageHits + skill.bonusDamageHits) * (skill.overcharged ? 2 : 1); } },
-      { id: "highEnergyBeamOverload", skillId: "highEnergyBeam", name: "超能过载", rarity: "稀有", max: 1, icon: "ϟ", desc: "射线伤害次数翻倍，冷却 +50%", detail: "高能射线伤害次数翻倍，技能冷却时间增加 50%。", apply: function (p) { var skill = p.skills.highEnergyBeam; skill.overcharged = true; skill.damageHits = (skill.baseDamageHits + skill.bonusDamageHits) * 2; skill.fireInterval *= 1.5; } }
+      { id: "highEnergyBeamOverload", skillId: "highEnergyBeam", name: "超能过载", rarity: "稀有", max: 1, icon: "ϟ", desc: "射线伤害次数翻倍，冷却 +50%", detail: "高能射线伤害次数翻倍，技能冷却时间增加 50%。", apply: function (p) { var skill = p.skills.highEnergyBeam; skill.overcharged = true; skill.damageHits = (skill.baseDamageHits + skill.bonusDamageHits) * 2; skill.fireInterval *= 1.5; } },
+      { id: "unlockWhirlwindCannon", skillId: "whirlwindCannon", unlocksSkill: true, name: "旋风加农", rarity: "稀有", max: 1, icon: "☈", desc: "解锁旋风加农技能", detail: "首次获取后解锁旋风加农，技能槽显示 Lv.1；幻形会召唤龙卷风主动扑向敌人密集处，持续 10 秒后消失并进入冷却。", apply: function () {} },
+      { id: "whirlwindDamage", skillId: "whirlwindCannon", name: "旋风增伤", rarity: "稀有", max: 3, icon: "✦", desc: "龙卷风伤害 +60%", detail: "每级使龙卷风每次命中的伤害提高 60%，最高 3 级。", apply: function (p) { p.skills.whirlwindCannon.damage *= 1.6; } },
+      { id: "whirlwindPull", skillId: "whirlwindCannon", name: "风力加强", rarity: "稀有", max: 3, icon: "≋", desc: "龙卷风牵引速度 +50%", detail: "每级使龙卷风把命中目标拉向风眼的速度提高 50%，最高 3 级；牵引不会打断敌人自身的推进。", apply: function (p) { p.skills.whirlwindCannon.pullSpeed *= 1.5; } },
+      { id: "whirlwindTurbo", skillId: "whirlwindCannon", name: "涡轮增压", rarity: "稀有", max: 3, icon: "⚡", desc: "持续时间 +40%，伤害 +20%", detail: "每级使龙卷风持续时间延长 40%，同时使每次命中的伤害提高 20%，最高 3 级。", apply: function (p) { var skill = p.skills.whirlwindCannon; skill.duration *= 1.4; skill.damage *= 1.2; } },
+      { id: "whirlwindTwin", skillId: "whirlwindCannon", name: "双重旋风", rarity: "稀有", max: 1, icon: "✣", desc: "同时召唤两个龙卷风，持续时间 -50%", detail: "额外召唤一个龙卷风，两个龙卷风在战场不同区域各自游走；持续时间缩短 50%。", apply: function (p) { var skill = p.skills.whirlwindCannon; skill.extraTornadoes += 1; skill.duration *= .5; } },
+      { id: "whirlwindStorm", skillId: "whirlwindCannon", name: "风暴聚集", rarity: "稀有", max: 1, icon: "◉", desc: "消失位置留下 2 秒大龙卷风", detail: "龙卷风持续时间结束并进入冷却时，会在消失位置释放一个体型更大、牵引更强的静止龙卷风，持续 2 秒；双重旋风下每个龙卷风各自留下一个。", apply: function (p) { p.skills.whirlwindCannon.stormGather = true; } }
     ],
     coreSkills: [
-      { id: "bombardment", name: "空投轰炸", icon: "✹", status: "已实装", detail: "冷却就绪后自动索敌，优先轰炸预计爆炸时敌人更密集的区域；炸弹落地造成高额范围伤害与击退，并可强化伤害、连续投弹、爆炸范围、眩晕、中心伤害及热核灼烧减速区域。" },
-      { id: "thermobaric", name: "温压弹", icon: "♨", status: "已实装", detail: "幻形自动发射红色炮弹。命中后造成冲击伤害与击退，穿透耗尽后发生范围爆炸，对范围内敌人造成爆炸伤害并施加燃烧。" },
-      { id: "dryIce", name: "干冰弹", icon: "❄", status: "已实装", detail: "幻形自动发射蓝色圆锥弹，初始可额外穿透 3 个目标。命中造成伤害与微弱击退，可通过冰冻、分裂、齐射和连发词条强化。" },
-      { id: "armoredCar", name: "装甲车", icon: "▰", status: "已实装", detail: "自动从城墙前方派遣装甲车驶向尸潮，沿途多段碾压并减速敌人；可强化伤害、派遣数量、减速、眩晕与车身尺寸。" },
-      { id: "electromagnetic", name: "电磁穿刺", icon: "ϟ", status: "已实装", detail: "自动从天而降闪电劈向敌人，造成伤害并施加麻痹；可通过分流、爆炸、麻痹增伤和电磁矩阵词条强化。" },
-      { id: "highEnergyBeam", name: "高能射线", icon: "ϟ", status: "已实装", detail: "幻形自动朝覆盖敌人最多的方向发射蓝色宽光束，贯穿全场并持续 4 秒、造成 20 次低额伤害；可强化伤害、减速与致残效果，也可增加脉冲次数或过载翻倍。" }
+      { id: "bombardment", name: "空投轰炸", icon: "✹", color: "#ffd166", range: "far", status: "已实装", detail: "冷却就绪后自动索敌，优先轰炸预计爆炸时敌人更密集的区域；炸弹落地造成高额范围伤害与击退，并可强化伤害、连续投弹、爆炸范围、眩晕、中心伤害及热核灼烧减速区域。" },
+      { id: "thermobaric", name: "温压弹", icon: "♨", color: "#ff9b52", range: "mid", status: "已实装", detail: "幻形自动发射红色炮弹。命中后造成冲击伤害与击退，穿透耗尽后发生范围爆炸，对范围内敌人造成爆炸伤害并施加燃烧。" },
+      { id: "dryIce", name: "干冰弹", icon: "❄", color: "#58aaff", range: "mid", status: "已实装", detail: "幻形自动发射蓝色圆锥弹，初始可额外穿透 3 个目标。命中造成伤害与微弱击退，可通过冰冻、分裂、齐射和连发词条强化。" },
+      { id: "armoredCar", name: "装甲车", icon: "▰", color: "#63e6a0", range: "far", status: "已实装", detail: "自动从城墙前方派遣装甲车驶向尸潮，沿途多段碾压并减速敌人；可强化伤害、派遣数量、减速、眩晕与车身尺寸。" },
+      { id: "electromagnetic", name: "电磁穿刺", icon: "ϟ", color: "#68d8ff", range: "mid", status: "已实装", detail: "自动从天而降闪电劈向敌人，造成伤害并施加麻痹；可通过分流、爆炸、麻痹增伤和电磁矩阵词条强化。" },
+      { id: "highEnergyBeam", name: "高能射线", icon: "ϟ", color: "#51cfff", range: "far", status: "已实装", detail: "幻形自动朝覆盖敌人最多的方向发射蓝色宽光束，贯穿全场并持续 4 秒、造成 20 次低额伤害；可强化伤害、减速与致残效果，也可增加脉冲次数或过载翻倍。" },
+      { id: "whirlwindCannon", name: "旋风加农", icon: "☈", color: "#9fe6ff", range: "mid", status: "已实装", detail: "幻形召唤龙卷风主动扑向敌人最密集的位置，并优先照顾靠近城墙的敌群；持续 10 秒，沿途对接触到的敌人持续造成伤害并施加轻微牵引，持续时间结束后龙卷风消失并进入冷却。可强化伤害、牵引、持续时间与数量，也可在消失位置留下大龙卷风。" }
     ],
     levels: [
       { id: 1, name: "街区警戒线", subtitle: "基础尸潮防守", unlocked: true, hpScale: 1, xpScale: 1.76, waves: levelOneWaves },
       { id: 2, name: "地铁入口", subtitle: "分裂僵尸与更密集的波次", unlocked: false, hpScale: 1, xpScale: .63, waves: levelTwoWaves },
-      { id: 3, name: "封锁工厂", subtitle: "更密集的尸潮与分裂精英", unlocked: false, hpScale: 1.35, xpScale: .43, waves: levelThreeWaves }
+      { id: 3, name: "封锁工厂", subtitle: "更密集的尸潮与分裂精英", unlocked: false, hpScale: 1.35, xpScale: .43, waves: levelThreeWaves },
+      { id: 4, name: "熔炉核心", subtitle: "后期尸潮成倍压上，个体更硬", unlocked: false, hpScale: 1.35, xpScale: .34, waves: levelFourWaves }
     ],
     waves: levelOneWaves
   };

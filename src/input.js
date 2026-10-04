@@ -72,6 +72,45 @@
     if (button) button.addEventListener("click", function (event) { event.preventDefault(); action(); });
   }
 
+  var slotHoldTimer = null, slotHoldId = null;
+
+  function isInSkillSlotColumn(point) {
+    var slots = C.skillSlots;
+    if (!slots) return false;
+    var left = C.width + slots.offsetX;
+    return point.x >= left - 6 && point.x <= left + slots.width + 6 && point.y >= slots.y - 4 && point.y <= slots.y + C.maxSkillSlots * (slots.height + slots.gap);
+  }
+
+  function getSkillSlotAt(point) {
+    var slots = C.skillSlots;
+    if (!slots || !S.player) return null;
+    var left = C.width + slots.offsetX;
+    if (point.x < left - 6 || point.x > left + slots.width + 6) return null;
+    var order = S.player.skillOrder || [];
+    for (var slot = 0; slot < C.maxSkillSlots; slot++) {
+      var y = slots.y + slot * (slots.height + slots.gap);
+      if (point.y >= y - 4 && point.y <= y + slots.height + 4) return order[slot] || null;
+    }
+    return null;
+  }
+
+  function releaseSkillSlot() {
+    if (slotHoldTimer) { clearTimeout(slotHoldTimer); slotHoldTimer = null; }
+    slotHoldId = null;
+    if (S.skillRangePreview) S.skillRangePreview = null;
+  }
+
+  function holdSkillSlot(point) {
+    var id = getSkillSlotAt(point);
+    releaseSkillSlot();
+    if (!id) return;
+    slotHoldId = id;
+    slotHoldTimer = setTimeout(function () {
+      slotHoldTimer = null;
+      if (slotHoldId) S.skillRangePreview = slotHoldId;
+    }, C.skillRangeHoldMs || 350);
+  }
+
   bindTestButton("test-controls-hide", function () { S.testArena.controlsVisible = false; });
   bindTestButton("test-controls-tab", function () { S.testArena.controlsVisible = true; });
   bindTestButton("test-enemy-prev", function () { Game.selectTestEnemy(-1); });
@@ -104,11 +143,12 @@
     }
     if (S.screen === "zombieCodex" || S.screen === "skillCodex") { handleCodexPointer(point, S.screen); return; }
     if (S.screen === "levelSelect") {
+      var geo = C.levelSelect;
       for (var li = 0; li < C.levels.length; li++) {
-        var cardY = 180 + li * 100;
-        if (point.y >= cardY && point.y <= cardY + 82) { Game.start(C.levels[li].id); return; }
+        var cardY = geo.cardTop + li * geo.cardGap;
+        if (point.x >= geo.cardX && point.x <= geo.cardX + geo.cardWidth && point.y >= cardY && point.y <= cardY + geo.cardHeight) { Game.start(C.levels[li].id); return; }
       }
-      if (point.y >= 510 && point.y <= 570) Game.backToMenu();
+      if (point.y >= geo.backY - 8 && point.y <= geo.backY + geo.backHeight + 8) Game.backToMenu();
       return;
     }
     if (S.screen === "upgrade") {
@@ -134,16 +174,23 @@
     if (S.screen === "testArena") {
       if (point.x >= 14 && point.x <= 42 && point.y >= 15 && point.y <= 43) { Game.exitTestArena(); return; }
       if (point.x >= 286 && point.x <= 354 && point.y >= 10 && point.y <= 32) { Game.toggleRifle(); return; }
+      if (isInSkillSlotColumn(point)) { holdSkillSlot(point); return; }
       Game.setManualAim(point.x, point.y);
       return;
     }
     if (S.screen === "playing") {
       if (point.x >= 14 && point.x <= 42 && point.y >= 15 && point.y <= 43) { Game.pause(); return; }
       if (point.x >= 286 && point.x <= 354 && point.y >= 10 && point.y <= 32) { Game.toggleRifle(); return; }
-      if (point.x >= 204 && point.x <= 354 && point.y >= 45 && point.y <= 64) return;
+      if (isInSkillSlotColumn(point)) { holdSkillSlot(point); return; }
       Game.setManualAim(point.x, point.y);
     }
   });
+  canvas.addEventListener("pointerup", releaseSkillSlot);
+  canvas.addEventListener("pointercancel", releaseSkillSlot);
+  canvas.addEventListener("pointerleave", releaseSkillSlot);
+  window.addEventListener("pointerup", releaseSkillSlot);
+  window.addEventListener("pointercancel", releaseSkillSlot);
+  window.addEventListener("blur", releaseSkillSlot);
   window.addEventListener("keydown", function (event) {
     if (S.screen !== "testArena") return;
     var key = event.key.toLowerCase();

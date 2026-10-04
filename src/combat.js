@@ -2,12 +2,18 @@
 (function (Game) {
   "use strict";
   var C = Game.config, S = Game.state, U = Game.utils;
+  Game.getWaveHpScale = function () {
+    var session = S.session;
+    if (!session || session.testArena || !session.waves) return 1;
+    var plan = session.waves[session.wave - 1];
+    return (plan && plan.hpScale) || 1;
+  };
   Game.spawnEnemy = function (type, options) {
     var info = C.enemies[type], opts = options || {}, radius = info.radius;
     var edge = Math.max(22, radius + 4);
     var x = opts.x === undefined ? U.rand(edge, C.width - edge) : U.clamp(opts.x, radius, C.width - radius);
     var y = opts.y === undefined ? -radius - 8 : U.clamp(opts.y, -radius, S.wall ? S.wall.y - S.wall.height / 2 - radius - 3 : C.height);
-    var maxHp = Math.round(info.hp * ((S.session && S.session.hpScale) || 1));
+    var maxHp = Math.round(info.hp * ((S.session && S.session.hpScale) || 1) * Game.getWaveHpScale());
     var enemy = { type: type, x: x, y: y, hp: maxHp, maxHp: maxHp, slow: 0, slowFactor: .58, damageTakenTimer: 0, damageTakenMultiplier: 1, burn: 0, burnDps: 0, hitFlash: 0, attackTimer: 0, regenPerSecond: info.regenPerSecond || 0 };
     if (type === "boss") enemy.x = C.width / 2;
     S.enemies.push(enemy);
@@ -34,9 +40,7 @@
     skill = S.player.skills[definition.id];
     if (skill.unlocked) { S.session.message = definition.name + " 已解锁"; }
     else {
-      skill.unlocked = true;
-      skill.level = 1;
-      skill.fireTimer = 0;
+      Game.unlockSkill(definition.id, true);
       unlockTrait = (C.skillTraits || []).filter(function (trait) { return trait.skillId === definition.id && trait.unlocksSkill; })[0];
       if (unlockTrait) S.player.traits[unlockTrait.id] = 1;
       S.session.message = "已解锁：" + definition.name;
@@ -70,9 +74,9 @@
       skills[id].burstTimer = 0;
       skills[id].burstAngle = -Math.PI / 2;
     });
-    p.damage = 28; p.fireInterval = .52; p.burst = 0; p.spread = 0; p.pierce = 0; p.bulletRadius = 4; p.crit = .08; p.critDamage = 1.5; p.burn = 0; p.freeze = 0; p.bulletType = "normal"; p.skills = skills; p.traits = {};
+    p.damage = 28; p.fireInterval = .52; p.burst = 0; p.spread = 0; p.pierce = 0; p.bulletRadius = 4; p.crit = .08; p.critDamage = 1.5; p.burn = 0; p.freeze = 0; p.bulletType = "normal"; p.skills = skills; p.traits = {}; p.skillOrder = [];
     p.ammo = p.magazineSize; p.reloadTimer = 0; p.rifleEnabled = true; p.fireTimer = 0; p.burstShotsRemaining = 0; p.burstTimer = 0;
-    S.bullets = []; S.skillProjectiles = []; S.armoredCars = []; S.bombDrops = []; S.bombZones = []; S.electromagneticZones = []; S.explosions = [];
+    S.bullets = []; S.skillProjectiles = []; S.armoredCars = []; S.bombDrops = []; S.bombZones = []; S.electromagneticZones = []; S.tornadoes = []; S.explosions = [];
     S.session.message = "技能和词条已清空";
     S.session.messageTimer = 1.5;
   };
@@ -86,6 +90,7 @@
     S.bombDrops = [];
     S.bombZones = [];
     S.electromagneticZones = [];
+    S.tornadoes = [];
     S.explosions = [];
     S.session.message = "测试场已清空";
     S.session.messageTimer = 1.2;
@@ -101,6 +106,8 @@
       S.player.skills[type].fireTimer = 0;
       S.player.skills[type].burstShotsRemaining = 0;
       S.player.skills[type].burstTimer = 0;
+      S.player.skills[type].active = false;
+      S.player.skills[type].activeElapsed = 0;
     });
     S.session.message = "状态已恢复";
     S.session.messageTimer = 1.2;
@@ -118,6 +125,23 @@
     var queue = S.pendingSpawns;
     S.pendingSpawns = [];
     queue.forEach(function (item) { Game.spawnEnemy(item.type, { x: item.x, y: item.y, silent: true }); });
+  };
+  Game.getRangeLine = function (rangeName) {
+    var wallTop = S.wall ? S.wall.y - S.wall.height / 2 : C.height;
+    var ranges = C.ranges || {};
+    return wallTop - (ranges[rangeName] || 0);
+  };
+  Game.getSkillRangeName = function (id) {
+    var list = C.coreSkills || [];
+    if (id === "rifle") return C.rifleRange || "far";
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i].range || "far";
+    return "far";
+  };
+  Game.getSkillRangeLine = function (id) { return Game.getRangeLine(Game.getSkillRangeName(id)); };
+  Game.isSkillRangeEngaged = function (id) {
+    var line = Game.getSkillRangeLine(id);
+    for (var i = 0; i < S.enemies.length; i++) if (S.enemies[i].y >= line) return true;
+    return false;
   };
   Game.getWeaponMount = function (p) {
     var rifle = C.sprites && C.sprites.playerRifle;
@@ -139,7 +163,9 @@
     }
 
     var mount = Game.getWeaponMount(p), target = null, targetX = 0, targetY = 0, bestTime = Infinity;
+    var rifleLine = Game.getSkillRangeLine("rifle");
     S.enemies.forEach(function (enemy) {
+      if (enemy.y < rifleLine) return;
       var info = C.enemies[enemy.type];
       var speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
       if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
@@ -206,6 +232,7 @@
   Game.fire = function () {
     var p = S.player;
     if (p.reloadTimer > 0) return;
+    if (!Game.isSkillRangeEngaged("rifle")) return;
     if (p.ammo <= 0) { Game.startReload(p); return; }
     p.burstAngle = p.aimAngle;
     p.ammo--;
@@ -225,11 +252,13 @@
   };
   Game.getSkillMuzzle = function () {
     var ring = C.skillRing || {};
-    return { x: C.width / 2 + (ring.offsetX || 86), y: C.height + (ring.offsetY || -102) };
+    return { x: C.width / 2 + (ring.offsetX || 64), y: C.height + (ring.offsetY || -100) };
   };
   Game.getSkillTargetAngle = function (type, origin, preferredAwayFrom) {
     var skill = S.player.skills[type], targetAngle = null, bestTime = Infinity, bestDiversity = -1;
+    var rangeLine = Game.getSkillRangeLine(type);
     S.enemies.forEach(function (enemy) {
+      if (enemy.y < rangeLine) return;
       var info = C.enemies[enemy.type], speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
       if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
       var attackY = S.wall ? S.wall.y - S.wall.height / 2 - info.radius - 3 : C.height;
@@ -262,7 +291,8 @@
     return targetAngle;
   };
   Game.getElectromagneticTargets = function (skill) {
-    return S.enemies.slice().sort(function (a, b) {
+    var rangeLine = Game.getSkillRangeLine("electromagnetic");
+    return S.enemies.filter(function (enemy) { return enemy.y >= rangeLine; }).sort(function (a, b) {
       var aInfo = C.enemies[a.type], bInfo = C.enemies[b.type];
       var aScore = a.y + aInfo.radius * .35, bScore = b.y + bInfo.radius * .35;
       if (a.type === "boss") aScore += 10;
@@ -292,8 +322,9 @@
     return { x: origin.x + dx * length, y: origin.y + dy * length };
   };
   Game.getHighEnergyBeamAngle = function (origin, skill) {
-    var bestAngle = null, bestScore = -1;
+    var bestAngle = null, bestScore = -1, rangeLine = Game.getSkillRangeLine("highEnergyBeam");
     S.enemies.forEach(function (candidate) {
+      if (candidate.y < rangeLine) return;
       var angle = Math.atan2(candidate.y - origin.y, candidate.x - origin.x);
       if (Math.sin(angle) >= 0) return;
       var end = Game.getHighEnergyBeamEnd(origin, angle), dx = end.x - origin.x, dy = end.y - origin.y, length = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / length, uy = dy / length, score = 0;
@@ -351,17 +382,17 @@
       if (!skill.unlocked) return;
       if (type === "armoredCar") {
         skill.fireTimer = Math.max(0, skill.fireTimer - dt);
-        if (skill.fireTimer <= 0) { Game.launchArmoredCars(skill); skill.fireTimer = skill.fireInterval; }
+        if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) { Game.launchArmoredCars(skill); skill.fireTimer = skill.fireInterval; }
         return;
       }
       if (type === "bombardment") {
         skill.fireTimer = Math.max(0, skill.fireTimer - dt);
-        if (skill.fireTimer <= 0 && S.enemies.length) Game.launchBombardment();
+        if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) Game.launchBombardment();
         return;
       }
       if (type === "electromagnetic") {
         skill.fireTimer = Math.max(0, skill.fireTimer - dt);
-        if (skill.fireTimer <= 0 && S.enemies.length) Game.launchElectromagnetic();
+        if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) Game.launchElectromagnetic();
         return;
       }
       if (type === "highEnergyBeam") {
@@ -374,8 +405,18 @@
           if (skill.activeElapsed >= skill.duration) { skill.active = false; skill.fireTimer = skill.fireInterval; }
         } else {
           skill.fireTimer = Math.max(0, skill.fireTimer - dt);
-          if (skill.fireTimer <= 0 && S.enemies.length) Game.launchHighEnergyBeam(skill);
+          if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) Game.launchHighEnergyBeam(skill);
         }
+        return;
+      }
+      if (type === "whirlwindCannon") {
+        if (skill.active) {
+          skill.activeElapsed = Math.min(skill.duration, skill.activeElapsed + dt);
+          if (skill.activeElapsed >= skill.duration) { skill.active = false; skill.fireTimer = skill.fireInterval; }
+          return;
+        }
+        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) Game.launchWhirlwindCannon();
         return;
       }
       if (skill.burstShotsRemaining > 0) {
@@ -393,7 +434,7 @@
         return;
       }
       skill.fireTimer = Math.max(0, skill.fireTimer - dt);
-      if (skill.fireTimer > 0 || !S.enemies.length) return;
+      if (skill.fireTimer > 0 || !Game.isSkillRangeEngaged(type)) return;
       var origin = Game.getSkillMuzzle(), angle = Game.getSkillTargetAngle(type, origin);
       if (angle === null) return;
       Game.launchSkillVolley(type, angle);
@@ -509,10 +550,54 @@
       }
     }
   };
-  Game.getBombardmentTarget = function (skill) {
+  function bombardmentImpact(skill, point, wait) { return (wait || 0) + (point.y + 24) / skill.bombSpeed; }
+  function bombardmentCoverage(skill, point, impactTime) {
+    var score = 0;
+    S.enemies.forEach(function (enemy) {
+      var info = C.enemies[enemy.type], speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
+      if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
+      var attackY = S.wall.y - S.wall.height / 2 - info.radius - 3, predictedY = Math.min(attackY, enemy.y + speed * impactTime);
+      var dx = enemy.x - point.x, dy = predictedY - point.y, distance = Math.sqrt(dx * dx + dy * dy), reach = skill.blastRadius + info.radius;
+      if (distance > reach) return;
+      var weight = enemy.type === "boss" ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
+      score += weight * (1.1 - distance / reach);
+    });
+    return score;
+  }
+  function pushBombTargetAway(point, taken, offset, minY, maxY) {
+    var result = { x: point.x, y: point.y }, margin = C.enemies.boss.radius;
+    var angles = [0, Math.PI / 3, -Math.PI / 3, Math.PI * 2 / 3, -Math.PI * 2 / 3, Math.PI];
+    taken.forEach(function (other) {
+      var dx = result.x - other.x, dy = result.y - other.y, gap = Math.sqrt(dx * dx + dy * dy), base = Math.atan2(dy, dx);
+      if (gap >= offset) return;
+      if (gap < .001) base = 0;
+      for (var i = 0; i < angles.length; i++) {
+        var angle = base + angles[i];
+        var nx = U.clamp(other.x + Math.cos(angle) * offset, margin, C.width - margin);
+        var ny = U.clamp(other.y + Math.sin(angle) * offset, minY, maxY);
+        var ndx = nx - other.x, ndy = ny - other.y;
+        if (Math.sqrt(ndx * ndx + ndy * ndy) >= offset - .5) { result.x = nx; result.y = ny; return; }
+      }
+      result.x = U.clamp(other.x + Math.cos(base) * offset, margin, C.width - margin);
+      result.y = U.clamp(other.y + Math.sin(base) * offset, minY, maxY);
+    });
+    return result;
+  }
+  Game.isBombTargetTooClose = function (point, taken, separation) {
+    for (var i = 0; i < taken.length; i++) {
+      var dx = point.x - taken[i].x, dy = point.y - taken[i].y;
+      if (Math.sqrt(dx * dx + dy * dy) < separation) return true;
+    }
+    return false;
+  };
+  Game.getBombardmentTarget = function (skill, delay, avoid) {
     if (!S.enemies.length) return null;
-    var minY = 82, maxY = S.wall.y - S.wall.height / 2 - C.enemies.boss.radius, best = null, bestScore = -1;
+    var wait = delay || 0, taken = avoid || [], candidates = [];
+    var separation = Math.max(56, skill.blastRadius * (skill.bombMinSeparationRatio || .9));
+    var minY = 82, maxY = S.wall.y - S.wall.height / 2 - C.enemies.boss.radius;
+    var rangeLine = Game.getSkillRangeLine("bombardment");
     S.enemies.forEach(function (candidate) {
+      if (candidate.y < rangeLine) return;
       var candidateInfo = C.enemies[candidate.type], candidateSpeed = candidate.stun > 0 ? 0 : candidateInfo.speed * (candidate.slow > 0 ? candidate.slowFactor || .58 : 1);
       if (candidate.type === "boss" && candidate.hp < candidate.maxHp * .5) candidateSpeed *= 1.5;
       var candidateAttackY = S.wall.y - S.wall.height / 2 - candidateInfo.radius - 3, targetY = candidate.y;
@@ -520,31 +605,44 @@
         var estimateY = U.clamp(targetY, minY, maxY), dropTime = (estimateY + 24) / skill.bombSpeed;
         targetY = Math.min(candidateAttackY, candidate.y + candidateSpeed * dropTime);
       }
-      var targetX = U.clamp(candidate.x, C.enemies.boss.radius, C.width - C.enemies.boss.radius);
-      targetY = U.clamp(targetY, minY, maxY);
-      var impactTime = (targetY + 24) / skill.bombSpeed, score = 0;
-      S.enemies.forEach(function (enemy) {
-        var info = C.enemies[enemy.type], speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
-        if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
-        var attackY = S.wall.y - S.wall.height / 2 - info.radius - 3, predictedY = Math.min(attackY, enemy.y + speed * impactTime);
-        var dx = enemy.x - targetX, dy = predictedY - targetY, distance = Math.sqrt(dx * dx + dy * dy), reach = skill.blastRadius + info.radius;
-        if (distance > reach) return;
-        var weight = enemy.type === "boss" ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
-        score += weight * (1.1 - distance / reach);
-      });
-      if (score > bestScore) { bestScore = score; best = { x: targetX, y: targetY }; }
+      var point = { x: U.clamp(candidate.x, C.enemies.boss.radius, C.width - C.enemies.boss.radius), y: U.clamp(targetY, minY, maxY) };
+      point.score = bombardmentCoverage(skill, point, bombardmentImpact(skill, point, wait));
+      candidates.push(point);
     });
-    return best;
+    if (!candidates.length) return null;
+    var main = candidates[0], alternative = null, index;
+    for (index = 1; index < candidates.length; index++) if (candidates[index].score > main.score) main = candidates[index];
+    if (!taken.length) return { x: main.x, y: main.y };
+    for (index = 0; index < candidates.length; index++) {
+      if (Game.isBombTargetTooClose(candidates[index], taken, separation)) continue;
+      if (!alternative || candidates[index].score > alternative.score) alternative = candidates[index];
+    }
+    if (alternative && alternative.score >= main.score * (skill.bombAltScoreRatio || .45)) return { x: alternative.x, y: alternative.y };
+    return Game.spreadBombTarget(skill, main, taken, separation, minY, maxY, wait);
+  };
+  Game.spreadBombTarget = function (skill, point, taken, separation, minY, maxY, wait) {
+    var offset = separation, fallback = null;
+    for (var attempt = 0; attempt < 4; attempt++) {
+      var result = pushBombTargetAway(point, taken, offset, minY, maxY);
+      if (bombardmentCoverage(skill, result, bombardmentImpact(skill, result, wait)) > 0) return result;
+      if (!fallback) fallback = result;
+      offset *= .5;
+    }
+    return fallback;
   };
   Game.launchBombardment = function () {
     var skill = S.player.skills.bombardment;
     if (!skill.unlocked || skill.fireTimer > 0) return false;
-    var target = Game.getBombardmentTarget(skill);
-    if (!target) return false;
-    var x = target.x, y = target.y;
-    for (var i = 0; i <= skill.extraBombs; i++) {
-      S.bombDrops.push({ x: x, y: -24, targetX: x, targetY: y, delay: i * .42, speed: skill.bombSpeed, damage: skill.damage, radius: skill.blastRadius, centerRadius: skill.centerRadius, knockback: skill.knockback, centerDamageMultiplier: skill.centerDamageMultiplier, stunDuration: skill.stunDuration, thermonuclear: skill.thermonuclear, heatDuration: skill.heatDuration, heatDps: skill.heatDps, heatSlowFactor: skill.heatSlowFactor });
+    var dropDelay = skill.bombDropDelay || .42, targets = [], index, target;
+    for (index = 0; index <= skill.extraBombs; index++) {
+      target = Game.getBombardmentTarget(skill, index * dropDelay, targets);
+      if (!target) break;
+      targets.push(target);
     }
+    if (!targets.length) return false;
+    targets.forEach(function (point, order) {
+      S.bombDrops.push({ x: point.x, y: -24, targetX: point.x, targetY: point.y, delay: order * dropDelay, speed: skill.bombSpeed, damage: skill.damage, radius: skill.blastRadius, centerRadius: skill.centerRadius, knockback: skill.knockback, centerDamageMultiplier: skill.centerDamageMultiplier, stunDuration: skill.stunDuration, thermonuclear: skill.thermonuclear, heatDuration: skill.heatDuration, heatDps: skill.heatDps, heatSlowFactor: skill.heatSlowFactor });
+    });
     skill.fireTimer = skill.fireInterval;
     return true;
   };
@@ -584,6 +682,118 @@
       }
     }
   };
+  Game.getWhirlwindField = function (radius) {
+    var wallTop = S.wall ? S.wall.y - S.wall.height / 2 : C.height, minY = 96 + radius;
+    return { minX: radius + 4, maxX: Math.max(radius + 4, C.width - radius - 4), minY: minY, maxY: Math.max(minY, wallTop - radius - 6) };
+  };
+  Game.getWhirlwindEnemyWeight = function (enemy) {
+    var info = C.enemies[enemy.type];
+    return enemy.type === "boss" ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
+  };
+  Game.getWhirlwindChaseTarget = function (tornado, field) {
+    var skill = S.player.skills.whirlwindCannon, clusterRadius = skill.clusterRadius, threatRange = Math.max(1, field.maxY - field.minY);
+    var best = null, bestScore = -Infinity;
+    S.enemies.forEach(function (enemy) {
+      var info = C.enemies[enemy.type];
+      if (enemy.y < field.minY - tornado.radius || enemy.y > field.maxY + info.radius + tornado.radius) return;
+      var dx = enemy.x - tornado.x, dy = enemy.y - tornado.y, distance = Math.sqrt(dx * dx + dy * dy), cluster = 0;
+      S.enemies.forEach(function (other) {
+        var ox = other.x - enemy.x, oy = other.y - enemy.y;
+        if (ox * ox + oy * oy > clusterRadius * clusterRadius) return;
+        cluster += Game.getWhirlwindEnemyWeight(other);
+      });
+      var score = cluster * skill.clusterWeight - distance * .35 + ((enemy.y - field.minY) / threatRange) * skill.threatWeight;
+      S.tornadoes.forEach(function (other) {
+        if (other === tornado) return;
+        var ox = enemy.x - other.x, oy = enemy.y - other.y, reach = tornado.radius + other.radius + 24;
+        if (ox * ox + oy * oy <= reach * reach) score -= skill.clusterWeight;
+      });
+      if (score > bestScore) { bestScore = score; best = enemy; }
+    });
+    if (!best) return null;
+    return { x: U.clamp(best.x + U.rand(-1, 1) * skill.clusterJitter * tornado.radius, field.minX, field.maxX), y: U.clamp(best.y + U.rand(-1, 1) * skill.clusterJitter * tornado.radius, field.minY, field.maxY) };
+  };
+  Game.pickWhirlwindTarget = function (tornado, field) {
+    var skill = S.player.skills.whirlwindCannon, target = Game.getWhirlwindChaseTarget(tornado, field);
+    if (target) {
+      tornado.targetX = target.x;
+      tornado.targetY = target.y;
+      tornado.retargetTimer = U.rand(.5, 1.2);
+    } else {
+      tornado.targetX = U.rand(field.minX, field.maxX);
+      tornado.targetY = U.rand(field.minY, field.maxY);
+      tornado.retargetTimer = U.rand(1.1, 2.1);
+    }
+  };
+  Game.spawnWhirlwind = function (skill, options) {
+    var opts = options || {}, count = opts.count || 1, field = Game.getWhirlwindField(skill.radius);
+    var band = (field.maxX - field.minX) / count, bandX = field.minX + band * (opts.index || 0);
+    var tornado = {
+      x: U.rand(bandX, bandX + band), y: U.rand(field.minY, field.minY + (field.maxY - field.minY) * .5),
+      radius: skill.radius, life: skill.duration, duration: skill.duration, speed: skill.speed, stationary: false,
+      damage: skill.damage, hitInterval: skill.hitInterval, pullSpeed: skill.pullSpeed, contacts: [], targetX: 0, targetY: 0, retargetTimer: 0
+    };
+    tornado.targetX = tornado.x;
+    tornado.targetY = tornado.y;
+    S.tornadoes.push(tornado);
+  };
+  Game.launchWhirlwindCannon = function () {
+    var skill = S.player.skills.whirlwindCannon, count = 1 + skill.extraTornadoes;
+    if (!skill.unlocked || skill.active || skill.fireTimer > 0) return false;
+    for (var i = 0; i < count; i++) Game.spawnWhirlwind(skill, { index: i, count: count });
+    skill.active = true;
+    skill.activeElapsed = 0;
+    return true;
+  };
+  Game.spawnStormWhirlwind = function (skill, tornado) {
+    S.tornadoes.push({ x: tornado.x, y: tornado.y, radius: tornado.radius * skill.stormRadiusScale, life: skill.stormDuration, duration: skill.stormDuration, speed: 0, stationary: true, damage: tornado.damage * skill.stormDamageScale, hitInterval: tornado.hitInterval, pullSpeed: tornado.pullSpeed * skill.stormPullScale, contacts: [], targetX: tornado.x, targetY: tornado.y, retargetTimer: 0 });
+    Game.burst(tornado.x, tornado.y, 18, C.colors.cyan);
+  };
+  Game.moveWhirlwind = function (tornado, dt) {
+    var field = Game.getWhirlwindField(tornado.radius);
+    tornado.retargetTimer -= dt;
+    if (tornado.retargetTimer <= 0) Game.pickWhirlwindTarget(tornado, field);
+    var dx = tornado.targetX - tornado.x, dy = tornado.targetY - tornado.y, distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < 10) return;
+    var step = Math.min(tornado.speed * dt, distance);
+    tornado.x = U.clamp(tornado.x + dx / distance * step, field.minX, field.maxX);
+    tornado.y = U.clamp(tornado.y + dy / distance * step, field.minY, field.maxY);
+  };
+  Game.updateWhirlwinds = function (dt) {
+    if (!S.tornadoes || !S.tornadoes.length) return;
+    var skill = S.player.skills.whirlwindCannon;
+    for (var i = S.tornadoes.length - 1; i >= 0; i--) {
+      var tornado = S.tornadoes[i];
+      tornado.life -= dt;
+      if (tornado.life <= 0) {
+        if (!tornado.stationary && skill.stormGather) Game.spawnStormWhirlwind(skill, tornado);
+        S.tornadoes.splice(i, 1);
+        continue;
+      }
+      if (!tornado.stationary) Game.moveWhirlwind(tornado, dt);
+      tornado.contacts.forEach(function (contact) { contact.hitTimer = Math.max(0, contact.hitTimer - dt); });
+      for (var j = S.enemies.length - 1; j >= 0; j--) {
+        var enemy = S.enemies[j], info = C.enemies[enemy.type];
+        var dx = enemy.x - tornado.x, dy = enemy.y - tornado.y, reach = tornado.radius + info.radius;
+        if (dx * dx + dy * dy > reach * reach) continue;
+        var distance = Math.sqrt(dx * dx + dy * dy) || 1;
+        var pull = tornado.pullSpeed * dt * (.35 + .65 * (1 - distance / reach));
+        enemy.x = U.clamp(enemy.x - dx / distance * pull, info.radius, C.width - info.radius);
+        enemy.y = Math.max(-info.radius, enemy.y - dy / distance * pull);
+        var contactIndex = -1;
+        for (var k = 0; k < tornado.contacts.length; k++) if (tornado.contacts[k].enemy === enemy) { contactIndex = k; break; }
+        if (contactIndex < 0) { tornado.contacts.push({ enemy: enemy, hitTimer: 0 }); contactIndex = tornado.contacts.length - 1; }
+        if (tornado.contacts[contactIndex].hitTimer > 0) continue;
+        tornado.contacts[contactIndex].hitTimer = tornado.hitInterval;
+        Game.damageEnemy(enemy, tornado.damage, { critical: false, noWeaponEffects: true, silentText: true });
+        Game.burst(enemy.x, enemy.y, 1, C.colors.cyan);
+        if (enemy.hp <= 0) { Game.killEnemy(j); tornado.contacts.splice(contactIndex, 1); }
+      }
+    }
+  };
+  Game.nextXpAfter = function (current) {
+    return Math.floor(current * C.xpMultiplier + C.xpBonus);
+  };
   Game.gainXp = function (amount) {
     var p = S.player;
     if (S.session && S.session.testArena) return;
@@ -592,15 +802,17 @@
     while (p.xp >= p.nextXp && p.level < C.maxLevel) {
       p.xp -= p.nextXp;
       p.level++;
-      p.nextXp = Math.floor(p.nextXp * 1.22 + 10);
+      p.nextXp = Game.nextXpAfter(p.nextXp);
       if (p.level >= C.maxLevel) {
         p.xp = p.nextXp;
         S.session.message = "LV.MAX · 清空剩余尸潮";
         S.session.messageTimer = 2.6;
         break;
       }
+      var cards = Game.rollTraits();
+      if (!cards.length) continue;
       S.screen = "upgrade";
-      S.upgradeCards = Game.rollTraits();
+      S.upgradeCards = cards;
       break;
     }
   };
@@ -609,15 +821,28 @@
     while (p.level < C.maxLevel) {
       p.xp -= p.nextXp;
       p.level++;
-      p.nextXp = Math.floor(p.nextXp * 1.22 + 10);
+      p.nextXp = Game.nextXpAfter(p.nextXp);
     }
     p.xp = p.nextXp;
   };
+  Game.unlockSkill = function (id, force) {
+    var skill = S.player.skills[id], order = S.player.skillOrder;
+    if (!skill || skill.unlocked) return false;
+    if (!order) order = S.player.skillOrder = [];
+    if (!force && order.length >= C.maxSkillSlots) return false;
+    skill.unlocked = true;
+    skill.level = 1;
+    skill.fireTimer = 0;
+    if (order.indexOf(id) < 0) order.push(id);
+    return true;
+  };
+  Game.getSkillSlotCount = function () { return (S.player.skillOrder || []).length; };
+  Game.canUnlockSkill = function () { return Game.getSkillSlotCount() < C.maxSkillSlots; };
   Game.rollTraits = function () {
-    var p = S.player, allTraits = C.traits.concat(C.skillTraits || []);
+    var p = S.player, allTraits = C.traits.concat(C.skillTraits || []), slotsFull = !Game.canUnlockSkill();
     var pool = allTraits.filter(function (trait) {
       if ((p.traits[trait.id] || 0) >= trait.max) return false;
-      if (trait.unlocksSkill) return !p.skills[trait.skillId].unlocked;
+      if (trait.unlocksSkill) return !slotsFull && !p.skills[trait.skillId].unlocked;
       if (trait.skillId) return p.skills[trait.skillId].unlocked;
       return true;
     }).slice(), cards = [];
@@ -629,12 +854,15 @@
     var trait = S.upgradeCards[index], p = S.player;
     p.traits[trait.id] = (p.traits[trait.id] || 0) + 1;
     if (trait.skillId) {
-      var skill = p.skills[trait.skillId];
-      if (trait.unlocksSkill) { skill.unlocked = true; skill.level = 1; skill.fireTimer = 0; }
-      else skill.level++;
+      if (trait.unlocksSkill) Game.unlockSkill(trait.skillId);
+      else p.skills[trait.skillId].level++;
     }
     trait.apply(p);
     Game.addText(p.x, p.y - 38, trait.name + (trait.skillId ? " Lv." + p.skills[trait.skillId].level : " Lv." + p.traits[trait.id]), C.colors.green);
+    if (trait.unlocksSkill && !Game.canUnlockSkill()) {
+      S.session.message = "技能槽已满 · " + C.maxSkillSlots + " / " + C.maxSkillSlots;
+      S.session.messageTimer = 2.4;
+    }
     S.screen = "playing";
   };
   Game.getCodexEnemyIds = function (category) {
