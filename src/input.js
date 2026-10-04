@@ -113,8 +113,40 @@
 
   bindTestButton("test-controls-hide", function () { S.testArena.controlsVisible = false; });
   bindTestButton("test-controls-tab", function () { S.testArena.controlsVisible = true; });
-  bindTestButton("test-enemy-prev", function () { Game.selectTestEnemy(-1); });
-  bindTestButton("test-enemy-next", function () { Game.selectTestEnemy(1); });
+  var testEnemyRows = document.getElementById("test-enemy-rows");
+  if (testEnemyRows && testEnemyRows.addEventListener) {
+    var dragList = null, dragStartX = 0, dragStartLeft = 0, dragMoved = false;
+    function endEnemyDrag() {
+      if (!dragList) return;
+      dragList.classList.remove("dragging");
+      dragList = null;
+    }
+    testEnemyRows.addEventListener("pointerdown", function (event) {
+      var list = event.target && event.target.closest ? event.target.closest(".test-enemy-list") : null;
+      if (!list || (event.pointerType && event.pointerType !== "mouse")) return;
+      dragList = list;
+      dragStartX = event.clientX;
+      dragStartLeft = list.scrollLeft;
+      dragMoved = false;
+      list.classList.add("dragging");
+    });
+    testEnemyRows.addEventListener("pointermove", function (event) {
+      if (!dragList) return;
+      var offset = event.clientX - dragStartX;
+      if (!dragMoved && Math.abs(offset) <= 3) return;
+      dragMoved = true;
+      dragList.scrollLeft = dragStartLeft - offset;
+      event.preventDefault();
+    });
+    testEnemyRows.addEventListener("pointerup", endEnemyDrag);
+    testEnemyRows.addEventListener("pointercancel", endEnemyDrag);
+    testEnemyRows.addEventListener("pointerleave", endEnemyDrag);
+    testEnemyRows.addEventListener("click", function (event) {
+      var chip = event.target, id = chip && chip.getAttribute ? chip.getAttribute("data-enemy-id") : null;
+      if (dragMoved) { dragMoved = false; event.preventDefault(); event.stopPropagation(); return; }
+      if (id) Game.setTestEnemy(id);
+    });
+  }
   bindTestButton("test-spawn-one", function () { Game.testSpawnEnemy(1); });
   bindTestButton("test-spawn-wave", function () { Game.testSpawnEnemy(C.waves[0].total); });
   bindTestButton("test-clear-enemies", Game.testClearEnemies);
@@ -134,7 +166,7 @@
     var point = Game.pointerPosition(event), center = C.width / 2;
 
     if (S.screen === "menu") {
-      if (point.x > center - 100 && point.x < center + 100 && point.y >= 245 && point.y <= 300) Game.start(Game.getLatestUnlockedLevel());
+      if (point.x > center - 100 && point.x < center + 100 && point.y >= 245 && point.y <= 300) Game.start(Game.getContinueLevel());
       else if (point.x > center - 100 && point.x < center + 100 && point.y >= 306 && point.y <= 356) Game.openLevelSelect();
       else if (point.x >= 22 && point.x <= 172 && point.y >= 365 && point.y <= 409) Game.openZombieCodex();
       else if (point.x >= 188 && point.x <= 338 && point.y >= 365 && point.y <= 409) Game.openSkillCodex();
@@ -145,8 +177,8 @@
     if (S.screen === "levelSelect") {
       var geo = C.levelSelect;
       for (var li = 0; li < C.levels.length; li++) {
-        var cardY = geo.cardTop + li * geo.cardGap;
-        if (point.x >= geo.cardX && point.x <= geo.cardX + geo.cardWidth && point.y >= cardY && point.y <= cardY + geo.cardHeight) { Game.start(C.levels[li].id); return; }
+        var row = Game.getLevelRowRect(li);
+        if (point.x >= row.x && point.x <= row.x + row.w && point.y >= row.y && point.y <= row.y + row.h) { Game.start(C.levels[li].id); return; }
       }
       if (point.y >= geo.backY - 8 && point.y <= geo.backY + geo.backHeight + 8) Game.backToMenu();
       return;

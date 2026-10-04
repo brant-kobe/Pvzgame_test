@@ -2,7 +2,7 @@
 (function (Game) {
   "use strict";
   var C = Game.config;
-  Game.state = { screen: "menu", selectedLevel: 1, player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null };
+  Game.state = { screen: "menu", selectedLevel: 1, player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null };
   Game.reset = function () {
     var s = Game.state;
     var level = C.levels.find(function (item) { return item.id === s.selectedLevel; });
@@ -17,7 +17,7 @@
       skills[id].burstAngle = -Math.PI / 2;
     });
     s.player = { x: C.width / 2, y: C.height - 58, aimAngle: -Math.PI / 2, manualAimTimer: 0, maxHp: 100, hp: 100, damage: 28, fireInterval: .52, fireTimer: .05, magazineSize: C.magazineCapacity, ammo: C.magazineCapacity, reloadDuration: C.reloadDuration, reloadTimer: 0, rifleEnabled: true, burst: 0, burstShotsRemaining: 0, burstTimer: 0, burstAngle: -Math.PI / 2, spread: 0, pierce: 0, bulletRadius: 4, crit: .08, critDamage: 1.5, burn: 0, freeze: 0, bulletType: "normal", skills: skills, skillOrder: [], level: 1, xp: 0, nextXp: C.xpBase, traits: {} };
-    s.bullets = []; s.skillProjectiles = []; s.armoredCars = []; s.bombDrops = []; s.bombZones = []; s.electromagneticZones = []; s.tornadoes = []; s.explosions = []; s.enemies = []; s.pendingSpawns = []; s.particles = []; s.texts = []; s.upgradeCards = []; s.skillRangePreview = null;
+    s.bullets = []; s.skillProjectiles = []; s.armoredCars = []; s.bombDrops = []; s.bombZones = []; s.electromagneticZones = []; s.tornadoes = []; s.enemyShots = []; s.explosions = []; s.enemies = []; s.pendingSpawns = []; s.particles = []; s.texts = []; s.upgradeCards = []; s.skillRangePreview = null;
     s.wall = { x: C.width / 2, y: C.height - 125, width: C.width - 30, height: 30, maxHp: C.wallMaxHp, hp: C.wallMaxHp };
     s.session = { level: s.selectedLevel, waves: waves, xpScale: (level && level.xpScale) || 1, hpScale: (level && level.hpScale) || 1, elapsed: 0, wave: 1, spawnCount: 0, spawnTimer: .25, eliteSpawned: false, bossSpawned: false, kills: 0, message: "", messageTimer: 0 };
   };
@@ -49,6 +49,11 @@
     var arena = Game.state.testArena, ids = Game.getTestEnemyIds();
     if (!arena || !ids.length) return;
     arena.enemyIndex = (arena.enemyIndex + offset + ids.length) % ids.length;
+  };
+  Game.setTestEnemy = function (id) {
+    var arena = Game.state.testArena, ids = Game.getTestEnemyIds(), index = ids.indexOf(id);
+    if (!arena || index < 0) return;
+    arena.enemyIndex = index;
   };
   Game.selectTestSkill = function (offset) {
     var arena = Game.state.testArena, skills = C.coreSkills || [];
@@ -101,10 +106,16 @@
     if (level.unlocked) return true;
     return Game.isLevelCompleted(levelId - 1);
   };
-  Game.getLatestUnlockedLevel = function () {
-    var latest = C.levels[0] ? C.levels[0].id : 1;
-    C.levels.forEach(function (level) { if (Game.isLevelUnlocked(level.id)) latest = level.id; });
-    return latest;
+  Game.getLevelRowRect = function (index) {
+    var geo = C.levelSelect, count = Math.max(1, C.levels.length);
+    var height = Math.min(geo.rowHeight, (geo.backY - 12 - geo.listY) / count);
+    return { x: geo.listX, y: geo.listY + index * height, w: geo.listWidth, h: height };
+  };
+  Game.getContinueLevel = function () {
+    var pending = C.levels.filter(function (level) { return Game.isLevelUnlocked(level.id) && !Game.isLevelCompleted(level.id); });
+    if (pending.length) return pending[0].id;
+    var open = C.levels.filter(function (level) { return Game.isLevelUnlocked(level.id); });
+    return open.length ? open[open.length - 1].id : 1;
   };
   Game.getRemainingEnemyCount = function () {
     var s = Game.state, session = s.session;

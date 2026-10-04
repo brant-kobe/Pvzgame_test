@@ -75,6 +75,7 @@
     Game.drawBackground();
     Game.drawRangeLines();
     Game.drawEnemies();
+    Game.drawEnemyShots();
     Game.drawArmoredCars();
     Game.drawWhirlwinds();
     Game.drawWall();
@@ -283,8 +284,13 @@
       var isRunner = enemy.type === "runner" || enemy.type === "runnerElite", isElite = info.codexCategory === "elite";
       var isSplitter = enemy.type === "splitter" || enemy.type === "splitterElite" || enemy.type === "splitterChild" || enemy.type === "splitterEliteChild";
       var isTwoHead = enemy.type === "splitter" || enemy.type === "splitterElite";
-      var shirtColor = isSplitter ? (isElite ? "#584a84" : "#463c6b") : isElite ? (isRunner ? "#98633b" : "#617745") : isRunner ? "#705345" : enemy.type === "boss" ? "#4d2d3b" : "#3f6655";
-      var shirtShadow = isSplitter ? "#241f38" : isElite ? "#3b3026" : isRunner ? "#382b2d" : enemy.type === "boss" ? "#281c2a" : "#243c39";
+      var isArmored = enemy.type === "armored" || enemy.type === "armoredElite", isBasketball = enemy.type === "basketball" || enemy.type === "basketballElite";
+      var shirtColor = isSplitter ? (isElite ? "#584a84" : "#463c6b")
+        : isElite ? (isRunner ? "#98633b" : isArmored ? "#5b6b78" : isBasketball ? "#96591f" : "#617745")
+        : isRunner ? "#705345" : enemy.type === "boss" ? "#4d2d3b" : isArmored ? "#46545f" : isBasketball ? "#7a4a20" : "#3f6655";
+      var shirtShadow = isSplitter ? "#241f38"
+        : isElite ? (isArmored ? "#333f48" : isBasketball ? "#4f2d0f" : "#3b3026")
+        : isRunner ? "#382b2d" : enemy.type === "boss" ? "#281c2a" : isArmored ? "#28323a" : isBasketball ? "#4a2a12" : "#243c39";
       ctx.save();
       ctx.translate(enemy.x, enemy.y);
       ctx.scale(pulse, pulse);
@@ -322,6 +328,25 @@
       ctx.beginPath(); ctx.moveTo(-r * .65, r * .58); ctx.lineTo(-r * .2, r * .76); ctx.lineTo(-r * .33, r * 1.02); ctx.lineTo(-r * .64, r * .86); ctx.closePath(); ctx.fill();
       ctx.beginPath(); ctx.moveTo(r * .15, r * .66); ctx.lineTo(r * .62, r * .52); ctx.lineTo(r * .65, r * .9); ctx.lineTo(r * .34, r * 1.02); ctx.closePath(); ctx.fill();
 
+      if (isArmored) {
+        var broken = !enemy.armorCharges;
+        ctx.save();
+        ctx.globalAlpha = broken ? .34 : 1;
+        if (!broken && enemy.armorFlash > 0) { ctx.shadowColor = "rgba(150, 230, 255, .95)"; ctx.shadowBlur = 14; }
+        ctx.fillStyle = broken ? "#3f4a52" : "#6f7f8c";
+        ctx.beginPath(); ctx.arc(-r * .72, -r * .18, r * .3, 0, Math.PI * 2); ctx.arc(r * .72, -r * .18, r * .3, 0, Math.PI * 2); ctx.fill();
+        U.roundedRect(ctx, -r * .78, -r * .2, r * 1.56, r * .82, r * .22, "#5f6f7c", broken ? "#4b5860" : "#93a8b6");
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = broken ? "rgba(170, 190, 204, .16)" : "rgba(214, 236, 250, .24)";
+        ctx.beginPath(); ctx.moveTo(-r * .58, -r * .06); ctx.lineTo(r * .06, -r * .12); ctx.lineTo(r * .34, r * .26); ctx.lineTo(-r * .26, r * .36); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = broken ? "rgba(30, 38, 44, .5)" : "rgba(28, 38, 46, .62)";
+        ctx.fillRect(-r * .68, r * .38, r * 1.36, Math.max(1, r * .13));
+        for (var rivet = -1; rivet <= 1; rivet++) {
+          ctx.beginPath(); ctx.arc(rivet * r * .44, r * .6, Math.max(.8, r * .07), 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+      }
+
       // 腐烂的头部、头发、发光眼睛和张开的嘴；分裂僵尸共用身体但有两个头。
       if (isTwoHead) {
         drawZombieHead(r, info, -r * .4, -r * .74, .74);
@@ -338,9 +363,68 @@
         ctx.beginPath(); ctx.arc(0, 0, r * .82, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       }
+      if (isBasketball) {
+        var ballX = r * .95, ballY = -r * .92, ballR = r * .42;
+        ctx.strokeStyle = shirtShadow; ctx.lineWidth = Math.max(2, r * .2); ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(r * .5, -r * .05); ctx.lineTo(r * .74, -r * .5); ctx.lineTo(ballX, ballY + ballR * .55); ctx.stroke();
+        ctx.fillStyle = "#1d2328";
+        ctx.beginPath(); ctx.arc(ballX, ballY, ballR, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#e08a2c";
+        ctx.beginPath(); ctx.arc(ballX, ballY, ballR * .9, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#7d4413"; ctx.lineWidth = Math.max(1, r * .07);
+        ctx.beginPath(); ctx.arc(ballX, ballY, ballR * .9, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ballX - ballR * .9, ballY); ctx.lineTo(ballX + ballR * .9, ballY); ctx.moveTo(ballX, ballY - ballR * .9); ctx.lineTo(ballX, ballY + ballR * .9); ctx.stroke();
+        ctx.beginPath(); ctx.arc(ballX - ballR * 1.05, ballY, ballR * .72, -Math.PI * .42, Math.PI * .42); ctx.stroke();
+        ctx.beginPath(); ctx.arc(ballX + ballR * 1.05, ballY, ballR * .72, Math.PI * .58, Math.PI * 1.42); ctx.stroke();
+      }
       ctx.restore();
       if (enemy.stun > 0) text("晕", enemy.x, enemy.y - r - 17, "bold 10px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
-      if (enemy.type !== "boss" && !enemy.hideHealthBar) { ctx.fillStyle = "rgba(0, 0, 0, .5)"; ctx.fillRect(enemy.x - r, enemy.y - r - 13, r * 2, 3); ctx.fillStyle = C.colors.green; ctx.fillRect(enemy.x - r, enemy.y - r - 13, r * 2 * U.clamp(enemy.hp / enemy.maxHp, 0, 1), 3); }
+      if (enemy.armorCharges > 0) {
+        var armorLabel = "甲 " + enemy.armorCharges, armorBadgeWidth = armorLabel.length > 3 ? 30 : 22;
+        U.roundedRect(ctx, enemy.x - r - armorBadgeWidth - 3, enemy.y - r - 18, armorBadgeWidth, 12, 4, "rgba(12, 30, 40, .88)", enemy.armorFlash > 0 ? C.colors.cyan : "rgba(104, 216, 255, .5)");
+        text(armorLabel, enemy.x - r - armorBadgeWidth / 2 - 3, enemy.y - r - 9, "bold 8px Segoe UI, Microsoft YaHei", C.colors.cyan, "center");
+      }
+      if (enemy.type === "boss") { if (!enemy.hideHealthBar) Game.drawBossHealthBar(enemy, r); }
+      else if (!enemy.hideHealthBar) { ctx.fillStyle = "rgba(0, 0, 0, .5)"; ctx.fillRect(enemy.x - r, enemy.y - r - 13, r * 2, 3); ctx.fillStyle = C.colors.green; ctx.fillRect(enemy.x - r, enemy.y - r - 13, r * 2 * U.clamp(enemy.hp / enemy.maxHp, 0, 1), 3); }
+    });
+  };
+  Game.drawBossHealthBar = function (enemy, r) {
+    var cfg = C.bossHealth, bars = Math.max(1, cfg.bars);
+    var width = Math.min(cfg.width, C.width - 24), height = cfg.barHeight;
+    var x = U.clamp(enemy.x - width / 2, 8, C.width - width - 8);
+    var y = enemy.y - r * cfg.headExtent - cfg.offsetY - height;
+    var ratio = U.clamp(enemy.hp / enemy.maxHp, 0, 1);
+    var remaining = Math.ceil(ratio * bars);
+    if (remaining <= 0) return;
+    var fill = ratio * bars - (remaining - 1);
+    ctx.save();
+    U.roundedRect(ctx, x, y, width, height, height / 2, cfg.track, "rgba(0, 0, 0, .35)");
+    U.roundedRect(ctx, x, y, Math.max(height, width * fill), height, height / 2, C.colors.red);
+    ctx.shadowColor = "rgba(0, 0, 0, .85)";
+    ctx.shadowBlur = 4;
+    text("×" + remaining, x + width - 6, y + height / 2 + 3.5, "bold 9px Segoe UI, Microsoft YaHei", C.colors.text, "right");
+    ctx.restore();
+  };
+  Game.drawEnemyShots = function () {
+    (S.enemyShots || []).forEach(function (shot) {
+      var r = shot.radius;
+      ctx.save();
+      ctx.translate(shot.x, shot.y);
+      ctx.fillStyle = "rgba(0, 0, 0, .3)";
+      ctx.beginPath(); ctx.ellipse(2, S.wall.y - S.wall.height / 2 - shot.y + 2, r * .8, r * .26, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.rotate(shot.spin);
+      ctx.fillStyle = "#1d2328";
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#e08a2c";
+      ctx.beginPath(); ctx.arc(0, 0, r * .88, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#7d4413"; ctx.lineWidth = Math.max(1, r * .16);
+      ctx.beginPath(); ctx.arc(0, 0, r * .88, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-r * .88, 0); ctx.lineTo(r * .88, 0); ctx.moveTo(0, -r * .88); ctx.lineTo(0, r * .88); ctx.stroke();
+      ctx.beginPath(); ctx.arc(-r * 1.04, 0, r * .7, -Math.PI * .42, Math.PI * .42); ctx.stroke();
+      ctx.beginPath(); ctx.arc(r * 1.04, 0, r * .7, Math.PI * .58, Math.PI * 1.42); ctx.stroke();
+      ctx.fillStyle = "rgba(255, 226, 168, .5)";
+      ctx.beginPath(); ctx.arc(-r * .3, -r * .34, r * .22, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     });
   };
   Game.drawArmoredCars = function () {
@@ -426,7 +510,7 @@
     ctx.save();
     ctx.beginPath(); ctx.rect(x, y, width, height); ctx.clip();
     ctx.translate(centerX, modelY); ctx.scale(scale, scale); ctx.translate(-centerX, -modelY);
-    Game.drawEnemies({ type: id, x: centerX, y: modelY, hp: enemy.hp, maxHp: enemy.hp, hitFlash: 0, slow: 0, hideHealthBar: true });
+    Game.drawEnemies({ type: id, x: centerX, y: modelY, hp: enemy.hp, maxHp: enemy.hp, hitFlash: 0, slow: 0, hideHealthBar: true, armorCharges: enemy.armorCharges || 0, armorFlash: 0 });
     ctx.restore();
   }
 
@@ -635,8 +719,8 @@
     }
     drawSkillSlots(p);
     var boss = S.enemies.find(function (enemy) { return enemy.type === "boss"; });
-    if (boss) { badge("BOSS  ·  尸潮领主", 104, 88, 152, C.colors.red); U.roundedRect(ctx, 44, 112, C.width - 88, 7, 4, "rgba(0,0,0,.5)"); U.roundedRect(ctx, 44, 112, (C.width - 88) * U.clamp(boss.hp / boss.maxHp, 0, 1), 7, 4, C.colors.red); }
-    if (session.messageTimer > 0) text(session.message, C.width / 2, boss ? 142 : 108, "bold 16px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    if (boss) badge("BOSS  ·  尸潮领主", 104, 88, 152, C.colors.red);
+    if (session.messageTimer > 0) text(session.message, C.width / 2, boss ? 132 : 108, "bold 16px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
   };
 
   Game.drawPauseButton = function (x, y, w, h) {
@@ -648,8 +732,35 @@
     ctx.restore();
   };
 
+  var testEnemyChips = null;
+  function buildTestEnemyPicker() {
+    if (testEnemyChips) return;
+    var host = document.getElementById("test-enemy-rows");
+    if (!host || !host.appendChild || typeof document.createElement !== "function") return;
+    testEnemyChips = [];
+    [{ category: "minion", label: "小怪" }, { category: "elite", label: "精英" }, { category: "boss", label: "首领" }].forEach(function (group) {
+      var row = document.createElement("div"), label = document.createElement("span"), list = document.createElement("div");
+      row.className = "test-enemy-row";
+      label.className = "test-enemy-label";
+      label.textContent = group.label;
+      list.className = "test-enemy-list";
+      Object.keys(C.enemies).forEach(function (id) {
+        if (C.enemies[id].codexCategory !== group.category) return;
+        var chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "test-enemy-chip";
+        chip.setAttribute("data-enemy-id", id);
+        chip.textContent = C.enemies[id].name;
+        list.appendChild(chip);
+        testEnemyChips.push({ id: id, node: chip });
+      });
+      row.appendChild(label);
+      row.appendChild(list);
+      host.appendChild(row);
+    });
+  }
   Game.updateTestControls = function () {
-    var arena = S.testArena, controls = document.getElementById("test-controls"), ids, type, skill, traits, trait, skillLabel, traitLabel;
+    var arena = S.testArena, controls = document.getElementById("test-controls"), ids, type, info, skill, traits, trait, skillLabel, traitLabel;
     function setText(id, value) {
       var node = document.getElementById(id);
       if (node && node.textContent !== value) node.textContent = value;
@@ -658,18 +769,21 @@
     controls.hidden = S.screen !== "testArena" || !arena;
     if (controls.hidden) return;
     controls.classList.toggle("collapsed", !arena.controlsVisible);
+    buildTestEnemyPicker();
     ids = Game.getTestEnemyIds();
     type = ids[arena.enemyIndex];
+    info = type ? C.enemies[type] : null;
     skill = C.coreSkills[arena.skillIndex];
     traits = (C.skillTraits || []).filter(function (item) { return skill && item.skillId === skill.id && !item.unlocksSkill; });
     trait = traits[arena.traitIndex];
     skillLabel = skill ? skill.name + (S.player.skills[skill.id].unlocked ? " · Lv." + S.player.skills[skill.id].level : " · 未解锁") : "无可选技能";
     traitLabel = trait ? trait.name + " · " + (S.player.traits[trait.id] || 0) + "/" + trait.max : "无可选词条";
-    setText("test-enemy-name", type ? C.enemies[type].name : "暂无敌人");
+    setText("test-enemy-name", info ? info.name + " · 生命 " + info.hp + " · 移速 " + info.speed : "暂无敌人");
     setText("test-skill-name", skillLabel);
     setText("test-trait-name", traitLabel);
     setText("test-unlock-skill", skill && S.player.skills[skill.id].unlocked ? "所选技能已解锁" : "解锁所选技能");
     setText("test-rifle-toggle", S.player.rifleEnabled === false ? "开启步枪" : "关闭步枪");
+    if (testEnemyChips) testEnemyChips.forEach(function (chip) { chip.node.classList.toggle("active", chip.id === type); });
   };
 
   Game.drawPause = function () {
@@ -697,7 +811,28 @@
     Game.button(188, 365, 150, 44, "技能图鉴", C.colors.purple);
     Game.button(C.width / 2 - 82, 425, 164, 42, "进入测试场", C.colors.yellow);
   };
-  Game.drawLevelSelect = function () { var geo = C.levelSelect; Game.overlay(); panel(geo.panelX, geo.panelY, geo.panelWidth, geo.panelHeight, "rgba(10, 35, 49, .94)", "rgba(153, 205, 218, .18)", 20); badge("MISSION SELECT", 105, 84, 150, C.colors.cyan); text("选择关卡", C.width / 2, 130, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center"); text("完成前一关后解锁后续区域", C.width / 2, 153, "12px Segoe UI, Microsoft YaHei", C.colors.muted, "center"); C.levels.forEach(function (level, index) { var x = geo.cardX, y = geo.cardTop + index * geo.cardGap, w = geo.cardWidth, h = geo.cardHeight, unlocked = Game.isLevelUnlocked(level.id), completed = Game.isLevelCompleted(level.id); panel(x, y, w, h, unlocked ? "#163b4d" : "rgba(24, 35, 46, .9)", unlocked ? "rgba(104,216,255,.38)" : "rgba(153,205,218,.12)", 14); text("0" + level.id, x + 24, y + 34, "bold 20px Segoe UI, Microsoft YaHei", unlocked ? C.colors.cyan : "#667985", "center"); text(level.name, x + 52, y + 29, "bold 15px Segoe UI, Microsoft YaHei", unlocked ? C.colors.text : "#71828b"); text(level.subtitle, x + 52, y + 52, "11px Segoe UI, Microsoft YaHei", unlocked ? C.colors.muted : "#56666e"); if (unlocked) { U.roundedRect(ctx, x + w - 74, y + 25, 60, 30, 10, "#245f73"); text(completed ? "已通关" : "进入", x + w - 44, y + 44, "bold 11px Segoe UI, Microsoft YaHei", C.colors.text, "center"); } else { text("🔒 锁定", x + w - 44, y + 44, "bold 11px Segoe UI, Microsoft YaHei", "#7e8d94", "center"); } }); Game.button(C.width / 2 - 72, geo.backY, 144, geo.backHeight, "返回首页", "#4b7180"); };
+  Game.drawLevelSelect = function () {
+    var geo = C.levelSelect, rowHeight = Game.getLevelRowRect(0).h;
+    Game.overlay();
+    panel(geo.panelX, geo.panelY, geo.panelWidth, geo.panelHeight, "rgba(10, 35, 49, .94)", "rgba(153, 205, 218, .18)", 20);
+    badge("MISSION SELECT", 105, 68, 150, C.colors.cyan);
+    text("选择关卡", C.width / 2, 112, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    text("所有关卡已开放 · 点击任意一行直接开战", C.width / 2, 135, "12px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    U.roundedRect(ctx, geo.listX, geo.listY, geo.listWidth, rowHeight * C.levels.length, 14, "rgba(13, 34, 46, .92)", "rgba(153, 205, 218, .16)");
+    C.levels.forEach(function (level, index) {
+      var r = Game.getLevelRowRect(index), cy = r.y + r.h / 2;
+      var unlocked = Game.isLevelUnlocked(level.id), completed = Game.isLevelCompleted(level.id);
+      if (completed) U.roundedRect(ctx, r.x + 2, r.y + 8, 4, r.h - 16, 2, C.colors.green);
+      text("0" + level.id, r.x + 26, cy + 2, "bold 19px Segoe UI, Microsoft YaHei", unlocked ? (completed ? C.colors.green : C.colors.cyan) : "#667985", "center");
+      text(level.name, r.x + 54, cy - 8, "bold 15px Segoe UI, Microsoft YaHei", unlocked ? C.colors.text : "#71828b");
+      text(level.subtitle, r.x + 54, cy + 12, "11px Segoe UI, Microsoft YaHei", unlocked ? C.colors.muted : "#56666e");
+      if (!unlocked) text("未解锁", r.x + r.w - 16, cy + 4, "bold 11px Segoe UI, Microsoft YaHei", "#7e8d94", "right");
+      else if (completed) text("已通关", r.x + r.w - 16, cy + 4, "bold 11px Segoe UI, Microsoft YaHei", C.colors.green, "right");
+      else text("›", r.x + r.w - 18, cy + 7, "bold 20px Segoe UI, Microsoft YaHei", C.colors.cyan, "center");
+      if (index < C.levels.length - 1) U.roundedRect(ctx, r.x + 16, r.y + r.h - .5, r.w - 32, 1, .5, "rgba(153, 205, 218, .14)");
+    });
+    Game.button(C.width / 2 - 72, geo.backY, 144, geo.backHeight, "返回首页", "#4b7180");
+  };
   function drawCodexTab(x, y, w, label, active, color) {
     U.roundedRect(ctx, x, y, w, 31, 10, active ? "rgba(49, 105, 125, .95)" : "rgba(13, 29, 39, .9)", active ? color : "rgba(153,205,218,.18)");
     text(label, x + w / 2, y + 20, "bold 11px Segoe UI, Microsoft YaHei", active ? C.colors.text : C.colors.muted, "center");
@@ -727,7 +862,9 @@
       drawCodexEnemyModel(S.selectedZombieCodexId, selectedEnemy, 40, 153, 280, 152, true);
       text(selectedEnemy.name, C.width / 2, 330, "bold 20px Segoe UI, Microsoft YaHei", C.colors.text, "center");
       text("生命 " + selectedEnemy.hp + "   ·   移速 " + selectedEnemy.speed + " / 秒", 44, 353, "bold 11px Segoe UI, Microsoft YaHei", C.colors.cyan);
-      text("城墙伤害 " + selectedEnemy.damage + "   ·   击杀经验 " + selectedEnemy.xp + "   ·   半径 " + selectedEnemy.radius, 44, 374, "bold 10px Segoe UI, Microsoft YaHei", C.colors.cyan);
+      text((selectedEnemy.ranged ? "投掷伤害 " + selectedEnemy.ranged.damage : "城墙伤害 " + selectedEnemy.damage) + "   ·   击杀经验 " + selectedEnemy.xp + "   ·   半径 " + selectedEnemy.radius, 44, 374, "bold 10px Segoe UI, Microsoft YaHei", C.colors.cyan);
+      if (selectedEnemy.ranged) text("每 " + selectedEnemy.ranged.interval + " 秒投掷一次   ·   距防线 " + selectedEnemy.ranged.standoff + " 像素处停下", 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
+      else if (selectedEnemy.armorCharges) text("装甲 " + selectedEnemy.armorCharges + " 层   ·   可抵挡等量的伤害与负面状态", 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
       text("单位特征", 44, 404, "bold 11px Segoe UI, Microsoft YaHei", C.colors.yellow);
       ctx.font = "11px Segoe UI, Microsoft YaHei"; ctx.fillStyle = C.colors.text; ctx.textAlign = "left";
       U.wrapText(ctx, selectedEnemy.description || "详细资料待补充。", 44, 422, 272, 13);

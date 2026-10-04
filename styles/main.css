@@ -90,12 +90,25 @@ canvas {
 .test-control-group h2 { margin: 0 0 8px; color: #68d8ff; font-size: 14px; }
 .test-control-row { margin-top: 8px; }
 .test-control-row > span { display: flex; flex: 1; min-width: 0; min-height: 54px; align-items: center; justify-content: center; overflow: hidden; padding: 10px 8px; border: 1px solid rgba(153, 205, 218, .22); border-radius: 10px; background: rgba(17, 47, 62, .96); line-height: 1.35; text-align: center; white-space: normal; }
+.test-enemy-rows { display: flex; flex-direction: column; gap: 9px; margin-top: 10px; }
+.test-enemy-row { display: flex; align-items: flex-start; gap: 8px; }
+.test-enemy-label { flex: 0 0 30px; padding-top: 9px; color: rgba(204, 224, 233, .72); font-size: 12px; font-weight: 700; }
+.test-enemy-list { display: flex; flex: 1 1 auto; flex-wrap: nowrap; gap: 6px; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: 5px; cursor: grab; scrollbar-width: thin; scrollbar-color: rgba(104, 216, 255, .4) transparent; }
+.test-enemy-list.dragging { cursor: grabbing; }
+.test-enemy-list::-webkit-scrollbar { height: 6px; }
+.test-enemy-list::-webkit-scrollbar-thumb { border-radius: 3px; background: rgba(104, 216, 255, .35); }
+.test-enemy-list::-webkit-scrollbar-track { background: transparent; }
+.test-enemy-current { margin: 10px 0 0; color: rgba(204, 224, 233, .78); font-size: 12px; }
+.test-enemy-current span { color: #ffd166; font-weight: 700; }
 #test-controls button { min-height: 42px; flex: 1 1 0; padding: 7px 9px; border: 1px solid rgba(104, 216, 255, .7); border-radius: 10px; background: #16404e; color: #f4f8fb; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 #test-controls button:hover { filter: brightness(1.18); }
 #test-controls button:active { transform: translateY(1px); }
 #test-controls button.danger { border-color: #ff6868; }
 #test-controls button.warning { border-color: #ffd166; }
 #test-controls button.purple { border-color: #bd82ff; }
+#test-controls button.test-enemy-chip { flex: 0 0 auto; min-height: 32px; padding: 5px 9px; border-color: rgba(104, 216, 255, .32); border-radius: 8px; background: rgba(17, 47, 62, .96); font-size: 12px; white-space: nowrap; }
+#test-controls button.test-enemy-chip:hover { border-color: rgba(104, 216, 255, .8); }
+#test-controls button.test-enemy-chip.active { border-color: #68d8ff; background: #1f7d92; box-shadow: 0 0 10px rgba(104, 216, 255, .45); }
 #test-controls button.wide { width: 100%; margin-top: 8px; }
 .test-control-actions { margin-top: 10px; }
 .test-controls-hint { margin: 14px 0 0; color: rgba(204, 224, 233, .7); font-size: 11px; line-height: 1.7; text-align: center; }

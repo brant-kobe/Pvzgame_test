@@ -44,15 +44,55 @@
     { total: 74, interval: .4, mix: ["runner", "splitter", "runner"], hpScale: 1.5 },
     { total: 84, interval: .38, mix: ["normal", "runner", "splitter"], hpScale: 1.6 }
   ];
+  var levelFiveWaves = [
+    { total: 12, interval: 1.5, mix: ["normal"] },
+    { total: 16, interval: 1.35, mix: ["normal", "runner"] },
+    { total: 21, interval: 1.2, mix: ["normal", "basketball", "runner"] },
+    { total: 26, interval: .55, mix: ["normal", "runner", "basketball", "splitter"], elite: "basketballElite" },
+    { total: 30, interval: .5, mix: ["basketball", "runner", "splitter", "normal"] },
+    { total: 56, interval: .44, mix: ["normal", "basketball", "runner", "splitter"], hpScale: 1.2 },
+    { total: 62, interval: .42, mix: ["runner", "basketball", "splitter", "normal"], boss: true, hpScale: 1.3 },
+    { total: 70, interval: .4, mix: ["normal", "basketball", "runner", "splitter"], hpScale: 1.45 },
+    { total: 78, interval: .38, mix: ["basketball", "runner", "splitter", "normal"], hpScale: 1.55 },
+    { total: 88, interval: .36, mix: ["normal", "basketball", "runner", "splitter"], hpScale: 1.7 }
+  ];
+  var levelSixWaves = [
+    { total: 10, interval: 1.5, mix: ["basketball"] },
+    { total: 13, interval: 1.35, mix: ["basketball", "splitter"] },
+    { total: 17, interval: 1.2, mix: ["basketball", "splitter", "basketball", "armored"] },
+    { total: 22, interval: .55, mix: ["splitter", "basketball", "armored", "splitter"], elite: "basketballElite" },
+    { total: 27, interval: .5, mix: ["basketball", "splitter", "basketball", "armored"] },
+    { total: 36, interval: .46, mix: ["basketball", "armored", "splitter", "splitter", "basketball"], hpScale: 1.2 },
+    { total: 41, interval: .44, mix: ["splitter", "basketball", "armored", "basketball", "splitter"], boss: true, hpScale: 1.35 },
+    { total: 45, interval: .42, mix: ["basketball", "armored", "splitter", "basketball", "splitter"], hpScale: 1.5 },
+    { total: 50, interval: .4, mix: ["basketball", "splitter", "armored", "basketball", "splitter"], hpScale: 1.6 },
+    { total: 56, interval: .38, mix: ["basketball", "armored", "splitter", "basketball", "splitter"], hpScale: 1.75 },
+    { total: 63, interval: .36, mix: ["splitter", "basketball", "armored", "basketball", "splitter"], hpScale: 1.9 }
+  ];
+  var levelSevenWaves = [
+    { total: 10, interval: 1.5, mix: ["normal"] },
+    { total: 13, interval: 1.35, mix: ["normal", "splitter"] },
+    { total: 17, interval: 1.2, mix: ["normal", "armored", "splitter"] },
+    { total: 22, interval: .55, mix: ["splitter", "armored", "normal", "splitter"], elite: "armoredElite" },
+    { total: 26, interval: .5, mix: ["normal", "armored", "splitter", "normal"] },
+    { total: 38, interval: .46, mix: ["armored", "normal", "splitter", "splitter"], hpScale: 1.2 },
+    { total: 42, interval: .44, mix: ["normal", "splitter", "armored", "normal"], boss: true, hpScale: 1.35 },
+    { total: 47, interval: .42, mix: ["splitter", "armored", "normal", "splitter"], hpScale: 1.5 },
+    { total: 52, interval: .4, mix: ["normal", "armored", "splitter", "normal"], hpScale: 1.65 },
+    { total: 57, interval: .38, mix: ["armored", "splitter", "normal", "splitter"], hpScale: 1.8 },
+    { total: 63, interval: .36, mix: ["normal", "armored", "splitter", "normal"], hpScale: 1.95 },
+    { total: 69, interval: .34, mix: ["splitter", "normal", "armored", "splitter"], hpScale: 2.1 }
+  ];
   Game.config = {
-    width: 360, height: 640, maxLevel: 15, maxSkillSlots: 4, wallMaxHp: 1000, xpBase: 15, xpMultiplier: 1.13, xpBonus: 6, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12,
+    width: 360, height: 640, maxLevel: 15, maxSkillSlots: 4, wallMaxHp: 1000, armorBlockWindow: .12, xpBase: 15, xpMultiplier: 1.13, xpBonus: 6, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12,
     sprites: {
       playerBody: { src: ["assets/player-man.png", "assets/player-body.png", "assets/man.png"], width: 74, height: 131, anchorX: 37, anchorY: 78 },
       playerRifle: { src: "assets/player-rifle.png", width: 18, height: 46, anchorX: 9, anchorY: 38, mountX: -6, mountY: -40 }
     },
     skillRing: { offsetX: 64, offsetY: -100 },
     skillSlots: { offsetX: -54, y: 46, width: 48, height: 18, gap: 3 },
-    levelSelect: { panelX: 16, panelY: 56, panelWidth: 328, panelHeight: 538, cardX: 30, cardWidth: 300, cardHeight: 82, cardTop: 172, cardGap: 88, backY: 540, backHeight: 40 },
+    levelSelect: { panelX: 16, panelY: 42, panelWidth: 328, panelHeight: 578, listX: 30, listY: 144, listWidth: 300, rowHeight: 66, backY: 566, backHeight: 40 },
+    bossHealth: { bars: 3, width: 108, barHeight: 9, offsetY: 12, headExtent: 1.78, track: "rgba(255, 107, 107, .42)" },
     ranges: { far: 480, mid: 320, near: 125 },
     rifleRange: "far",
     skillRangeHoldMs: 350,
@@ -62,16 +102,20 @@
       runner: { name: "快跑僵尸", codexCategory: "minion", description: "体型轻巧、生命较低，但移动速度明显快于普通僵尸。", tactics: "尽早击杀以免快速逼近城墙；齐射、连发和冰冻效果都能有效应对。", hp: 16, speed: 42, radius: 11, damage: 7, xp: 7, color: "#e5a052", accent: "#ffe0a7" },
       splitter: { name: "分裂僵尸", codexCategory: "minion", description: "两个头共用一个身体的变异僵尸，被击杀后会分裂成两个更小的分裂幼体。", tactics: "分裂会立刻补充敌人数量，建议用穿透、齐射或范围技能一次清理本体与幼体，尽量在它们靠近城墙前解决。", hp: 60, speed: 22, radius: 16, damage: 10, xp: 12, color: "#6f6398", accent: "#c9b6ff", splitInto: "splitterChild", splitCount: 2 },
       splitterChild: { name: "分裂僵尸幼体", codexCategory: "minion", codexHidden: true, description: "分裂僵尸死亡后产生的单头幼体，体型和生命较低，但移动更快。", tactics: "数量较多，注意不要让它们同时抵达防线；范围伤害能高效清除。", hp: 18, speed: 30, radius: 9, damage: 5, xp: 3, color: "#8478ad", accent: "#d8ccff" },
+      armored: { name: "护甲僵尸", codexCategory: "minion", description: "身上焊着废旧装甲板的僵尸，装甲能替他挡下伤害，也能挡下燃烧、冰冻、减速、麻痹和眩晕等负面状态。", tactics: "装甲次数有限，用高射速武器或范围技能先削掉装甲层数，再集中输出；装甲还在时控制类词条基本无效，别指望减速拖住它。", hp: 55, speed: 18, radius: 16, damage: 12, xp: 16, color: "#79899a", accent: "#d6e6f2", armorCharges: 6 },
+      basketball: { name: "篮球僵尸", codexCategory: "minion", description: "抱着篮球的僵尸，会在离防线一段距离处停下，不断把篮球砸向城墙。", tactics: "它不会贴到城墙，靠城墙前的减速和近战拦不住；应在它进入投掷距离前用中远距离技能或步枪提前点掉。", hp: 40, speed: 26, radius: 14, damage: 10, xp: 12, color: "#c9762a", accent: "#ffd08a", ranged: { standoff: 85, interval: 2.4, projectileSpeed: 210, projectileRadius: 9, damage: 12 } },
       normalElite: { name: "普通僵尸精英", codexCategory: "elite", description: "普通僵尸的精英强化形态，体型更大，生命、移速和攻击力全面提升，仍以稳定推进为主要特性。", tactics: "精英单位更耐打且对城墙威胁更高，应集中火力尽早消灭。", hp: 420, speed: 26, radius: 22, damage: 20, xp: 35, color: "#647847", accent: "#ffd166" },
       runnerElite: { name: "快跑僵尸精英", codexCategory: "elite", description: "快跑僵尸的精英强化形态，保留高速冲锋特性，并拥有更大的体型、更高的生命和更强的攻击。", tactics: "速度与耐久兼备，出现后应优先集火；冰冻效果可以压制其推进速度。", hp: 300, speed: 54, radius: 19, damage: 16, xp: 30, color: "#a86735", accent: "#ffe08a" },
       splitterElite: { name: "分裂僵尸精英", codexCategory: "elite", description: "分裂僵尸的精英形态，体型更大并持续回复生命；死亡后分裂出两个同样会自愈的精英幼体。", tactics: "自愈会拉长战斗时间，需要集中持续输出；击杀本体后立即处理两个精英幼体，避免它们回满生命。", hp: 620, speed: 27, radius: 25, damage: 22, xp: 55, color: "#5d4f8a", accent: "#ffd166", splitInto: "splitterEliteChild", splitCount: 2, regenPerSecond: 8 },
       splitterEliteChild: { name: "分裂僵尸精英幼体", codexCategory: "elite", codexHidden: true, description: "分裂僵尸精英死亡后产生的精英幼体，体型较小但保留精英特征并会持续回复生命。", tactics: "尽快击杀防止回血堆积，冰冻、眩晕和爆发伤害都很有效。", hp: 100, speed: 34, radius: 12, damage: 10, xp: 10, color: "#7767a5", accent: "#ffe08a", regenPerSecond: 3 },
+      armoredElite: { name: "护甲僵尸精英", codexCategory: "elite", description: "护甲僵尸的精英形态，体型更大，装甲板层数翻倍，推进速度与撞击力度同步提升。", tactics: "装甲层数更多，高射速武器与范围技能剥甲更快；破甲前不要指望燃烧、冰冻或眩晕能拖住它。", hp: 420, speed: 22, radius: 22, damage: 20, xp: 35, color: "#5f7080", accent: "#ffd166", armorCharges: 12 },
+      basketballElite: { name: "篮球僵尸精英", codexCategory: "elite", description: "篮球僵尸的精英形态，站得更远、抛得更快、砸得更重，同样不会靠近城墙。", tactics: "它停在更远的位置，靠防线前的减速与近战完全拦不住；应当用中远距离技能或提前集火在它出手前解决。", hp: 320, speed: 30, radius: 19, damage: 16, xp: 30, color: "#a85f1f", accent: "#ffd166", ranged: { standoff: 113, interval: 1.9, projectileSpeed: 230, projectileRadius: 12, damage: 22 } },
       boss: { name: "尸潮领主", codexCategory: "boss", description: "关卡首领，体型巨大、生命值极高；生命低于一半时进入狂暴状态，移动速度提升。", tactics: "持续输出并留意其接近城墙；燃烧、暴击与高伤害构筑有助于缩短战斗时间。", hp: 3000, speed: 10, radius: 34, damage: 24, xp: 100, color: "#9d5264", accent: "#ffb0bc" }
     },
     skillDefaults: {
       thermobaric: { unlocked: false, level: 0, fireInterval: 5, projectileSpeed: 250, projectileRadius: 8, impactDamage: 32, impactKnockback: 24, explosionDamage: 58, explosionRadius: 68, explosionKnockback: 42, burnDps: 10, burnDuration: 2.5, pierce: 0, burst: 0 },
       dryIce: { unlocked: false, level: 0, fireInterval: 3.5, projectileSpeed: 300, projectileRadius: 7, damage: 28, knockback: 12, pierce: 3, freezeDuration: 0, slowFactor: .58, splitCount: 0, spread: 0, burst: 0 },
-      armoredCar: { unlocked: false, level: 0, fireInterval: 6.3, speed: 140, carWidth: 34, carLength: 64, damage: 4, hitInterval: .16, slowFactor: .55, slowDuration: 1.2, stunChance: 0, stunDuration: .6, extraCars: 0, sizeLevel: 0 },
+      armoredCar: { unlocked: false, level: 0, fireInterval: 6.3, speed: 100, carWidth: 42, carLength: 80, damage: 4, hitInterval: .12, slowFactor: .55, slowDuration: 1.2, stunChance: 0, stunDuration: .6, extraCars: 0, sizeLevel: 0 },
       bombardment: { unlocked: false, level: 0, fireInterval: 11, bombSpeed: 560, damage: 180, blastRadius: 45, centerRadius: 17, knockback: 105, extraBombs: 0, stunDuration: 0, centerDamageMultiplier: 1, thermonuclear: false, heatDuration: 4, heatDps: 25, heatSlowFactor: .5, bombDropDelay: .42, bombMinSeparationRatio: .9, bombAltScoreRatio: .45 },
       electromagnetic: { unlocked: false, level: 0, fireInterval: 3, damage: 72, stunDuration: 2.5, extraTargets: 0, explosion: false, explosionDamage: 44, explosionRadius: 54, matrix: false, matrixDuration: 4, matrixDps: 12, matrixRadius: 38, matrixSlowFactor: .5 },
       highEnergyBeam: { unlocked: false, level: 0, fireInterval: 3, damage: 6, baseDamageHits: 20, bonusDamageHits: 0, damageHits: 20, beamWidth: 16, duration: 4, slowEnabled: false, slowFactor: .1, slowDuration: 1, crippleEnabled: false, damageTakenMultiplier: 1.25, damageTakenDuration: 5, overcharged: false },
@@ -147,9 +191,12 @@
     ],
     levels: [
       { id: 1, name: "街区警戒线", subtitle: "基础尸潮防守", unlocked: true, hpScale: 1, xpScale: 1.76, waves: levelOneWaves },
-      { id: 2, name: "地铁入口", subtitle: "分裂僵尸与更密集的波次", unlocked: false, hpScale: 1, xpScale: .63, waves: levelTwoWaves },
-      { id: 3, name: "封锁工厂", subtitle: "更密集的尸潮与分裂精英", unlocked: false, hpScale: 1.35, xpScale: .43, waves: levelThreeWaves },
-      { id: 4, name: "熔炉核心", subtitle: "后期尸潮成倍压上，个体更硬", unlocked: false, hpScale: 1.35, xpScale: .34, waves: levelFourWaves }
+      { id: 2, name: "地铁入口", subtitle: "分裂僵尸与更密集的波次", unlocked: true, hpScale: 1, xpScale: .63, waves: levelTwoWaves },
+      { id: 3, name: "封锁工厂", subtitle: "更密集的尸潮与分裂精英", unlocked: true, hpScale: 1.35, xpScale: .43, waves: levelThreeWaves },
+      { id: 4, name: "熔炉核心", subtitle: "后期尸潮成倍压上，个体更硬", unlocked: true, hpScale: 1.35, xpScale: .34, waves: levelFourWaves },
+      { id: 5, name: "废弃球馆", subtitle: "篮球僵尸远程砸墙，尸潮更密更硬", unlocked: true, hpScale: 1.5, xpScale: .32, waves: levelFiveWaves },
+      { id: 6, name: "隔离区", subtitle: "护甲、分裂与远程混编，尸潮更长", unlocked: true, hpScale: 1.55, xpScale: .29, waves: levelSixWaves },
+      { id: 7, name: "装甲坟场", subtitle: "护甲僵尸成群推进，装甲精英坐镇", unlocked: true, hpScale: 1.6, xpScale: .26, waves: levelSevenWaves }
     ],
     waves: levelOneWaves
   };

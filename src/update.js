@@ -75,13 +75,17 @@
       current.stun = Math.max(0, (current.stun || 0) - dt);
       if (current.stun > 0) continue;
       var speed = info.speed * (current.slow > 0 ? current.slowFactor || .58 : 1) * (current.type === "boss" && current.hp < current.maxHp * .5 ? 1.5 : 1);
-      var attackY = wall.y - wall.height / 2 - info.radius - 3;
-      if (current.y >= attackY) {
-        current.y = attackY;
+      var wallLine = wall.y - wall.height / 2, ranged = info.ranged;
+      var holdY = ranged ? wallLine - ranged.standoff : wallLine - info.radius - 3;
+      if (current.y >= holdY) {
+        current.y = holdY;
         if (current.attackTimer <= 0) {
-          wall.hp -= info.damage; current.attackTimer = current.type === "boss" ? .65 : 1.0;
-          Game.burst(current.x, wall.y, 4, C.colors.red); Game.addText(current.x, wall.y - 19, "-" + info.damage, C.colors.red);
-          if (wall.hp <= 0) { wall.hp = 0; session.message = "城墙失守"; S.screen = "defeat"; }
+          if (ranged) { Game.throwEnemyShot(current); current.attackTimer = ranged.interval * U.rand(.9, 1.1); }
+          else {
+            wall.hp -= info.damage; current.attackTimer = current.type === "boss" ? .65 : 1.0;
+            Game.burst(current.x, wall.y, 4, C.colors.red); Game.addText(current.x, wall.y - 19, "-" + info.damage, C.colors.red);
+            if (wall.hp <= 0) { wall.hp = 0; session.message = "城墙失守"; S.screen = "defeat"; }
+          }
         }
       } else {
         current.y += speed * dt;
@@ -89,6 +93,7 @@
       }
     }
     Game.updateArmoredCars(dt);
+    Game.updateEnemyShots(dt);
     Game.flushPendingSpawns();
     Game.updateEffects(dt);
     var waveSpawned = !!plan && session.spawnCount >= plan.total && (!plan.boss || session.bossSpawned);
@@ -124,11 +129,10 @@
         if (!contact) { contact = { enemy: enemy, hitTimer: 0, stunChecked: false }; car.contacts.push(contact); }
         if (contact.hitTimer > 0) continue;
         Game.damageEnemy(enemy, car.damage, { critical: false, noWeaponEffects: true, silentText: true });
-        enemy.slow = Math.max(enemy.slow || 0, car.slowDuration);
-        enemy.slowFactor = Math.min(enemy.slowFactor || .58, car.slowFactor);
+        Game.applySlow(enemy, car.slowDuration, car.slowFactor);
         if (!contact.stunChecked) {
           contact.stunChecked = true;
-          if (Math.random() < car.stunChance) enemy.stun = Math.max(enemy.stun || 0, car.stunDuration);
+          if (Math.random() < car.stunChance) Game.applyStun(enemy, car.stunDuration);
         }
         contact.hitTimer = car.hitInterval;
         car.impactFlash = .1;

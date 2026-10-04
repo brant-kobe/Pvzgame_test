@@ -18,7 +18,8 @@
         <div class="test-controls-heading"><span>测试场调试工具</span><button id="test-controls-hide" type="button">收起</button></div>
         <section class="test-control-group">
           <h2>测试僵尸</h2>
-          <div class="test-control-row"><button id="test-enemy-prev" type="button">‹</button><span id="test-enemy-name">—</span><button id="test-enemy-next" type="button">›</button></div>
+          <div class="test-enemy-rows" id="test-enemy-rows"></div>
+          <p class="test-enemy-current">当前：<span id="test-enemy-name">—</span></p>
           <div class="test-control-row"><button id="test-spawn-one" type="button">生成 1 只</button><button id="test-spawn-wave" type="button">生成一波</button></div>
           <div class="test-control-row"><button id="test-clear-enemies" type="button" class="danger">清空敌人</button><button id="test-restore" type="button" class="warning">恢复状态</button></div>
         </section>
