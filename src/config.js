@@ -53,9 +53,11 @@
     },
     skillDefaults: {
       thermobaric: { unlocked: false, level: 0, fireInterval: 5, projectileSpeed: 250, projectileRadius: 8, impactDamage: 32, impactKnockback: 24, explosionDamage: 58, explosionRadius: 68, explosionKnockback: 42, burnDps: 10, burnDuration: 2.5, pierce: 0, burst: 0 },
-      dryIce: { unlocked: false, level: 0, fireInterval: 4.2, projectileSpeed: 300, projectileRadius: 7, damage: 28, knockback: 12, pierce: 3, freezeDuration: 0, slowFactor: .58, splitCount: 0, spread: 0, burst: 0 },
-      armoredCar: { unlocked: false, level: 0, fireInterval: 7, speed: 140, carWidth: 34, carLength: 64, damage: 4, hitInterval: .16, slowFactor: .55, slowDuration: 1.2, stunChance: 0, stunDuration: .6, extraCars: 0, sizeLevel: 0 },
-      bombardment: { unlocked: false, level: 0, fireInterval: 16, bombSpeed: 560, damage: 180, blastRadius: 82, centerRadius: 30, knockback: 105, extraBombs: 0, stunDuration: 0, centerDamageMultiplier: 1, thermonuclear: false, heatDuration: 4, heatDps: 25, heatSlowFactor: .5 }
+      dryIce: { unlocked: false, level: 0, fireInterval: 3.5, projectileSpeed: 300, projectileRadius: 7, damage: 28, knockback: 12, pierce: 3, freezeDuration: 0, slowFactor: .58, splitCount: 0, spread: 0, burst: 0 },
+      armoredCar: { unlocked: false, level: 0, fireInterval: 6.3, speed: 140, carWidth: 34, carLength: 64, damage: 4, hitInterval: .16, slowFactor: .55, slowDuration: 1.2, stunChance: 0, stunDuration: .6, extraCars: 0, sizeLevel: 0 },
+      bombardment: { unlocked: false, level: 0, fireInterval: 11, bombSpeed: 560, damage: 180, blastRadius: 82, centerRadius: 30, knockback: 105, extraBombs: 0, stunDuration: 0, centerDamageMultiplier: 1, thermonuclear: false, heatDuration: 4, heatDps: 25, heatSlowFactor: .5 },
+      electromagnetic: { unlocked: false, level: 0, fireInterval: 3, damage: 72, stunDuration: 2.5, extraTargets: 0, explosion: false, explosionDamage: 44, explosionRadius: 54, matrix: false, matrixDuration: 4, matrixDps: 12, matrixRadius: 38, matrixSlowFactor: .5 },
+      highEnergyBeam: { unlocked: false, level: 0, fireInterval: 3, damage: 6, baseDamageHits: 20, bonusDamageHits: 0, damageHits: 20, beamWidth: 16, duration: 4, slowEnabled: false, slowFactor: .1, slowDuration: 1, crippleEnabled: false, damageTakenMultiplier: 1.25, damageTakenDuration: 5, overcharged: false }
     },
     traits: [
       { id: "damage", name: "增伤", rarity: "普通", max: 5, icon: "✦", desc: "子弹伤害 +25%", detail: "每级使所有步枪子弹伤害提高 25%，最高 5 级。稳定提升清理普通敌人和攻击首领的效率。", apply: function (p) { p.damage *= 1.25; } },
@@ -96,13 +98,27 @@
       { id: "bombardmentRadius", skillId: "bombardment", name: "轰炸扩张", rarity: "稀有", max: 1, icon: "◉", desc: "爆炸范围 +105%", detail: "空投轰炸爆炸半径扩大 105%。", apply: function (p) { p.skills.bombardment.blastRadius *= 2.05; } },
       { id: "bombardmentStun", skillId: "bombardment", name: "轰炸震荡", rarity: "稀有", max: 1, icon: "⚡", desc: "爆炸造成眩晕", detail: "空投轰炸命中范围内的敌人时使其眩晕 1.5 秒。", apply: function (p) { p.skills.bombardment.stunDuration = 1.5; } },
       { id: "bombardmentPrecision", skillId: "bombardment", name: "精准打击", rarity: "稀有", max: 1, icon: "◎", desc: "轰炸中心伤害 +200%", detail: "轰炸中心 30 像素范围内的敌人受到 3 倍伤害。", apply: function (p) { p.skills.bombardment.centerDamageMultiplier = 3; } },
-      { id: "bombardmentThermonuclear", skillId: "bombardment", name: "热核轰炸", rarity: "稀有", max: 1, icon: "♨", desc: "留下灼烧减速区域", detail: "爆炸后留下持续 4 秒的热核区域，每秒造成 25 点伤害并将敌人移速降低 50%。", apply: function (p) { p.skills.bombardment.thermonuclear = true; } }
+      { id: "bombardmentThermonuclear", skillId: "bombardment", name: "热核轰炸", rarity: "稀有", max: 1, icon: "♨", desc: "留下灼烧减速区域", detail: "爆炸后留下持续 4 秒的热核区域，每秒造成 25 点伤害并将敌人移速降低 50%。", apply: function (p) { p.skills.bombardment.thermonuclear = true; } },
+      { id: "unlockElectromagnetic", skillId: "electromagnetic", unlocksSkill: true, name: "电磁穿刺", rarity: "稀有", max: 1, icon: "ϟ", desc: "解锁电磁穿刺技能", detail: "首次获取后解锁电磁穿刺，技能槽显示 Lv.1；技能就绪后自动召唤闪电劈击敌人并施加麻痹。", apply: function () {} },
+      { id: "electromagneticDamage", skillId: "electromagnetic", name: "电磁增伤", rarity: "稀有", max: 1, icon: "✦", desc: "电磁穿刺伤害 +80%", detail: "每级使电磁穿刺的闪电伤害提高 80%。", apply: function (p) { p.skills.electromagnetic.damage *= 1.8; } },
+      { id: "electromagneticSplit", skillId: "electromagnetic", name: "电磁分流", rarity: "稀有", max: 4, icon: "ϟ", desc: "额外选定 1 个目标释放闪电", detail: "每级使电磁穿刺额外选择 1 个目标劈下闪电，最高 4 级。", apply: function (p) { p.skills.electromagnetic.extraTargets++; } },
+      { id: "electromagneticExplosion", skillId: "electromagnetic", name: "电磁爆炸", rarity: "稀有", max: 1, icon: "✹", desc: "命中后发生爆炸", detail: "闪电命中目标后发生爆炸，对小范围内的敌人造成额外伤害。", apply: function (p) { p.skills.electromagnetic.explosion = true; } },
+      { id: "electromagneticStun", skillId: "electromagnetic", name: "麻痹增伤", rarity: "稀有", max: 1, icon: "⚡", desc: "伤害 +30%，麻痹时间 +1.5 秒", detail: "电磁穿刺伤害提高 30%，并使命中目标的麻痹时间延长 1.5 秒。", apply: function (p) { p.skills.electromagnetic.damage *= 1.3; p.skills.electromagnetic.stunDuration += 1.5; } },
+      { id: "electromagneticMatrix", skillId: "electromagnetic", name: "电磁矩阵", rarity: "稀有", max: 1, icon: "▦", desc: "命中后形成持续 4 秒的电磁矩阵", detail: "闪电命中目标后在其脚下形成小范围电磁矩阵，持续造成低伤害并减速敌人 4 秒。", apply: function (p) { p.skills.electromagnetic.matrix = true; } },
+      { id: "unlockHighEnergyBeam", skillId: "highEnergyBeam", unlocksSkill: true, name: "高能射线", rarity: "稀有", max: 1, icon: "ϟ", desc: "解锁高能射线技能", detail: "首次获取后解锁高能射线，技能槽显示 Lv.1；幻形会自动发射贯穿全场的蓝色射线。", apply: function () {} },
+      { id: "highEnergyBeamDamage", skillId: "highEnergyBeam", name: "射线增伤", rarity: "稀有", max: 1, icon: "✦", desc: "高能射线伤害 +60%", detail: "高能射线每次脉冲造成的伤害提高 60%。", apply: function (p) { p.skills.highEnergyBeam.damage *= 1.6; } },
+      { id: "highEnergyBeamSlow", skillId: "highEnergyBeam", name: "减速射线", rarity: "稀有", max: 1, icon: "❄", desc: "命中目标减速 90%，持续 1 秒", detail: "高能射线命中目标后使其移动速度降低 90%，持续 1 秒。", apply: function (p) { p.skills.highEnergyBeam.slowEnabled = true; p.skills.highEnergyBeam.slowFactor = .1; p.skills.highEnergyBeam.slowDuration = 1; } },
+      { id: "highEnergyBeamCripple", skillId: "highEnergyBeam", name: "致残射线", rarity: "稀有", max: 1, icon: "ϟ", desc: "命中目标受到的伤害 +25%，持续 5 秒", detail: "高能射线命中目标后，使其受到的所有伤害提高 25%，持续 5 秒。", apply: function (p) { p.skills.highEnergyBeam.crippleEnabled = true; p.skills.highEnergyBeam.damageTakenMultiplier = 1.25; p.skills.highEnergyBeam.damageTakenDuration = 5; } },
+      { id: "highEnergyBeamCharge", skillId: "highEnergyBeam", name: "充能", rarity: "稀有", max: 1, icon: "＋", desc: "射线伤害次数 +5", detail: "高能射线持续时间内造成的伤害次数增加 5 次。", apply: function (p) { var skill = p.skills.highEnergyBeam; skill.bonusDamageHits += 5; skill.damageHits = (skill.baseDamageHits + skill.bonusDamageHits) * (skill.overcharged ? 2 : 1); } },
+      { id: "highEnergyBeamOverload", skillId: "highEnergyBeam", name: "超能过载", rarity: "稀有", max: 1, icon: "ϟ", desc: "射线伤害次数翻倍，冷却 +50%", detail: "高能射线伤害次数翻倍，技能冷却时间增加 50%。", apply: function (p) { var skill = p.skills.highEnergyBeam; skill.overcharged = true; skill.damageHits = (skill.baseDamageHits + skill.bonusDamageHits) * 2; skill.fireInterval *= 1.5; } }
     ],
     coreSkills: [
       { id: "bombardment", name: "空投轰炸", icon: "✹", status: "已实装", detail: "冷却就绪后自动索敌，优先轰炸预计爆炸时敌人更密集的区域；炸弹落地造成高额范围伤害与击退，并可强化伤害、连续投弹、爆炸范围、眩晕、中心伤害及热核灼烧减速区域。" },
       { id: "thermobaric", name: "温压弹", icon: "♨", status: "已实装", detail: "幻形自动发射红色炮弹。命中后造成冲击伤害与击退，穿透耗尽后发生范围爆炸，对范围内敌人造成爆炸伤害并施加燃烧。" },
       { id: "dryIce", name: "干冰弹", icon: "❄", status: "已实装", detail: "幻形自动发射蓝色圆锥弹，初始可额外穿透 3 个目标。命中造成伤害与微弱击退，可通过冰冻、分裂、齐射和连发词条强化。" },
-      { id: "armoredCar", name: "装甲车支援", icon: "▰", status: "已实装", detail: "自动从城墙前方派遣装甲车驶向尸潮，沿途多段碾压并减速敌人；可强化伤害、派遣数量、减速、眩晕与车身尺寸。" }
+      { id: "armoredCar", name: "装甲车", icon: "▰", status: "已实装", detail: "自动从城墙前方派遣装甲车驶向尸潮，沿途多段碾压并减速敌人；可强化伤害、派遣数量、减速、眩晕与车身尺寸。" },
+      { id: "electromagnetic", name: "电磁穿刺", icon: "ϟ", status: "已实装", detail: "自动从天而降闪电劈向敌人，造成伤害并施加麻痹；可通过分流、爆炸、麻痹增伤和电磁矩阵词条强化。" },
+      { id: "highEnergyBeam", name: "高能射线", icon: "ϟ", status: "已实装", detail: "幻形自动朝覆盖敌人最多的方向发射蓝色宽光束，贯穿全场并持续 4 秒、造成 20 次低额伤害；可强化伤害、减速与致残效果，也可增加脉冲次数或过载翻倍。" }
     ],
     levels: [
       { id: 1, name: "街区警戒线", subtitle: "基础尸潮防守", unlocked: true, hpScale: 1, xpScale: 1.76, waves: levelOneWaves },

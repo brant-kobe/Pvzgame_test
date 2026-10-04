@@ -2,7 +2,7 @@
 (function (Game) {
   "use strict";
   var C = Game.config;
-  Game.state = { screen: "menu", selectedLevel: 1, player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null };
+  Game.state = { screen: "menu", selectedLevel: 1, player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null };
   Game.reset = function () {
     var s = Game.state;
     var level = C.levels.find(function (item) { return item.id === s.selectedLevel; });
@@ -16,8 +16,8 @@
       skills[id].burstTimer = 0;
       skills[id].burstAngle = -Math.PI / 2;
     });
-    s.player = { x: C.width / 2, y: C.height - 58, aimAngle: -Math.PI / 2, manualAimTimer: 0, maxHp: 100, hp: 100, damage: 28, fireInterval: .52, fireTimer: .05, magazineSize: C.magazineCapacity, ammo: C.magazineCapacity, reloadDuration: C.reloadDuration, reloadTimer: 0, burst: 0, burstShotsRemaining: 0, burstTimer: 0, burstAngle: -Math.PI / 2, spread: 0, pierce: 0, bulletRadius: 4, crit: .08, critDamage: 1.5, burn: 0, freeze: 0, bulletType: "normal", skills: skills, level: 1, xp: 0, nextXp: 35, traits: {} };
-    s.bullets = []; s.skillProjectiles = []; s.armoredCars = []; s.bombDrops = []; s.bombZones = []; s.explosions = []; s.enemies = []; s.pendingSpawns = []; s.particles = []; s.texts = []; s.upgradeCards = [];
+    s.player = { x: C.width / 2, y: C.height - 58, aimAngle: -Math.PI / 2, manualAimTimer: 0, maxHp: 100, hp: 100, damage: 28, fireInterval: .52, fireTimer: .05, magazineSize: C.magazineCapacity, ammo: C.magazineCapacity, reloadDuration: C.reloadDuration, reloadTimer: 0, rifleEnabled: true, burst: 0, burstShotsRemaining: 0, burstTimer: 0, burstAngle: -Math.PI / 2, spread: 0, pierce: 0, bulletRadius: 4, crit: .08, critDamage: 1.5, burn: 0, freeze: 0, bulletType: "normal", skills: skills, level: 1, xp: 0, nextXp: 35, traits: {} };
+    s.bullets = []; s.skillProjectiles = []; s.armoredCars = []; s.bombDrops = []; s.bombZones = []; s.electromagneticZones = []; s.explosions = []; s.enemies = []; s.pendingSpawns = []; s.particles = []; s.texts = []; s.upgradeCards = [];
     s.wall = { x: C.width / 2, y: C.height - 125, width: C.width - 30, height: 30, maxHp: 260, hp: 260 };
     s.session = { level: s.selectedLevel, waves: waves, xpScale: (level && level.xpScale) || 1, hpScale: (level && level.hpScale) || 1, elapsed: 0, wave: 1, spawnCount: 0, spawnTimer: .25, eliteSpawned: false, bossSpawned: false, kills: 0, message: "", messageTimer: 0 };
   };
@@ -30,6 +30,40 @@
   Game.openZombieCodex = function () { Game.state.zombieCodexCategory = "minion"; Game.state.selectedZombieCodexId = null; Game.state.codexPage = 0; Game.state.screen = "zombieCodex"; };
   Game.openSkillCodex = function () { Game.state.selectedSkillCodexId = null; Game.state.codexPage = 0; Game.state.screen = "skillCodex"; };
   Game.backToMenu = function () { Game.state.screen = "menu"; };
+  Game.getTestEnemyIds = function () { return Object.keys(C.enemies); };
+  Game.startTestArena = function () {
+    var s = Game.state, enemyIds = Game.getTestEnemyIds();
+    s.selectedLevel = 1;
+    Game.reset();
+    s.testArena = { enemyIds: enemyIds, enemyIndex: 0, skillIndex: 0, traitIndex: 0, controlsVisible: true };
+    s.session.testArena = true;
+    s.session.level = 0;
+    s.session.wave = 0;
+    s.session.waves = [];
+    s.wall.maxHp = 9999;
+    s.wall.hp = s.wall.maxHp;
+    s.screen = "testArena";
+    document.getElementById("start-hint").style.display = "none";
+  };
+  Game.selectTestEnemy = function (offset) {
+    var arena = Game.state.testArena, ids = Game.getTestEnemyIds();
+    if (!arena || !ids.length) return;
+    arena.enemyIndex = (arena.enemyIndex + offset + ids.length) % ids.length;
+  };
+  Game.selectTestSkill = function (offset) {
+    var arena = Game.state.testArena, skills = C.coreSkills || [];
+    if (!arena || !skills.length) return;
+    arena.skillIndex = (arena.skillIndex + offset + skills.length) % skills.length;
+    arena.traitIndex = 0;
+  };
+  Game.selectTestTrait = function (offset) {
+    var arena = Game.state.testArena, skill = arena && C.coreSkills[arena.skillIndex], traits;
+    if (!arena || !skill) return;
+    traits = (C.skillTraits || []).filter(function (trait) { return trait.skillId === skill.id && !trait.unlocksSkill; });
+    if (!traits.length) return;
+    arena.traitIndex = (arena.traitIndex + offset + traits.length) % traits.length;
+  };
+  Game.exitTestArena = function () { Game.exitToMenu(); };
   Game.pause = function () { if (Game.state.screen === "playing") Game.state.screen = "paused"; };
   Game.resume = function () { if (Game.state.screen === "paused") Game.state.screen = "playing"; };
   Game.start = function (levelId) {
@@ -40,7 +74,7 @@
     Game.state.screen = "playing";
     document.getElementById("start-hint").style.display = "none";
   };
-  Game.exitToMenu = function () { Game.reset(); Game.state.screen = "menu"; document.getElementById("start-hint").style.display = "block"; };
+  Game.exitToMenu = function () { Game.reset(); Game.state.testArena = null; Game.state.screen = "menu"; document.getElementById("start-hint").style.display = "block"; };
   var progressKey = "blockline.progress", memoryProgress = {};
   function readStoredProgress() {
     try { return JSON.parse(window.localStorage.getItem(progressKey)) || {}; } catch (error) { return {}; }

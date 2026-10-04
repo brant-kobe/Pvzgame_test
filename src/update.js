@@ -16,9 +16,9 @@
     session.spawnTimer = plan.interval * U.rand(.7, 1.15);
   };
   Game.update = function (dt) {
-    if (S.screen !== "playing") return;
+    if (S.screen !== "playing" && S.screen !== "testArena") return;
     var session = S.session, p = S.player, wall = S.wall; session.elapsed += dt; if (session.messageTimer > 0) session.messageTimer -= dt;
-    var plan = session.waves[session.wave - 1];
+    var plan = session.testArena ? null : session.waves[session.wave - 1];
     if (plan) {
       session.spawnTimer -= dt;
       if (session.spawnTimer <= 0) Game.spawnWaveEnemy();
@@ -34,7 +34,7 @@
     if (p.reloadTimer > 0) {
       p.reloadTimer = Math.max(0, p.reloadTimer - dt);
       if (p.reloadTimer === 0) { p.ammo = p.magazineSize; p.fireTimer = 0; }
-    } else {
+    } else if (p.rifleEnabled !== false) {
       p.fireTimer -= dt;
       if (p.burstShotsRemaining > 0) { p.burstTimer -= dt; if (p.burstTimer <= 0) Game.fireBurstShot(); }
       else if (p.fireTimer <= 0) Game.fire();
@@ -56,18 +56,21 @@
     }
     Game.updateSkillProjectiles(dt);
     Game.updateBombardment(dt);
+    Game.updateElectromagneticZones(dt);
     for (var k = S.enemies.length - 1; k >= 0; k--) {
       var current = S.enemies[k], info = C.enemies[current.type];
       current.hitFlash = Math.max(0, current.hitFlash - dt);
       current.attackTimer -= dt;
       if (current.burn > 0) {
         current.burn = Math.max(0, current.burn - dt);
-        current.hp -= (current.burnDps || 10 + p.burn * 3) * dt;
+        current.hp -= (current.burnDps || 10 + p.burn * 3) * dt * (current.damageTakenTimer > 0 ? current.damageTakenMultiplier || 1 : 1);
         if (current.hp <= 0) { Game.killEnemy(k); continue; }
       }
       if (current.regenPerSecond > 0) current.hp = Math.min(current.maxHp, current.hp + current.regenPerSecond * dt);
       current.slow = Math.max(0, current.slow - dt);
       if (current.slow === 0) current.slowFactor = .58;
+      current.damageTakenTimer = Math.max(0, (current.damageTakenTimer || 0) - dt);
+      if (current.damageTakenTimer === 0) current.damageTakenMultiplier = 1;
       current.stun = Math.max(0, (current.stun || 0) - dt);
       if (current.stun > 0) continue;
       var speed = info.speed * (current.slow > 0 ? current.slowFactor || .58 : 1) * (current.type === "boss" && current.hp < current.maxHp * .5 ? 1.5 : 1);

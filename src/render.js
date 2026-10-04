@@ -61,6 +61,7 @@
     Game.drawPlayer();
     Game.drawEffects();
     Game.drawHud();
+    Game.updateTestControls();
     if (S.screen === "menu") Game.drawMenu();
     if (S.screen === "levelSelect") Game.drawLevelSelect();
     if (S.screen === "zombieCodex") Game.drawZombieCodex();
@@ -158,6 +159,17 @@
       ctx.restore();
     });
     (S.skillProjectiles || []).forEach(function (projectile) {
+      if (projectile.type === "electromagnetic") {
+        var target = projectile.target && S.enemies.indexOf(projectile.target) >= 0 ? projectile.target : projectile;
+        var strikeX = target.x, strikeY = target.y;
+        ctx.save();
+        ctx.globalAlpha = projectile.delay > 0 ? .52 : .92;
+        ctx.shadowColor = "#9bffff"; ctx.shadowBlur = 14; ctx.strokeStyle = "#d8ffff"; ctx.lineWidth = 3; ctx.lineJoin = "round";
+        ctx.beginPath(); ctx.moveTo(strikeX, -18); ctx.lineTo(strikeX - 7, strikeY - 76); ctx.lineTo(strikeX + 5, strikeY - 48); ctx.lineTo(strikeX - 3, strikeY - 24); ctx.lineTo(strikeX, strikeY); ctx.stroke();
+        ctx.strokeStyle = "#6dd8ff"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(strikeX + 9, -12); ctx.lineTo(strikeX + 2, strikeY - 54); ctx.lineTo(strikeX + 8, strikeY - 24); ctx.stroke();
+        ctx.restore();
+        return;
+      }
       var angle = Math.atan2(projectile.vy, projectile.vx), r = projectile.radius;
       ctx.save();
       ctx.translate(projectile.x, projectile.y); ctx.rotate(angle);
@@ -427,17 +439,40 @@
   };
 
   Game.drawEffects = function () {
+    var beamSkill = S.player && S.player.skills.highEnergyBeam;
+    if (beamSkill && beamSkill.active) {
+      var beamPulse = .9 + Math.sin(S.session.elapsed * 38) * .1;
+      ctx.save(); ctx.lineCap = "round"; ctx.globalAlpha = .2 * beamPulse; ctx.strokeStyle = "#38aaff"; ctx.shadowColor = "#3dbdff"; ctx.shadowBlur = 20; ctx.lineWidth = beamSkill.beamWidth + 12;
+      ctx.beginPath(); ctx.moveTo(beamSkill.activeX, beamSkill.activeY); ctx.lineTo(beamSkill.activeX2, beamSkill.activeY2); ctx.stroke();
+      ctx.globalAlpha = .72 * beamPulse; ctx.strokeStyle = "#278fff"; ctx.shadowBlur = 12; ctx.lineWidth = beamSkill.beamWidth;
+      ctx.beginPath(); ctx.moveTo(beamSkill.activeX, beamSkill.activeY); ctx.lineTo(beamSkill.activeX2, beamSkill.activeY2); ctx.stroke();
+      ctx.globalAlpha = .96; ctx.strokeStyle = "#b9f5ff"; ctx.shadowColor = "#91efff"; ctx.shadowBlur = 8; ctx.lineWidth = Math.max(2, beamSkill.beamWidth * .28);
+      ctx.beginPath(); ctx.moveTo(beamSkill.activeX, beamSkill.activeY); ctx.lineTo(beamSkill.activeX2, beamSkill.activeY2); ctx.stroke(); ctx.restore();
+    }
     (S.bombZones || []).forEach(function (zone) {
       var fade = U.clamp(zone.life / zone.duration, 0, 1), pulse = .96 + Math.sin(S.session.elapsed * 7) * .04;
       ctx.save(); ctx.globalAlpha = .2 + fade * .13; ctx.fillStyle = "#ff6a32"; ctx.beginPath(); ctx.arc(zone.x, zone.y, zone.radius * pulse, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = .22 + fade * .3; ctx.strokeStyle = "#ffbe5e"; ctx.lineWidth = 3; ctx.setLineDash([7, 5]); ctx.beginPath(); ctx.arc(zone.x, zone.y, zone.radius * pulse, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
       ctx.restore();
     });
+    (S.electromagneticZones || []).forEach(function (zone) {
+      var fade = U.clamp(zone.life / zone.duration, 0, 1), pulse = .94 + Math.sin(S.session.elapsed * 9) * .06;
+      ctx.save(); ctx.globalAlpha = .18 + fade * .16; ctx.fillStyle = "#51d9ff"; ctx.beginPath(); ctx.arc(zone.x, zone.y, zone.radius * pulse, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = .4 + fade * .35; ctx.strokeStyle = "#8df3ff"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(zone.x, zone.y, zone.radius * pulse, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.translate(zone.x, zone.y); ctx.rotate(S.session.elapsed * 1.6); ctx.globalAlpha = .55 + fade * .25; ctx.strokeStyle = "#c5ffff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-zone.radius * .72, 0); ctx.lineTo(zone.radius * .72, 0); ctx.moveTo(0, -zone.radius * .72); ctx.lineTo(0, zone.radius * .72); ctx.stroke(); ctx.restore();
+    });
     (S.explosions || []).forEach(function (explosion) {
+      if (explosion.type === "electromagneticStrike") {
+        var strikeProgress = 1 - U.clamp(explosion.life / explosion.duration, 0, 1);
+        ctx.save(); ctx.globalAlpha = 1 - strikeProgress; ctx.shadowColor = "#9bffff"; ctx.shadowBlur = 16; ctx.strokeStyle = "#d8ffff"; ctx.lineWidth = 3; ctx.lineJoin = "round";
+        ctx.beginPath(); ctx.moveTo(explosion.x, -18); ctx.lineTo(explosion.x - 7, explosion.y - 76); ctx.lineTo(explosion.x + 5, explosion.y - 48); ctx.lineTo(explosion.x - 3, explosion.y - 24); ctx.lineTo(explosion.x, explosion.y); ctx.stroke();
+        ctx.strokeStyle = "#6dd8ff"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(explosion.x + 9, -12); ctx.lineTo(explosion.x + 2, explosion.y - 54); ctx.lineTo(explosion.x + 8, explosion.y - 24); ctx.stroke(); ctx.restore();
+        return;
+      }
       var progress = 1 - U.clamp(explosion.life / explosion.duration, 0, 1), radius = explosion.radius * (.45 + progress * .55);
       ctx.save(); ctx.globalAlpha = (1 - progress) * .62;
-      ctx.fillStyle = explosion.type === "bombardment" ? "rgba(255, 174, 54, .48)" : "rgba(255, 75, 42, .42)"; ctx.beginPath(); ctx.arc(explosion.x, explosion.y, radius, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1 - progress; ctx.strokeStyle = explosion.type === "bombardment" ? "#fff0a0" : "#ffbf6b"; ctx.lineWidth = Math.max(2, 8 * (1 - progress));
+      ctx.fillStyle = explosion.type === "bombardment" ? "rgba(255, 174, 54, .48)" : explosion.type === "electromagnetic" ? "rgba(77, 213, 255, .48)" : "rgba(255, 75, 42, .42)"; ctx.beginPath(); ctx.arc(explosion.x, explosion.y, radius, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1 - progress; ctx.strokeStyle = explosion.type === "bombardment" ? "#fff0a0" : explosion.type === "electromagnetic" ? "#d2ffff" : "#ffbf6b"; ctx.lineWidth = Math.max(2, 8 * (1 - progress));
       ctx.beginPath(); ctx.arc(explosion.x, explosion.y, radius * .84, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
     });
@@ -465,13 +500,15 @@
     Game.drawPauseButton(14, 15, 28, 28);
     ctx.save();
     ctx.shadowColor = "rgba(0, 0, 0, .72)"; ctx.shadowBlur = 6;
-    text(level ? level.id + " " + level.name : "未知区域", C.width / 2, 27, "bold 15px Segoe UI, Microsoft YaHei", C.colors.text, "center");
-    text("第 " + session.wave + " / " + session.waves.length + " 波", C.width - 14, 25, "bold 9px Segoe UI, Microsoft YaHei", C.colors.muted, "right");
+    text(session.testArena ? "测试场" : level ? level.id + " " + level.name : "未知区域", C.width / 2, 27, "bold 15px Segoe UI, Microsoft YaHei", C.colors.text, "center");
+    text(session.testArena ? "自由战斗" : "第 " + session.wave + " / " + session.waves.length + " 波", C.width - 14, 25, "bold 9px Segoe UI, Microsoft YaHei", C.colors.muted, "right");
     ctx.restore();
     U.roundedRect(ctx, 54, 40, 148, 8, 4, "rgba(255,255,255,.12)");
     U.roundedRect(ctx, 54, 40, 148 * U.clamp(p.xp / p.nextXp, 0, 1), 8, 4, C.colors.cyan);
     text(p.level >= C.maxLevel ? "LV.MAX · 剩余 " + Game.getRemainingEnemyCount() : "LV." + p.level + "  " + Math.floor(p.xp) + " / " + p.nextXp + " XP", 128, 58, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     var rifleIcon = Game.sprites.images.playerRifle, ammoColor = p.reloadTimer > 0 ? C.colors.yellow : p.ammo <= 5 ? C.colors.red : C.colors.cyan;
+    U.roundedRect(ctx, 286, 10, 68, 20, 7, p.rifleEnabled === false ? "rgba(83, 35, 43, .94)" : "rgba(24, 65, 76, .94)", p.rifleEnabled === false ? C.colors.red : C.colors.cyan);
+    text(p.rifleEnabled === false ? "开启步枪" : "关闭步枪", 320, 23, "bold 8px Segoe UI, Microsoft YaHei", C.colors.text, "center");
     if (rifleIcon) {
       ctx.save(); ctx.translate(268, 30); ctx.rotate(Math.PI / 2); ctx.drawImage(rifleIcon, -4, -15, 8, 30); ctx.restore();
     } else {
@@ -485,13 +522,15 @@
       U.roundedRect(ctx, 300, 38, 36, 3, 2, "rgba(255,255,255,.14)");
       U.roundedRect(ctx, 300, 38, 36 * (1 - p.reloadTimer / p.reloadDuration), 3, 2, C.colors.yellow);
     }
-    drawSkillSlot(204, 45, 36, 19, p.skills.thermobaric, "♨", C.colors.fire);
-    drawSkillSlot(242, 45, 36, 19, p.skills.dryIce, "❄", C.colors.ice);
-    drawSkillSlot(280, 45, 36, 19, p.skills.armoredCar, "▰", C.colors.green);
-    drawSkillSlot(318, 45, 36, 19, p.skills.bombardment, "✹", C.colors.yellow);
+    drawSkillSlot(204, 42, 48, 18, p.skills.thermobaric, "♨", C.colors.fire);
+    drawSkillSlot(255, 42, 48, 18, p.skills.dryIce, "❄", C.colors.ice);
+    drawSkillSlot(306, 42, 48, 18, p.skills.armoredCar, "▰", C.colors.green);
+    drawSkillSlot(204, 63, 48, 18, p.skills.bombardment, "✹", C.colors.yellow);
+    drawSkillSlot(255, 63, 48, 18, p.skills.electromagnetic, "ϟ", C.colors.cyan);
+    drawSkillSlot(306, 63, 48, 18, p.skills.highEnergyBeam, "ϟ", "#51cfff");
     var boss = S.enemies.find(function (enemy) { return enemy.type === "boss"; });
-    if (boss) { badge("BOSS  ·  尸潮领主", 104, 72, 152, C.colors.red); U.roundedRect(ctx, 44, 96, C.width - 88, 7, 4, "rgba(0,0,0,.5)"); U.roundedRect(ctx, 44, 96, (C.width - 88) * U.clamp(boss.hp / boss.maxHp, 0, 1), 7, 4, C.colors.red); }
-    if (session.messageTimer > 0) text(session.message, C.width / 2, boss ? 126 : 108, "bold 16px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    if (boss) { badge("BOSS  ·  尸潮领主", 104, 88, 152, C.colors.red); U.roundedRect(ctx, 44, 112, C.width - 88, 7, 4, "rgba(0,0,0,.5)"); U.roundedRect(ctx, 44, 112, (C.width - 88) * U.clamp(boss.hp / boss.maxHp, 0, 1), 7, 4, C.colors.red); }
+    if (session.messageTimer > 0) text(session.message, C.width / 2, boss ? 142 : 108, "bold 16px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
   };
 
   Game.drawPauseButton = function (x, y, w, h) {
@@ -501,6 +540,30 @@
     var barW = Math.max(3, w * .16), barH = h * .52, barY = y + (h - barH) / 2;
     ctx.fillRect(x + w * .3, barY, barW, barH); ctx.fillRect(x + w * .52, barY, barW, barH);
     ctx.restore();
+  };
+
+  Game.updateTestControls = function () {
+    var arena = S.testArena, controls = document.getElementById("test-controls"), ids, type, skill, traits, trait, skillLabel, traitLabel;
+    function setText(id, value) {
+      var node = document.getElementById(id);
+      if (node && node.textContent !== value) node.textContent = value;
+    }
+    if (!controls) return;
+    controls.hidden = S.screen !== "testArena" || !arena;
+    if (controls.hidden) return;
+    controls.classList.toggle("collapsed", !arena.controlsVisible);
+    ids = Game.getTestEnemyIds();
+    type = ids[arena.enemyIndex];
+    skill = C.coreSkills[arena.skillIndex];
+    traits = (C.skillTraits || []).filter(function (item) { return skill && item.skillId === skill.id && !item.unlocksSkill; });
+    trait = traits[arena.traitIndex];
+    skillLabel = skill ? skill.name + (S.player.skills[skill.id].unlocked ? " · Lv." + S.player.skills[skill.id].level : " · 未解锁") : "无可选技能";
+    traitLabel = trait ? trait.name + " · " + (S.player.traits[trait.id] || 0) + "/" + trait.max : "无可选词条";
+    setText("test-enemy-name", type ? C.enemies[type].name : "暂无敌人");
+    setText("test-skill-name", skillLabel);
+    setText("test-trait-name", traitLabel);
+    setText("test-unlock-skill", skill && S.player.skills[skill.id].unlocked ? "所选技能已解锁" : "解锁所选技能");
+    setText("test-rifle-toggle", S.player.rifleEnabled === false ? "开启步枪" : "关闭步枪");
   };
 
   Game.drawPause = function () {
@@ -526,6 +589,7 @@
     Game.button(C.width / 2 - 82, 309, 164, 42, "选择关卡", C.colors.cyan);
     Game.button(22, 365, 150, 44, "僵尸图鉴", "#58aaff");
     Game.button(188, 365, 150, 44, "技能图鉴", C.colors.purple);
+    Game.button(C.width / 2 - 82, 425, 164, 42, "进入测试场", C.colors.yellow);
   };
   Game.drawLevelSelect = function () { Game.overlay(); panel(16, 60, C.width - 32, 530, "rgba(10, 35, 49, .94)", "rgba(153, 205, 218, .18)", 20); badge("MISSION SELECT", 105, 84, 150, C.colors.cyan); text("选择关卡", C.width / 2, 130, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center"); text("完成前一关后解锁后续区域", C.width / 2, 153, "12px Segoe UI, Microsoft YaHei", C.colors.muted, "center"); C.levels.forEach(function (level, index) { var x = 30, y = 180 + index * 100, unlocked = Game.isLevelUnlocked(level.id), completed = Game.isLevelCompleted(level.id); panel(x, y, 300, 82, unlocked ? "#163b4d" : "rgba(24, 35, 46, .9)", unlocked ? "rgba(104,216,255,.38)" : "rgba(153,205,218,.12)", 14); text("0" + level.id, x + 24, y + 34, "bold 20px Segoe UI, Microsoft YaHei", unlocked ? C.colors.cyan : "#667985", "center"); text(level.name, x + 52, y + 29, "bold 15px Segoe UI, Microsoft YaHei", unlocked ? C.colors.text : "#71828b"); text(level.subtitle, x + 52, y + 52, "11px Segoe UI, Microsoft YaHei", unlocked ? C.colors.muted : "#56666e"); if (unlocked) { U.roundedRect(ctx, x + 226, y + 25, 60, 30, 10, "#245f73"); text(completed ? "已通关" : "进入", x + 256, y + 44, "bold 11px Segoe UI, Microsoft YaHei", C.colors.text, "center"); } else { text("🔒 锁定", x + 256, y + 44, "bold 11px Segoe UI, Microsoft YaHei", "#7e8d94", "center"); } }); Game.button(C.width / 2 - 72, 518, 144, 40, "返回首页", "#4b7180"); };
   function drawCodexTab(x, y, w, label, active, color) {

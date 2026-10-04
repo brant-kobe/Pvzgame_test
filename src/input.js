@@ -67,6 +67,29 @@
     if (point.x >= 108 && point.x <= 252 && point.y >= 561 && point.y <= 598) Game.backToMenu();
   }
 
+  function bindTestButton(id, action) {
+    var button = document.getElementById(id);
+    if (button) button.addEventListener("click", function (event) { event.preventDefault(); action(); });
+  }
+
+  bindTestButton("test-controls-hide", function () { S.testArena.controlsVisible = false; });
+  bindTestButton("test-controls-tab", function () { S.testArena.controlsVisible = true; });
+  bindTestButton("test-enemy-prev", function () { Game.selectTestEnemy(-1); });
+  bindTestButton("test-enemy-next", function () { Game.selectTestEnemy(1); });
+  bindTestButton("test-spawn-one", function () { Game.testSpawnEnemy(1); });
+  bindTestButton("test-spawn-wave", function () { Game.testSpawnEnemy(C.waves[0].total); });
+  bindTestButton("test-clear-enemies", Game.testClearEnemies);
+  bindTestButton("test-restore", Game.testRestore);
+  bindTestButton("test-skill-prev", function () { Game.selectTestSkill(-1); });
+  bindTestButton("test-skill-next", function () { Game.selectTestSkill(1); });
+  bindTestButton("test-unlock-skill", Game.testUnlockSkill);
+  bindTestButton("test-trait-prev", function () { Game.selectTestTrait(-1); });
+  bindTestButton("test-trait-next", function () { Game.selectTestTrait(1); });
+  bindTestButton("test-apply-trait", Game.testApplyTrait);
+  bindTestButton("test-clear-build", Game.testClearBuild);
+  bindTestButton("test-rifle-toggle", Game.toggleRifle);
+  bindTestButton("test-exit", Game.exitTestArena);
+
   canvas.addEventListener("pointerdown", function (event) {
     event.preventDefault();
     var point = Game.pointerPosition(event), center = C.width / 2;
@@ -76,6 +99,7 @@
       else if (point.x > center - 100 && point.x < center + 100 && point.y >= 306 && point.y <= 356) Game.openLevelSelect();
       else if (point.x >= 22 && point.x <= 172 && point.y >= 365 && point.y <= 409) Game.openZombieCodex();
       else if (point.x >= 188 && point.x <= 338 && point.y >= 365 && point.y <= 409) Game.openSkillCodex();
+      else if (point.x > center - 100 && point.x < center + 100 && point.y >= 425 && point.y <= 467) Game.startTestArena();
       return;
     }
     if (S.screen === "zombieCodex" || S.screen === "skillCodex") { handleCodexPointer(point, S.screen); return; }
@@ -107,10 +131,36 @@
       }
       return;
     }
+    if (S.screen === "testArena") {
+      if (point.x >= 14 && point.x <= 42 && point.y >= 15 && point.y <= 43) { Game.exitTestArena(); return; }
+      if (point.x >= 286 && point.x <= 354 && point.y >= 10 && point.y <= 32) { Game.toggleRifle(); return; }
+      Game.setManualAim(point.x, point.y);
+      return;
+    }
     if (S.screen === "playing") {
       if (point.x >= 14 && point.x <= 42 && point.y >= 15 && point.y <= 43) { Game.pause(); return; }
+      if (point.x >= 286 && point.x <= 354 && point.y >= 10 && point.y <= 32) { Game.toggleRifle(); return; }
       if (point.x >= 204 && point.x <= 354 && point.y >= 45 && point.y <= 64) return;
       Game.setManualAim(point.x, point.y);
     }
+  });
+  window.addEventListener("keydown", function (event) {
+    if (S.screen !== "testArena") return;
+    var key = event.key.toLowerCase();
+    if (key === "arrowleft") { Game.selectTestEnemy(-1); event.preventDefault(); }
+    else if (key === "arrowright") { Game.selectTestEnemy(1); event.preventDefault(); }
+    else if (key === "1") { Game.testSpawnEnemy(1); event.preventDefault(); }
+    else if (key === "5") { Game.testSpawnEnemy(C.waves[0].total); event.preventDefault(); }
+    else if (key === "c") { Game.testClearEnemies(); event.preventDefault(); }
+    else if (key === "r") { Game.testRestore(); event.preventDefault(); }
+    else if (key === "[") { Game.selectTestSkill(-1); event.preventDefault(); }
+    else if (key === "]") { Game.selectTestSkill(1); event.preventDefault(); }
+    else if (key === ",") { Game.selectTestTrait(-1); event.preventDefault(); }
+    else if (key === ".") { Game.selectTestTrait(1); event.preventDefault(); }
+    else if (key === "e") { Game.testUnlockSkill(); event.preventDefault(); }
+    else if (key === "t") { Game.testApplyTrait(); event.preventDefault(); }
+    else if (key === "x") { Game.testClearBuild(); event.preventDefault(); }
+    else if (key === "h") { S.testArena.controlsVisible = !S.testArena.controlsVisible; event.preventDefault(); }
+    else if (key === "escape") { Game.exitTestArena(); event.preventDefault(); }
   });
 })(window.Game = window.Game || {});

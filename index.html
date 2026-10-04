@@ -7,9 +7,35 @@
   <link rel="stylesheet" href="styles/main.css" />
 </head>
 <body>
-  <main id="game-shell">
-    <canvas id="game" width="360" height="640" aria-label="街区警戒线游戏画面"></canvas>
-    <div id="start-hint">点击画面开始 · 战斗中点击调整方向 · 升级时点击卡片</div>
+  <main id="app-layout">
+    <section id="game-shell">
+      <canvas id="game" width="360" height="640" aria-label="街区警戒线游戏画面"></canvas>
+      <div id="start-hint">点击画面开始 · 战斗中点击调整方向 · 升级时点击卡片</div>
+    </section>
+    <aside id="test-controls" aria-label="测试场调试面板" hidden>
+      <button id="test-controls-tab" type="button">› 测试场工具</button>
+      <div id="test-controls-content">
+        <div class="test-controls-heading"><span>测试场调试工具</span><button id="test-controls-hide" type="button">收起</button></div>
+        <section class="test-control-group">
+          <h2>测试僵尸</h2>
+          <div class="test-control-row"><button id="test-enemy-prev" type="button">‹</button><span id="test-enemy-name">—</span><button id="test-enemy-next" type="button">›</button></div>
+          <div class="test-control-row"><button id="test-spawn-one" type="button">生成 1 只</button><button id="test-spawn-wave" type="button">生成一波</button></div>
+          <div class="test-control-row"><button id="test-clear-enemies" type="button" class="danger">清空敌人</button><button id="test-restore" type="button" class="warning">恢复状态</button></div>
+        </section>
+        <section class="test-control-group">
+          <h2>核心技能</h2>
+          <div class="test-control-row"><button id="test-skill-prev" type="button">‹</button><span id="test-skill-name">—</span><button id="test-skill-next" type="button">›</button></div>
+          <button id="test-unlock-skill" type="button" class="wide purple">解锁所选技能</button>
+        </section>
+        <section class="test-control-group">
+          <h2>专属词条</h2>
+          <div class="test-control-row"><button id="test-trait-prev" type="button">‹</button><span id="test-trait-name">—</span><button id="test-trait-next" type="button">›</button></div>
+          <button id="test-apply-trait" type="button" class="wide purple">应用所选词条</button>
+        </section>
+        <div class="test-control-row test-control-actions"><button id="test-rifle-toggle" type="button" class="warning">关闭步枪</button><button id="test-clear-build" type="button" class="danger">清空构筑</button><button id="test-exit" type="button">退出测试场</button></div>
+        <p class="test-controls-hint">←/→ 僵尸 · [/] 技能 · ,/. 词条<br>1 生成单只 · 5 生成一波 · H 隐藏</p>
+      </div>
+    </aside>
   </main>
   <!-- 使用有序的普通脚本，保持直接双击 index.html 也能运行。 -->
   <script src="src/config.js"></script>
