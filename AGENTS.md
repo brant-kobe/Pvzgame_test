@@ -21,6 +21,7 @@ git diff --check
 - `git diff --check`：空白字符校验。Windows 下出现的 `LF will be replaced by CRLF` 只是换行符提示，不是错误。
 - 逻辑回归优先用一次性 `node -e` 冒烟测试；需要模拟 Canvas 时，用 `Proxy` 桩实现 `document.getElementById("game").getContext("2d")`。
 - 不要引入测试框架、构建器或运行时依赖，除非用户明确要求。
+- **调试中间产物统一放进 `tmp/`**：冒烟测试脚本、临时截图、日志、导出数据等一律写入工作区根目录的 `tmp/`，不要散落在项目根目录或 `src/`；该目录已在 `.gitignore` 中忽略，不会被提交。仅当临时产物需要长期保留或复用时，才正式收录进 `src/` 或文档。
 
 ## 代码结构与职责
 
