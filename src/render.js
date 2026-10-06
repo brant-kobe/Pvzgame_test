@@ -1200,6 +1200,11 @@
     drawCodexPager(page, pages);
   };
   function skillGroupColor(group) { return group.id === "rifle" ? C.colors.cyan : C.colors.purple; }
+  function skillGroupElement(group) {
+    var info = group && group.element ? (C.elements || {})[group.element] : null;
+    if (!info) return null;
+    return { name: info.name + "属性", color: info.color, note: group.elementNote || info.detail || "" };
+  }
   Game.drawSkillCodex = function () {
     Game.overlay();
     panel(14, 36, C.width - 28, 568, "rgba(10, 35, 49, .97)", "rgba(153, 205, 218, .22)", 20);
@@ -1217,6 +1222,8 @@
       text(group.icon, x + 28, y + 39, "bold 20px Segoe UI, Microsoft YaHei", color, "center");
       text(group.name, x + 54, y + 27, "bold 14px Segoe UI, Microsoft YaHei", C.colors.text);
       text(group.traits.length + " 个词条", x + 54, y + 47, "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+      var element = skillGroupElement(group);
+      if (element) text(element.name, x + 128, y + 47, "bold 10px Segoe UI, Microsoft YaHei", element.color, "left");
       text(group.status || "", x + 322, y + 27, "bold 10px Segoe UI, Microsoft YaHei", implemented ? C.colors.green : C.colors.yellow, "right");
       text("查看详情 ›", x + 322, y + 47, "10px Segoe UI, Microsoft YaHei", color, "right");
     });
@@ -1231,6 +1238,12 @@
     text(group.status || "", 320, 160, "bold 10px Segoe UI, Microsoft YaHei", implemented ? C.colors.green : C.colors.yellow, "right");
     ctx.font = "10px Segoe UI, Microsoft YaHei"; ctx.fillStyle = C.colors.muted; ctx.textAlign = "left";
     U.wrapText(ctx, group.detail || "技能说明待补充。", 82, 182, 238, 13);
+    var element = skillGroupElement(group);
+    if (element) {
+      var elementWidth = 22 + element.name.length * 11;
+      badge(element.name, 40, 216, elementWidth, element.color);
+      text(element.note, 48 + elementWidth, 230, "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+    }
     text("专属词条", 40, 268, "bold 13px Segoe UI, Microsoft YaHei", C.colors.yellow);
     var traits = group.traits || [], perPage = 3, pages = Math.max(1, Math.ceil(traits.length / perPage)), page = U.clamp(S.codexPage || 0, 0, pages - 1);
     S.codexPage = page;

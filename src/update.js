@@ -133,7 +133,7 @@
         for (var k = 0; k < car.contacts.length; k++) if (car.contacts[k].enemy === enemy) { contact = car.contacts[k]; break; }
         if (!contact) { contact = { enemy: enemy, hitTimer: 0, stunChecked: false }; car.contacts.push(contact); }
         if (contact.hitTimer > 0) continue;
-        Game.damageEnemy(enemy, car.damage, { critical: false, noWeaponEffects: true, silentText: true });
+        Game.damageEnemy(enemy, car.damage, { critical: false, noWeaponEffects: true, silentText: true, element: car.element });
         Game.applySlow(enemy, car.slowDuration, car.slowFactor);
         if (!contact.stunChecked) {
           contact.stunChecked = true;

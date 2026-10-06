@@ -97,6 +97,14 @@
     rifleRange: "far",
     skillRangeHoldMs: 350,
     colors: { bg: "#0b202c", text: "#f4f8fb", muted: "#9ab0bc", green: "#63e6a0", yellow: "#ffd166", red: "#ff6b6b", cyan: "#68d8ff", ice: "#58aaff", fire: "#ff9b52", purple: "#c9a1ff" },
+    elements: {
+      physical: { name: "物理", color: "#d6e6f2", detail: "常规动能伤害，不附带元素效果。" },
+      energy: { name: "能量", color: "#68d8ff", detail: "高能光束伤害。" },
+      electric: { name: "电", color: "#c9a1ff", detail: "电击与闪电伤害。" },
+      ice: { name: "冰", color: "#58aaff", detail: "低温与冻结伤害。" },
+      fire: { name: "火", color: "#ff9b52", detail: "高温与燃烧伤害。" },
+      wind: { name: "风", color: "#63e6a0", detail: "气流与切割伤害。" }
+    },
     enemies: {
       normal: { name: "普通僵尸", codexCategory: "minion", description: "尸潮中的基础单位，生命与速度均衡，会持续向防线推进。", tactics: "优先利用自动锁定快速清理；单体威胁低，数量增加后会给城墙造成压力。", hp: 28, speed: 20, radius: 14, damage: 10, xp: 8, color: "#6eaa7b", accent: "#b1e4a0" },
       runner: { name: "快跑僵尸", codexCategory: "minion", description: "体型轻巧、生命较低，但移动速度明显快于普通僵尸。", tactics: "尽早击杀以免快速逼近城墙；齐射、连发和冰冻效果都能有效应对。", hp: 16, speed: 42, radius: 11, damage: 7, xp: 7, color: "#e5a052", accent: "#ffe0a7" },
@@ -221,18 +229,18 @@
       { id: "chainBurn", skillId: "chainLightning", name: "跃迁燃烧", rarity: "稀有", max: 1, icon: "♨", desc: "命中后附加燃烧", detail: "电链命中的每个目标都会被点燃，每秒受到 10 点燃烧伤害、持续 3 秒；燃烧与麻痹一样会先被护甲僵尸的装甲格挡。", apply: function (p) { p.skills.chainLightning.burnEnabled = true; } }
     ],
     coreSkills: [
-      { id: "bombardment", name: "空投轰炸", icon: "✹", color: "#ffd166", range: "far", status: "已实装", detail: "冷却就绪后自动索敌，优先轰炸预计爆炸时敌人更密集的区域；炸弹落地造成高额范围伤害与击退，并可强化伤害、连续投弹、爆炸范围、眩晕、中心伤害及热核灼烧减速区域。" },
-      { id: "thermobaric", name: "温压弹", icon: "♨", color: "#ff9b52", range: "mid", status: "已实装", detail: "幻形自动发射红色炮弹。命中后造成冲击伤害与击退，穿透耗尽后发生范围爆炸，对范围内敌人造成爆炸伤害并施加燃烧。" },
-      { id: "dryIce", name: "干冰弹", icon: "❄", color: "#58aaff", range: "mid", status: "已实装", detail: "幻形自动发射蓝色圆锥弹，初始可额外穿透 3 个目标。命中造成伤害与微弱击退，可通过冰冻、分裂、齐射和连发词条强化。" },
-      { id: "armoredCar", name: "装甲车", icon: "▰", color: "#63e6a0", range: "far", status: "已实装", detail: "自动从城墙前方派遣装甲车驶向尸潮，沿途多段碾压并减速敌人；可强化伤害、派遣数量、减速、眩晕与车身尺寸。" },
-      { id: "electromagnetic", name: "电磁穿刺", icon: "ϟ", color: "#68d8ff", range: "mid", status: "已实装", detail: "自动从天而降闪电劈向敌人，造成伤害并施加麻痹；可通过分流、爆炸、麻痹增伤和电磁矩阵词条强化。" },
-      { id: "highEnergyBeam", name: "高能射线", icon: "ϟ", color: "#51cfff", range: "far", status: "已实装", detail: "幻形自动朝覆盖敌人最多的方向发射蓝色宽光束，贯穿全场并持续 4 秒、造成 20 次低额伤害；可强化伤害、减速与致残效果，也可增加脉冲次数或过载翻倍。" },
-      { id: "whirlwindCannon", name: "旋风加农", icon: "☈", color: "#9fe6ff", range: "mid", status: "已实装", detail: "幻形召唤龙卷风主动扑向敌人最密集的位置，并优先照顾靠近城墙的敌群；持续 10 秒，沿途对接触到的敌人持续造成伤害并施加轻微牵引，持续时间结束后龙卷风消失并进入冷却。可强化伤害、牵引、持续时间与数量，也可在消失位置留下大龙卷风。" },
-      { id: "hailGenerator", name: "冰雹发生器", icon: "❆", color: "#8ce9ff", range: "mid", status: "已实装", detail: "在敌人最密集处释放一团持续 1.5 秒的冰雹，反复砸击范围内敌人并施加冻结减速；可强化伤害、数量、持续时间与覆盖范围，也可在冰雹消失时炸开一圈只减速不伤害的冰霜。" },
-      { id: "fuelBomb", name: "燃油弹", icon: "⛽", color: "#ff7043", range: "near", status: "已实装", detail: "向防线前方投出一枚燃油弹，落地炸开一片持续 1 秒的圆形火场，反复灼烧范围内敌人并附加点燃；可强化灼烧伤害、额外投弹、覆盖范围、减速、结束爆炸与持续时间。贴地技能，打不到飞鸟僵尸。" },
-      { id: "airBlade", name: "压缩气刃", icon: "☾", color: "#5ef2a0", range: "mid", status: "已实装", detail: "幻形甩出绿色月牙形气刃，沿直线穿透 3 个目标，造成伤害与轻微击退，并让命中目标在 5 秒内只回复一半生命；可强化伤害、齐射数量、连发轮次、穿透层数、击退距离与重伤强度。" },
-      { id: "drone", name: "无人机", icon: "◎", color: "#a6c8ff", range: "mid", status: "已实装", detail: "放出一架圆形飞行器在战场上巡航，主动飞向敌人最密集、最靠近防线的位置，撞到僵尸就持续造成伤害；可强化伤害、飞行速度、持续时间与机身尺寸，也能在撞击时甩出一道只有伤害的无穿透气刃或震晕目标。它是飞行单位，能撞到飞鸟僵尸。" },
-      { id: "chainLightning", name: "跃迁电子", icon: "☇", color: "#b98cff", range: "mid", status: "已实装", detail: "幻形朝中距离的敌人射出一条紫色电链，命中后依次弹射到最近的未命中目标，基础弹射 5 次、最多命中 6 个目标；每个被电链打到的目标都受到伤害并被麻痹，只从电链路径上经过、没有被选中的僵尸不会受伤。可强化伤害、麻痹时长与弹射次数，也能额外释放一条电链或让命中目标燃烧。" }
+      { id: "bombardment", name: "空投轰炸", icon: "✹", color: "#ffd166", range: "far", element: "physical", status: "已实装", detail: "冷却就绪后自动索敌，优先轰炸预计爆炸时敌人更密集的区域；炸弹落地造成高额范围伤害与击退，并可强化伤害、连续投弹、爆炸范围、眩晕、中心伤害及热核灼烧减速区域。" },
+      { id: "thermobaric", name: "温压弹", icon: "♨", color: "#ff9b52", range: "mid", element: "fire", status: "已实装", detail: "幻形自动发射红色炮弹。命中后造成冲击伤害与击退，穿透耗尽后发生范围爆炸，对范围内敌人造成爆炸伤害并施加燃烧。" },
+      { id: "dryIce", name: "干冰弹", icon: "❄", color: "#58aaff", range: "mid", element: "ice", status: "已实装", detail: "幻形自动发射蓝色圆锥弹，初始可额外穿透 3 个目标。命中造成伤害与微弱击退，可通过冰冻、分裂、齐射和连发词条强化。" },
+      { id: "armoredCar", name: "装甲车", icon: "▰", color: "#63e6a0", range: "far", element: "physical", status: "已实装", detail: "自动从城墙前方派遣装甲车驶向尸潮，沿途多段碾压并减速敌人；可强化伤害、派遣数量、减速、眩晕与车身尺寸。" },
+      { id: "electromagnetic", name: "电磁穿刺", icon: "ϟ", color: "#68d8ff", range: "mid", element: "electric", status: "已实装", detail: "自动从天而降闪电劈向敌人，造成伤害并施加麻痹；可通过分流、爆炸、麻痹增伤和电磁矩阵词条强化。" },
+      { id: "highEnergyBeam", name: "高能射线", icon: "ϟ", color: "#51cfff", range: "far", element: "energy", status: "已实装", detail: "幻形自动朝覆盖敌人最多的方向发射蓝色宽光束，贯穿全场并持续 4 秒、造成 20 次低额伤害；可强化伤害、减速与致残效果，也可增加脉冲次数或过载翻倍。" },
+      { id: "whirlwindCannon", name: "旋风加农", icon: "☈", color: "#9fe6ff", range: "mid", element: "wind", status: "已实装", detail: "幻形召唤龙卷风主动扑向敌人最密集的位置，并优先照顾靠近城墙的敌群；持续 10 秒，沿途对接触到的敌人持续造成伤害并施加轻微牵引，持续时间结束后龙卷风消失并进入冷却。可强化伤害、牵引、持续时间与数量，也可在消失位置留下大龙卷风。" },
+      { id: "hailGenerator", name: "冰雹发生器", icon: "❆", color: "#8ce9ff", range: "mid", element: "ice", status: "已实装", detail: "在敌人最密集处释放一团持续 1.5 秒的冰雹，反复砸击范围内敌人并施加冻结减速；可强化伤害、数量、持续时间与覆盖范围，也可在冰雹消失时炸开一圈只减速不伤害的冰霜。" },
+      { id: "fuelBomb", name: "燃油弹", icon: "⛽", color: "#ff7043", range: "near", element: "fire", status: "已实装", detail: "向防线前方投出一枚燃油弹，落地炸开一片持续 1 秒的圆形火场，反复灼烧范围内敌人并附加点燃；可强化灼烧伤害、额外投弹、覆盖范围、减速、结束爆炸与持续时间。贴地技能，打不到飞鸟僵尸。" },
+      { id: "airBlade", name: "压缩气刃", icon: "☾", color: "#5ef2a0", range: "mid", element: "wind", status: "已实装", detail: "幻形甩出绿色月牙形气刃，沿直线穿透 3 个目标，造成伤害与轻微击退，并让命中目标在 5 秒内只回复一半生命；可强化伤害、齐射数量、连发轮次、穿透层数、击退距离与重伤强度。" },
+      { id: "drone", name: "无人机", icon: "◎", color: "#a6c8ff", range: "mid", element: "physical", status: "已实装", detail: "放出一架圆形飞行器在战场上巡航，主动飞向敌人最密集、最靠近防线的位置，撞到僵尸就持续造成伤害；可强化伤害、飞行速度、持续时间与机身尺寸，也能在撞击时甩出一道只有伤害的无穿透气刃或震晕目标。它是飞行单位，能撞到飞鸟僵尸。" },
+      { id: "chainLightning", name: "跃迁电子", icon: "☇", color: "#b98cff", range: "mid", element: "electric", status: "已实装", detail: "幻形朝中距离的敌人射出一条紫色电链，命中后依次弹射到最近的未命中目标，基础弹射 5 次、最多命中 6 个目标；每个被电链打到的目标都受到伤害并被麻痹，只从电链路径上经过、没有被选中的僵尸不会受伤。可强化伤害、麻痹时长与弹射次数，也能额外释放一条电链或让命中目标燃烧。" }
     ],
     levels: [
       { id: 1, name: "街区警戒线", subtitle: "基础尸潮防守", unlocked: true, hpScale: 1, xpScale: 1.76, waves: levelOneWaves },
