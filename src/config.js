@@ -83,6 +83,20 @@
     { total: 63, interval: .36, mix: ["normal", "armored", "splitter", "normal"], hpScale: 1.95 },
     { total: 69, interval: .34, mix: ["splitter", "normal", "armored", "splitter"], hpScale: 2.1 }
   ];
+  var levelEightWaves = [
+    { total: 12, interval: 1.5, mix: ["runner"] },
+    { total: 16, interval: 1.35, mix: ["runner", "basketball"] },
+    { total: 22, interval: 1.2, mix: ["basketball", "runner", "bird"] },
+    { total: 32, interval: .5, mix: ["bird", "runner", "basketball", "bird"], elite: "birdElite" },
+    { total: 40, interval: .46, mix: ["runner", "bird", "basketball", "runner"] },
+    { total: 62, interval: .42, mix: ["bird", "basketball", "runner", "bird"], hpScale: 1.2 },
+    { total: 74, interval: .4, mix: ["runner", "bird", "basketball", "bird"], boss: true, hpScale: 1.35 },
+    { total: 92, interval: .38, mix: ["basketball", "runner", "bird", "runner"], hpScale: 1.5 },
+    { total: 108, interval: .36, mix: ["bird", "runner", "basketball", "bird"], hpScale: 1.65 },
+    { total: 126, interval: .34, mix: ["runner", "basketball", "bird", "runner"], hpScale: 1.8 },
+    { total: 146, interval: .32, mix: ["bird", "basketball", "runner", "bird"], hpScale: 1.95 },
+    { total: 168, interval: .3, mix: ["runner", "bird", "basketball", "runner"], hpScale: 2.1 }
+  ];
   Game.config = {
     width: 360, height: 640, maxLevel: 15, maxSkillSlots: 4, wallMaxHp: 1000, armorBlockWindow: .12, xpBase: 15, xpMultiplier: 1.13, xpBonus: 6, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12, flyingHover: 16,
     sprites: {
@@ -110,14 +124,14 @@
       runner: { name: "快跑僵尸", codexCategory: "minion", description: "体型轻巧、生命较低，但移动速度明显快于普通僵尸。", tactics: "尽早击杀以免快速逼近城墙；齐射、连发和冰冻效果都能有效应对。", hp: 16, speed: 42, radius: 11, damage: 7, xp: 7, color: "#e5a052", accent: "#ffe0a7" },
       splitter: { name: "分裂僵尸", codexCategory: "minion", description: "两个头共用一个身体的变异僵尸，被击杀后会分裂成两个更小的分裂幼体。", tactics: "分裂会立刻补充敌人数量，建议用穿透、齐射或范围技能一次清理本体与幼体，尽量在它们靠近城墙前解决。", hp: 60, speed: 22, radius: 16, damage: 10, xp: 12, color: "#6f6398", accent: "#c9b6ff", splitInto: "splitterChild", splitCount: 2 },
       splitterChild: { name: "分裂僵尸幼体", codexCategory: "minion", codexHidden: true, description: "分裂僵尸死亡后产生的单头幼体，体型和生命较低，但移动更快。", tactics: "数量较多，注意不要让它们同时抵达防线；范围伤害能高效清除。", hp: 18, speed: 30, radius: 9, damage: 5, xp: 3, color: "#8478ad", accent: "#d8ccff" },
-      armored: { name: "护甲僵尸", codexCategory: "minion", description: "身上焊着废旧装甲板的僵尸，装甲能替他挡下伤害，也能挡下燃烧、冰冻、减速、麻痹和眩晕等负面状态。", tactics: "装甲次数有限，用高射速武器或范围技能先削掉装甲层数，再集中输出；装甲还在时控制类词条基本无效，别指望减速拖住它。", hp: 55, speed: 18, radius: 16, damage: 12, xp: 16, color: "#79899a", accent: "#d6e6f2", armorCharges: 6 },
-      basketball: { name: "篮球僵尸", codexCategory: "minion", description: "抱着篮球的僵尸，会在离防线一段距离处停下，不断把篮球砸向城墙。", tactics: "它不会贴到城墙，靠城墙前的减速和近战拦不住；应在它进入投掷距离前用中远距离技能或步枪提前点掉。", hp: 40, speed: 26, radius: 14, damage: 10, xp: 12, color: "#c9762a", accent: "#ffd08a", ranged: { standoff: 85, interval: 2.4, projectileSpeed: 210, projectileRadius: 9, damage: 12 } },
+      armored: { name: "护甲僵尸", codexCategory: "minion", description: "身上焊着废旧装甲板的僵尸，装甲能替他挡下伤害，也能挡下燃烧、冰冻、减速、麻痹和眩晕等负面状态。", tactics: "装甲次数有限，用高射速武器或范围技能先削掉装甲层数，再集中输出；装甲还在时控制类词条基本无效，别指望减速拖住它。它对物理伤害减免 50%，改用非物理技能。", hp: 55, speed: 18, radius: 16, damage: 12, xp: 16, color: "#79899a", accent: "#d6e6f2", armorCharges: 6, damageTakenByElement: { physical: .5 } },
+      basketball: { name: "篮球僵尸", codexCategory: "minion", description: "抱着篮球的僵尸，会在离防线一段距离处停下，不断把篮球砸向城墙。", tactics: "它不会贴到城墙，靠城墙前的减速和近战拦不住；应在它进入投掷距离前用中远距离技能或步枪提前点掉。它怕电（+50%），电磁穿刺与跃迁电子能更快点掉它。", hp: 40, speed: 26, radius: 14, damage: 10, xp: 12, color: "#c9762a", accent: "#ffd08a", ranged: { standoff: 85, interval: 2.4, projectileSpeed: 210, projectileRadius: 9, damage: 12 }, damageTakenByElement: { electric: 1.5 } },
       normalElite: { name: "普通僵尸精英", codexCategory: "elite", description: "普通僵尸的精英强化形态，体型更大，生命、移速和攻击力全面提升，仍以稳定推进为主要特性。", tactics: "精英单位更耐打且对城墙威胁更高，应集中火力尽早消灭。", hp: 420, speed: 26, radius: 22, damage: 20, xp: 35, color: "#647847", accent: "#ffd166" },
       runnerElite: { name: "快跑僵尸精英", codexCategory: "elite", description: "快跑僵尸的精英强化形态，保留高速冲锋特性，并拥有更大的体型、更高的生命和更强的攻击。", tactics: "速度与耐久兼备，出现后应优先集火；冰冻效果可以压制其推进速度。", hp: 300, speed: 54, radius: 19, damage: 16, xp: 30, color: "#a86735", accent: "#ffe08a" },
-      splitterElite: { name: "分裂僵尸精英", codexCategory: "elite", description: "分裂僵尸的精英形态，体型更大并持续回复生命；死亡后分裂出两个同样会自愈的精英幼体。", tactics: "自愈会拉长战斗时间，需要集中持续输出；击杀本体后立即处理两个精英幼体，避免它们回满生命。", hp: 620, speed: 27, radius: 25, damage: 22, xp: 55, color: "#5d4f8a", accent: "#ffd166", splitInto: "splitterEliteChild", splitCount: 2, regenPerSecond: 8 },
-      splitterEliteChild: { name: "分裂僵尸精英幼体", codexCategory: "elite", codexHidden: true, description: "分裂僵尸精英死亡后产生的精英幼体，体型较小但保留精英特征并会持续回复生命。", tactics: "尽快击杀防止回血堆积，冰冻、眩晕和爆发伤害都很有效。", hp: 100, speed: 34, radius: 12, damage: 10, xp: 10, color: "#7767a5", accent: "#ffe08a", regenPerSecond: 3 },
-      armoredElite: { name: "护甲僵尸精英", codexCategory: "elite", description: "护甲僵尸的精英形态，体型更大，装甲板层数翻倍，推进速度与撞击力度同步提升。", tactics: "装甲层数更多，高射速武器与范围技能剥甲更快；破甲前不要指望燃烧、冰冻或眩晕能拖住它。", hp: 420, speed: 22, radius: 22, damage: 20, xp: 35, color: "#5f7080", accent: "#ffd166", armorCharges: 12 },
-      basketballElite: { name: "篮球僵尸精英", codexCategory: "elite", description: "篮球僵尸的精英形态，站得更远、抛得更快、砸得更重，同样不会靠近城墙。", tactics: "它停在更远的位置，靠防线前的减速与近战完全拦不住；应当用中远距离技能或提前集火在它出手前解决。", hp: 320, speed: 30, radius: 19, damage: 16, xp: 30, color: "#a85f1f", accent: "#ffd166", ranged: { standoff: 113, interval: 1.9, projectileSpeed: 230, projectileRadius: 12, damage: 22 } },
+      splitterElite: { name: "分裂僵尸精英", codexCategory: "elite", description: "分裂僵尸的精英形态，体型更大并持续回复生命；死亡后分裂出两个同样会自愈的精英幼体。", tactics: "自愈会拉长战斗时间，需要集中持续输出；击杀本体后立即处理两个精英幼体，避免它们回满生命。它与幼体都怕火（+50%）。", hp: 620, speed: 27, radius: 25, damage: 22, xp: 55, color: "#5d4f8a", accent: "#ffd166", splitInto: "splitterEliteChild", splitCount: 2, regenPerSecond: 8, damageTakenByElement: { fire: 1.5 } },
+      splitterEliteChild: { name: "分裂僵尸精英幼体", codexCategory: "elite", codexHidden: true, description: "分裂僵尸精英死亡后产生的精英幼体，体型较小但保留精英特征并会持续回复生命。", tactics: "尽快击杀防止回血堆积，冰冻、眩晕和爆发伤害都很有效；它同样怕火（+50%）。", hp: 100, speed: 34, radius: 12, damage: 10, xp: 10, color: "#7767a5", accent: "#ffe08a", regenPerSecond: 3, damageTakenByElement: { fire: 1.5 } },
+      armoredElite: { name: "护甲僵尸精英", codexCategory: "elite", description: "护甲僵尸的精英形态，体型更大，装甲板层数翻倍，推进速度与撞击力度同步提升。", tactics: "装甲层数更多，高射速武器与范围技能剥甲更快；破甲前不要指望燃烧、冰冻或眩晕能拖住它。它同样减免 50% 物理伤害。", hp: 420, speed: 22, radius: 22, damage: 20, xp: 35, color: "#5f7080", accent: "#ffd166", armorCharges: 12, damageTakenByElement: { physical: .5 } },
+      basketballElite: { name: "篮球僵尸精英", codexCategory: "elite", description: "篮球僵尸的精英形态，站得更远、抛得更快、砸得更重，同样不会靠近城墙。", tactics: "它停在更远的位置，靠防线前的减速与近战完全拦不住；应当用中远距离技能或提前集火在它出手前解决。它同样怕电（+50%），用电系技能收益最高。", hp: 320, speed: 30, radius: 19, damage: 16, xp: 30, color: "#a85f1f", accent: "#ffd166", ranged: { standoff: 113, interval: 1.9, projectileSpeed: 230, projectileRadius: 12, damage: 22 }, damageTakenByElement: { electric: 1.5 } },
       bird: { name: "飞鸟僵尸", codexCategory: "minion", description: "被尸群驱赶着飞行的黑色怪鸟，一路飞到城墙前才开始啄击防线；它全程停在半空，贴地推进的装甲车、龙卷风与燃油弹都碰不到它。", tactics: "贴地技能对它完全无效，只能用步枪、干冰弹、温压弹、冰雹、气刃、无人机、电链、空袭或射线解决；它飞得不慢，应在抵达城墙前点掉。", hp: 24, speed: 36, radius: 12, damage: 9, xp: 10, color: "#12171c", accent: "#9fb2bd", flying: true, attackInterval: .7 },
       birdElite: { name: "飞鸟僵尸精英", codexCategory: "elite", description: "飞鸟僵尸的精英形态，翼展更大、俯冲更快，撞击防线的力度也更高，同样免疫一切贴地推进的伤害。", tactics: "它同样无视装甲车、龙卷风与燃油弹，需要集中步枪火力或用空中技能处理；撞击伤害高于小怪，别让它反复啄击城墙。", hp: 300, speed: 46, radius: 17, damage: 16, xp: 30, color: "#0b0f14", accent: "#ffd166", flying: true, attackInterval: .6 },
       boss: { name: "尸潮领主", codexCategory: "boss", description: "关卡首领，体型巨大、生命值极高；生命低于一半时进入狂暴状态，移动速度提升。", tactics: "持续输出并留意其接近城墙；燃烧、暴击与高伤害构筑有助于缩短战斗时间。", hp: 3000, speed: 10, radius: 34, damage: 24, xp: 100, color: "#9d5264", accent: "#ffb0bc" }
@@ -247,9 +261,10 @@
       { id: 2, name: "地铁入口", subtitle: "分裂僵尸与更密集的波次", unlocked: true, hpScale: 1, xpScale: .63, waves: levelTwoWaves },
       { id: 3, name: "封锁工厂", subtitle: "更密集的尸潮与分裂精英", unlocked: true, hpScale: 1.35, xpScale: .43, waves: levelThreeWaves },
       { id: 4, name: "熔炉核心", subtitle: "后期尸潮成倍压上，个体更硬", unlocked: true, hpScale: 1.35, xpScale: .34, waves: levelFourWaves },
-      { id: 5, name: "废弃球馆", subtitle: "篮球僵尸远程砸墙，尸潮更密更硬", unlocked: true, hpScale: 1.5, xpScale: .32, waves: levelFiveWaves },
-      { id: 6, name: "隔离区", subtitle: "护甲、分裂与远程混编，尸潮更长", unlocked: true, hpScale: 1.55, xpScale: .29, waves: levelSixWaves },
-      { id: 7, name: "装甲坟场", subtitle: "护甲僵尸成群推进，装甲精英坐镇", unlocked: true, hpScale: 1.6, xpScale: .26, waves: levelSevenWaves }
+      { id: 5, name: "废弃球馆", subtitle: "篮球僵尸远程砸墙，尸潮更密更硬", unlocked: true, hpScale: 1.6, xpScale: .32, waves: levelFiveWaves },
+      { id: 6, name: "隔离区", subtitle: "护甲、分裂与远程混编，尸潮更长", unlocked: true, hpScale: 1.68, xpScale: .29, waves: levelSixWaves },
+      { id: 7, name: "装甲坟场", subtitle: "护甲僵尸成群推进，装甲精英坐镇", unlocked: true, hpScale: 1.75, xpScale: .26, waves: levelSevenWaves },
+      { id: 8, name: "环城高架", subtitle: "飞鸟与快跑压境，贴地技能失效", unlocked: true, hpScale: 2, xpScale: .165, waves: levelEightWaves }
     ],
     waves: levelOneWaves
   };

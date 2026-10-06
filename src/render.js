@@ -1187,6 +1187,16 @@
       text("应对建议", 44, 465, "bold 11px Segoe UI, Microsoft YaHei", C.colors.yellow);
       ctx.font = "10px Segoe UI, Microsoft YaHei"; ctx.fillStyle = C.colors.muted; ctx.textAlign = "left";
       U.wrapText(ctx, selectedEnemy.tactics || "暂无应对建议。", 44, 482, 272, 12);
+      var elementTraits = enemyElementTraits(selectedEnemy);
+      if (elementTraits.length) {
+        text("属性克制", 44, 526, "bold 10px Segoe UI, Microsoft YaHei", C.colors.yellow);
+        ctx.font = "bold 10px Segoe UI, Microsoft YaHei";
+        var traitX = 96;
+        elementTraits.forEach(function (item) {
+          text(item.text, traitX, 526, "bold 10px Segoe UI, Microsoft YaHei", item.color);
+          traitX += ctx.measureText(item.text).width + 12;
+        });
+      }
       Game.button(C.width / 2 - 82, 553, 164, 40, "返回图鉴列表", C.colors.cyan);
       return;
     }
@@ -1204,6 +1214,15 @@
     var info = group && group.element ? (C.elements || {})[group.element] : null;
     if (!info) return null;
     return { name: info.name + "属性", color: info.color, note: group.elementNote || info.detail || "" };
+  }
+  function enemyElementTraits(enemy) {
+    var table = enemy && enemy.damageTakenByElement, labels = [];
+    Object.keys(table || {}).forEach(function (id) {
+      var info = (C.elements || {})[id], scale = table[id];
+      if (!info) return;
+      labels.push({ text: info.name + "系伤害 " + (scale > 1 ? "+" : "−") + Math.round(Math.abs(scale - 1) * 100) + "%", color: info.color });
+    });
+    return labels;
   }
   Game.drawSkillCodex = function () {
     Game.overlay();
