@@ -8,13 +8,20 @@
     var plan = session.waves[session.wave - 1];
     return (plan && plan.hpScale) || 1;
   };
+  Game.isFlyingEnemy = function (enemy) {
+    var info = enemy && C.enemies[enemy.type];
+    return !!(info && info.flying);
+  };
+  Game.canHitEnemy = function (source, enemy) {
+    return !(source && source.groundOnly && Game.isFlyingEnemy(enemy));
+  };
   Game.spawnEnemy = function (type, options) {
     var info = C.enemies[type], opts = options || {}, radius = info.radius;
     var edge = Math.max(22, radius + 4);
     var x = opts.x === undefined ? U.rand(edge, C.width - edge) : U.clamp(opts.x, radius, C.width - radius);
     var y = opts.y === undefined ? -radius - 8 : U.clamp(opts.y, -radius, S.wall ? S.wall.y - S.wall.height / 2 - radius - 3 : C.height);
     var maxHp = Math.round(info.hp * ((S.session && S.session.hpScale) || 1) * Game.getWaveHpScale());
-    var enemy = { type: type, x: x, y: y, hp: maxHp, maxHp: maxHp, slow: 0, slowFactor: .58, damageTakenTimer: 0, damageTakenMultiplier: 1, burn: 0, burnDps: 0, hitFlash: 0, attackTimer: 0, regenPerSecond: info.regenPerSecond || 0, armorCharges: info.armorCharges || 0, armorStamp: -1e9, armorFlash: 0 };
+    var enemy = { type: type, x: x, y: y, hp: maxHp, maxHp: maxHp, slow: 0, slowFactor: .58, damageTakenTimer: 0, damageTakenMultiplier: 1, burn: 0, burnDps: 0, wound: 0, woundFactor: 0, woundExtra: 0, woundExtraFactor: 0, hitFlash: 0, attackTimer: 0, regenPerSecond: info.regenPerSecond || 0, armorCharges: info.armorCharges || 0, armorStamp: -1e9, armorFlash: 0 };
     if (type === "boss") enemy.x = C.width / 2;
     S.enemies.push(enemy);
     if (info.codexCategory === "elite" && !opts.silent) {
@@ -76,7 +83,7 @@
     });
     p.damage = 28; p.fireInterval = .52; p.burst = 0; p.spread = 0; p.pierce = 0; p.bulletRadius = 4; p.crit = .08; p.critDamage = 1.5; p.burn = 0; p.freeze = 0; p.bulletType = "normal"; p.skills = skills; p.traits = {}; p.skillOrder = [];
     p.ammo = p.magazineSize; p.reloadTimer = 0; p.rifleEnabled = true; p.fireTimer = 0; p.burstShotsRemaining = 0; p.burstTimer = 0;
-    S.bullets = []; S.skillProjectiles = []; S.armoredCars = []; S.bombDrops = []; S.bombZones = []; S.electromagneticZones = []; S.tornadoes = []; S.explosions = [];
+    S.bullets = []; S.skillProjectiles = []; S.armoredCars = []; S.bombDrops = []; S.bombZones = []; S.electromagneticZones = []; S.tornadoes = []; S.drones = []; S.hailStorms = []; S.fuelShells = []; S.fuelPools = []; S.explosions = [];
     S.session.message = "技能和词条已清空";
     S.session.messageTimer = 1.5;
   };
@@ -91,6 +98,10 @@
     S.bombZones = [];
     S.electromagneticZones = [];
     S.tornadoes = [];
+    S.drones = [];
+    S.hailStorms = [];
+    S.fuelShells = [];
+    S.fuelPools = [];
     S.explosions = [];
     S.session.message = "测试场已清空";
     S.session.messageTimer = 1.2;
@@ -125,6 +136,12 @@
     var queue = S.pendingSpawns;
     S.pendingSpawns = [];
     queue.forEach(function (item) { Game.spawnEnemy(item.type, { x: item.x, y: item.y, silent: true }); });
+  };
+  Game.getEnemyHoldY = function (info) {
+    if (!S.wall || !info) return C.height;
+    var wallLine = S.wall.y - S.wall.height / 2;
+    if (info.ranged) return wallLine - info.ranged.standoff;
+    return wallLine - info.radius - 3 - (info.flying ? (C.flyingHover || 0) : 0);
   };
   Game.getRangeLine = function (rangeName) {
     var wallTop = S.wall ? S.wall.y - S.wall.height / 2 : C.height;
@@ -169,7 +186,7 @@
       var info = C.enemies[enemy.type];
       var speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
       if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
-      var attackY = S.wall ? S.wall.y - S.wall.height / 2 - info.radius - 3 : C.height;
+      var attackY = Game.getEnemyHoldY(info);
       var predictedX = enemy.x, predictedY = enemy.y, flightTime = 0;
 
       // Re-estimate the intercept point so moving enemies, including those near either edge, stay on the firing line.
@@ -261,7 +278,7 @@
       if (enemy.y < rangeLine) return;
       var info = C.enemies[enemy.type], speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
       if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
-      var attackY = S.wall ? S.wall.y - S.wall.height / 2 - info.radius - 3 : C.height;
+      var attackY = Game.getEnemyHoldY(info);
       var predictedX = enemy.x, predictedY = enemy.y, flightTime = 0, targetX, targetY;
       for (var i = 0; i < 3; i++) {
         var dx = predictedX - origin.x, dy = predictedY - origin.y;
@@ -271,7 +288,7 @@
         targetY = predictedY;
       }
       var angle = Math.atan2(targetY - origin.y, targetX - origin.x);
-      if (type === "dryIce" && skill.spread > 0) {
+      if ((type === "dryIce" || type === "airBlade") && skill.spread > 0) {
         var lanes = 1 + skill.spread, lockLane = Math.floor((lanes - 1) / 2);
         angle -= (lockLane - (lanes - 1) / 2) * C.spreadAngle;
       }
@@ -360,6 +377,14 @@
       S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(angle) * skill.projectileSpeed, vy: Math.sin(angle) * skill.projectileSpeed, radius: skill.projectileRadius, impactDamage: skill.impactDamage, impactKnockback: skill.impactKnockback, explosionDamage: skill.explosionDamage, explosionRadius: skill.explosionRadius, explosionKnockback: skill.explosionKnockback, burnDps: skill.burnDps, burnDuration: skill.burnDuration, pierce: skill.pierce, hasImpacted: false, fuseTimer: 0, critical: false, hitEnemies: [] });
       return;
     }
+    if (type === "airBlade") {
+      var bladeLanes = 1 + skill.spread;
+      for (var blade = 0; blade < bladeLanes; blade++) {
+        var bladeAngle = angle + (blade - (bladeLanes - 1) / 2) * C.spreadAngle;
+        S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(bladeAngle) * skill.projectileSpeed, vy: Math.sin(bladeAngle) * skill.projectileSpeed, radius: skill.projectileRadius, damage: skill.damage, knockback: skill.knockback, pierce: skill.pierce, woundDuration: skill.woundDuration, woundFactor: skill.woundFactor, woundExtraDuration: skill.woundExtraDuration, woundExtraFactor: skill.woundExtraFactor, critical: false, hitEnemies: [] });
+      }
+      return;
+    }
     var lanes = 1 + skill.spread;
     for (var lane = 0; lane < lanes; lane++) {
       var bulletAngle = angle + (lane - (lanes - 1) / 2) * C.spreadAngle;
@@ -372,7 +397,7 @@
     var laneWidth = (maxX - minX) / count, startY = wall.y - wall.height / 2 - skill.carLength * scale / 2;
     for (var i = 0; i < count; i++) {
       var x = count === 1 ? U.rand(minX, maxX) : minX + laneWidth * (i + .5) + U.rand(-laneWidth * .18, laneWidth * .18);
-      S.armoredCars.push({ x: U.clamp(x, minX, maxX), y: startY, speed: skill.speed, width: skill.carWidth * scale, length: skill.carLength * scale, damage: skill.damage, hitInterval: skill.hitInterval, slowFactor: skill.slowFactor, slowDuration: skill.slowDuration, stunChance: skill.stunChance, stunDuration: skill.stunDuration, contacts: [], impactFlash: 0 });
+      S.armoredCars.push({ x: U.clamp(x, minX, maxX), y: startY, speed: skill.speed, width: skill.carWidth * scale, length: skill.carLength * scale, damage: skill.damage, hitInterval: skill.hitInterval, slowFactor: skill.slowFactor, slowDuration: skill.slowDuration, stunChance: skill.stunChance, stunDuration: skill.stunDuration, groundOnly: !!skill.groundOnly, contacts: [], impactFlash: 0 });
     }
   };
   Game.updateSkills = function (dt) {
@@ -393,6 +418,11 @@
       if (type === "electromagnetic") {
         skill.fireTimer = Math.max(0, skill.fireTimer - dt);
         if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) Game.launchElectromagnetic();
+        return;
+      }
+      if (type === "chainLightning") {
+        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) Game.launchChainLightning();
         return;
       }
       if (type === "highEnergyBeam") {
@@ -417,6 +447,34 @@
         }
         skill.fireTimer = Math.max(0, skill.fireTimer - dt);
         if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) Game.launchWhirlwindCannon();
+        return;
+      }
+      if (type === "hailGenerator") {
+        if (skill.active) {
+          skill.activeElapsed = Math.min(skill.duration, skill.activeElapsed + dt);
+          if (skill.activeElapsed >= skill.duration) skill.active = false;
+        }
+        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        if (skill.fireTimer <= 0 && !skill.active && Game.isSkillRangeEngaged(type)) Game.launchHailGenerator();
+        return;
+      }
+      if (type === "drone") {
+        if (skill.active) {
+          skill.activeElapsed = Math.min(skill.duration, skill.activeElapsed + dt);
+          if (skill.activeElapsed >= skill.duration) skill.active = false;
+        }
+        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        if (skill.fireTimer <= 0 && !skill.active && Game.isSkillRangeEngaged(type)) Game.launchDrone();
+        return;
+      }
+      if (type === "fuelBomb") {
+        var fuelWindow = skill.flightTime + skill.duration;
+        if (skill.active) {
+          skill.activeElapsed = Math.min(fuelWindow, skill.activeElapsed + dt);
+          if (skill.activeElapsed >= fuelWindow) skill.active = false;
+        }
+        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        if (skill.fireTimer <= 0 && !skill.active && Game.isSkillRangeEngaged(type)) Game.launchFuelBomb();
         return;
       }
       if (skill.burstShotsRemaining > 0) {
@@ -478,6 +536,26 @@
     enemy.burnDps = Math.max(enemy.burnDps || 0, dps);
     return true;
   };
+  Game.applyWound = function (enemy, duration, factor, extraDuration, extraFactor) {
+    var base = duration > 0, extra = extraDuration > 0;
+    if (!base && !extra) return false;
+    if (Game.blockWithArmor(enemy)) return false;
+    if (base) {
+      enemy.wound = Math.max(enemy.wound || 0, duration);
+      enemy.woundFactor = Math.max(enemy.woundFactor || 0, factor || 0);
+    }
+    if (extra) {
+      enemy.woundExtra = Math.max(enemy.woundExtra || 0, extraDuration);
+      enemy.woundExtraFactor = Math.max(enemy.woundExtraFactor || 0, extraFactor || 0);
+    }
+    return true;
+  };
+  Game.getHealScale = function (enemy) {
+    var cut = 0;
+    if (enemy.wound > 0) cut += enemy.woundFactor || 0;
+    if (enemy.woundExtra > 0) cut += enemy.woundExtraFactor || 0;
+    return U.clamp(1 - cut, 0, 1);
+  };
   Game.explodeThermobaric = function (projectile) {
     S.explosions.push({ x: projectile.x, y: projectile.y, radius: projectile.explosionRadius, life: .42, duration: .42 });
     for (var i = S.enemies.length - 1; i >= 0; i--) {
@@ -501,6 +579,10 @@
   Game.updateSkillProjectiles = function (dt) {
     for (var i = S.skillProjectiles.length - 1; i >= 0; i--) {
       var projectile = S.skillProjectiles[i];
+      if (projectile.type === "chainLightning") {
+        if (Game.updateChainLightnings(projectile, dt)) S.skillProjectiles.splice(i, 1);
+        continue;
+      }
       if (projectile.type === "electromagnetic") {
         if (S.enemies.indexOf(projectile.target) >= 0) { projectile.x = projectile.target.x; projectile.y = projectile.target.y; }
         projectile.delay -= dt;
@@ -525,8 +607,9 @@
           else { Game.explodeThermobaric(projectile); removed = true; }
         } else {
           Game.damageEnemy(enemy, projectile.damage, projectile);
-          Game.applyKnockback(enemy, projectile.x - projectile.vx, projectile.y - projectile.vy, projectile.knockback);
+          if (projectile.knockback > 0) Game.applyKnockback(enemy, projectile.x - projectile.vx, projectile.y - projectile.vy, projectile.knockback);
           if (projectile.freezeDuration > 0) Game.applySlow(enemy, projectile.freezeDuration, projectile.slowFactor);
+          if (projectile.woundDuration > 0 || projectile.woundExtraDuration > 0) Game.applyWound(enemy, projectile.woundDuration, projectile.woundFactor, projectile.woundExtraDuration, projectile.woundExtraFactor);
           Game.splitDryIceProjectile(projectile, enemy);
           if (enemy.hp <= 0) Game.killEnemy(j);
           projectile.pierce--;
@@ -576,7 +659,7 @@
     S.enemies.forEach(function (enemy) {
       var info = C.enemies[enemy.type], speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
       if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
-      var attackY = S.wall.y - S.wall.height / 2 - info.radius - 3, predictedY = Math.min(attackY, enemy.y + speed * impactTime);
+      var attackY = Game.getEnemyHoldY(info), predictedY = Math.min(attackY, enemy.y + speed * impactTime);
       var dx = enemy.x - point.x, dy = predictedY - point.y, distance = Math.sqrt(dx * dx + dy * dy), reach = skill.blastRadius + info.radius;
       if (distance > reach) return;
       var weight = enemy.type === "boss" ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
@@ -620,7 +703,7 @@
       if (candidate.y < rangeLine) return;
       var candidateInfo = C.enemies[candidate.type], candidateSpeed = candidate.stun > 0 ? 0 : candidateInfo.speed * (candidate.slow > 0 ? candidate.slowFactor || .58 : 1);
       if (candidate.type === "boss" && candidate.hp < candidate.maxHp * .5) candidateSpeed *= 1.5;
-      var candidateAttackY = S.wall.y - S.wall.height / 2 - candidateInfo.radius - 3, targetY = candidate.y;
+      var candidateAttackY = Game.getEnemyHoldY(candidateInfo), targetY = candidate.y;
       for (var step = 0; step < 3; step++) {
         var estimateY = U.clamp(targetY, minY, maxY), dropTime = (estimateY + 24) / skill.bombSpeed;
         targetY = Math.min(candidateAttackY, candidate.y + candidateSpeed * dropTime);
@@ -714,9 +797,11 @@
     var best = null, bestScore = -Infinity;
     S.enemies.forEach(function (enemy) {
       var info = C.enemies[enemy.type];
+      if (!Game.canHitEnemy(skill, enemy)) return;
       if (enemy.y < field.minY - tornado.radius || enemy.y > field.maxY + info.radius + tornado.radius) return;
       var dx = enemy.x - tornado.x, dy = enemy.y - tornado.y, distance = Math.sqrt(dx * dx + dy * dy), cluster = 0;
       S.enemies.forEach(function (other) {
+        if (!Game.canHitEnemy(skill, other)) return;
         var ox = other.x - enemy.x, oy = other.y - enemy.y;
         if (ox * ox + oy * oy > clusterRadius * clusterRadius) return;
         cluster += Game.getWhirlwindEnemyWeight(other);
@@ -750,7 +835,7 @@
     var tornado = {
       x: U.rand(bandX, bandX + band), y: U.rand(field.minY, field.minY + (field.maxY - field.minY) * .5),
       radius: skill.radius, life: skill.duration, duration: skill.duration, speed: skill.speed, stationary: false,
-      damage: skill.damage, hitInterval: skill.hitInterval, pullSpeed: skill.pullSpeed, contacts: [], targetX: 0, targetY: 0, retargetTimer: 0
+      damage: skill.damage, hitInterval: skill.hitInterval, pullSpeed: skill.pullSpeed, groundOnly: !!skill.groundOnly, contacts: [], targetX: 0, targetY: 0, retargetTimer: 0
     };
     tornado.targetX = tornado.x;
     tornado.targetY = tornado.y;
@@ -765,7 +850,7 @@
     return true;
   };
   Game.spawnStormWhirlwind = function (skill, tornado) {
-    S.tornadoes.push({ x: tornado.x, y: tornado.y, radius: tornado.radius * skill.stormRadiusScale, life: skill.stormDuration, duration: skill.stormDuration, speed: 0, stationary: true, damage: tornado.damage * skill.stormDamageScale, hitInterval: tornado.hitInterval, pullSpeed: tornado.pullSpeed * skill.stormPullScale, contacts: [], targetX: tornado.x, targetY: tornado.y, retargetTimer: 0 });
+    S.tornadoes.push({ x: tornado.x, y: tornado.y, radius: tornado.radius * skill.stormRadiusScale, life: skill.stormDuration, duration: skill.stormDuration, speed: 0, stationary: true, damage: tornado.damage * skill.stormDamageScale, hitInterval: tornado.hitInterval, pullSpeed: tornado.pullSpeed * skill.stormPullScale, groundOnly: !!skill.groundOnly, contacts: [], targetX: tornado.x, targetY: tornado.y, retargetTimer: 0 });
     Game.burst(tornado.x, tornado.y, 18, C.colors.cyan);
   };
   Game.moveWhirlwind = function (tornado, dt) {
@@ -793,6 +878,7 @@
       tornado.contacts.forEach(function (contact) { contact.hitTimer = Math.max(0, contact.hitTimer - dt); });
       for (var j = S.enemies.length - 1; j >= 0; j--) {
         var enemy = S.enemies[j], info = C.enemies[enemy.type];
+        if (!Game.canHitEnemy(tornado, enemy)) continue;
         var dx = enemy.x - tornado.x, dy = enemy.y - tornado.y, reach = tornado.radius + info.radius;
         if (dx * dx + dy * dy > reach * reach) continue;
         var distance = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -807,6 +893,422 @@
         Game.damageEnemy(enemy, tornado.damage, { critical: false, noWeaponEffects: true, silentText: true });
         Game.burst(enemy.x, enemy.y, 1, C.colors.cyan);
         if (enemy.hp <= 0) { Game.killEnemy(j); tornado.contacts.splice(contactIndex, 1); }
+      }
+    }
+  };
+  Game.getDroneChaseTarget = function (drone, field) {
+    var skill = S.player.skills.drone, clusterRadius = skill.clusterRadius, threatRange = Math.max(1, field.maxY - field.minY);
+    var best = null, bestScore = -Infinity;
+    S.enemies.forEach(function (enemy) {
+      var info = C.enemies[enemy.type];
+      if (!Game.canHitEnemy(drone, enemy)) return;
+      if (enemy.y < field.minY - drone.radius || enemy.y > field.maxY + info.radius + drone.radius) return;
+      var dx = enemy.x - drone.x, dy = enemy.y - drone.y, distance = Math.sqrt(dx * dx + dy * dy), cluster = 0;
+      S.enemies.forEach(function (other) {
+        if (!Game.canHitEnemy(drone, other)) return;
+        var ox = other.x - enemy.x, oy = other.y - enemy.y;
+        if (ox * ox + oy * oy > clusterRadius * clusterRadius) return;
+        cluster += Game.getWhirlwindEnemyWeight(other);
+      });
+      var score = cluster * skill.clusterWeight - distance * .35 + ((enemy.y - field.minY) / threatRange) * skill.threatWeight;
+      S.drones.forEach(function (other) {
+        if (other === drone) return;
+        var ox = enemy.x - other.x, oy = enemy.y - other.y, reach = drone.radius + other.radius + 24;
+        if (ox * ox + oy * oy <= reach * reach) score -= skill.clusterWeight;
+      });
+      if (score > bestScore) { bestScore = score; best = enemy; }
+    });
+    if (!best) return null;
+    return { x: U.clamp(best.x + U.rand(-1, 1) * skill.clusterJitter * drone.radius, field.minX, field.maxX), y: U.clamp(best.y + U.rand(-1, 1) * skill.clusterJitter * drone.radius, field.minY, field.maxY) };
+  };
+  Game.pickDroneTarget = function (drone, field) {
+    var target = Game.getDroneChaseTarget(drone, field);
+    if (target) {
+      drone.targetX = target.x;
+      drone.targetY = target.y;
+      drone.retargetTimer = U.rand(.45, 1.1);
+    } else {
+      drone.targetX = U.rand(field.minX, field.maxX);
+      drone.targetY = U.rand(field.minY, field.maxY);
+      drone.retargetTimer = U.rand(1.1, 2.1);
+    }
+  };
+  Game.getDroneRadius = function (skill) { return skill.radius * (1 + (skill.sizeLevel || 0) * .3); };
+  Game.spawnDrone = function (skill, options) {
+    var opts = options || {}, count = opts.count || 1, radius = Game.getDroneRadius(skill), field = Game.getWhirlwindField(radius);
+    var band = (field.maxX - field.minX) / count, bandX = field.minX + band * (opts.index || 0);
+    var drone = {
+      x: U.rand(bandX, bandX + band), y: U.rand(field.minY, field.minY + (field.maxY - field.minY) * .5),
+      radius: radius, baseRadius: skill.radius, sizeLevel: skill.sizeLevel || 0,
+      life: skill.duration, duration: skill.duration, speed: skill.speed,
+      damage: skill.damage, hitInterval: skill.hitInterval, stunDuration: skill.stunDuration, bladeEnabled: !!skill.bladeEnabled,
+      groundOnly: !!skill.groundOnly, contacts: [], targetX: 0, targetY: 0, retargetTimer: 0, spin: U.rand(0, Math.PI * 2)
+    };
+    drone.targetX = drone.x;
+    drone.targetY = drone.y;
+    S.drones.push(drone);
+    return drone;
+  };
+  Game.launchDrone = function () {
+    var skill = S.player.skills.drone;
+    if (!skill.unlocked || skill.active || skill.fireTimer > 0) return false;
+    Game.spawnDrone(skill, { index: 0, count: 1 });
+    skill.active = true;
+    skill.activeElapsed = 0;
+    skill.fireTimer = skill.fireInterval;
+    return true;
+  };
+  Game.spawnDroneBlade = function (drone, enemy) {
+    var skill = S.player.skills.airBlade, source = skill && skill.unlocked ? skill : C.skillDefaults.airBlade;
+    var angle = Math.atan2(enemy.y - drone.y, enemy.x - drone.x);
+    S.skillProjectiles.push({
+      type: "airBlade", x: drone.x, y: drone.y, vx: Math.cos(angle) * source.projectileSpeed, vy: Math.sin(angle) * source.projectileSpeed,
+      radius: source.projectileRadius, damage: source.damage, knockback: 0, pierce: 0,
+      woundDuration: 0, woundFactor: 0, woundExtraDuration: 0, woundExtraFactor: 0,
+      critical: false, noWeaponEffects: true, fromDrone: true, hitEnemies: [enemy]
+    });
+    return S.skillProjectiles[S.skillProjectiles.length - 1];
+  };
+  Game.moveDrone = function (drone, dt) {
+    var field = Game.getWhirlwindField(drone.radius);
+    drone.spin += dt * 9;
+    drone.retargetTimer -= dt;
+    if (drone.retargetTimer <= 0) Game.pickDroneTarget(drone, field);
+    var dx = drone.targetX - drone.x, dy = drone.targetY - drone.y, distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < 8) return;
+    var step = Math.min(drone.speed * dt, distance);
+    drone.x = U.clamp(drone.x + dx / distance * step, field.minX, field.maxX);
+    drone.y = U.clamp(drone.y + dy / distance * step, field.minY, field.maxY);
+  };
+  Game.updateDrones = function (dt) {
+    if (!S.drones || !S.drones.length) return;
+    for (var i = S.drones.length - 1; i >= 0; i--) {
+      var drone = S.drones[i];
+      drone.life -= dt;
+      if (drone.life <= 0) { S.drones.splice(i, 1); continue; }
+      Game.moveDrone(drone, dt);
+      drone.contacts.forEach(function (contact) { contact.hitTimer = Math.max(0, contact.hitTimer - dt); });
+      for (var j = S.enemies.length - 1; j >= 0; j--) {
+        var enemy = S.enemies[j], info = C.enemies[enemy.type];
+        if (!Game.canHitEnemy(drone, enemy)) continue;
+        var dx = enemy.x - drone.x, dy = enemy.y - drone.y, reach = drone.radius + info.radius;
+        if (dx * dx + dy * dy > reach * reach) continue;
+        var contactIndex = -1;
+        for (var k = 0; k < drone.contacts.length; k++) if (drone.contacts[k].enemy === enemy) { contactIndex = k; break; }
+        if (contactIndex < 0) { drone.contacts.push({ enemy: enemy, hitTimer: 0 }); contactIndex = drone.contacts.length - 1; }
+        if (drone.contacts[contactIndex].hitTimer > 0) continue;
+        drone.contacts[contactIndex].hitTimer = drone.hitInterval;
+        Game.damageEnemy(enemy, drone.damage, { critical: false, noWeaponEffects: true, silentText: true });
+        if (drone.bladeEnabled) Game.spawnDroneBlade(drone, enemy);
+        if (drone.stunDuration > 0) Game.applyStun(enemy, drone.stunDuration);
+        Game.burst(enemy.x, enemy.y, 1, "#a6c8ff");
+        if (enemy.hp <= 0) { Game.killEnemy(j); drone.contacts.splice(contactIndex, 1); }
+      }
+    }
+  };
+  Game.getChainLightningStart = function (taken) {
+    var rangeLine = Game.getSkillRangeLine("chainLightning"), best = null, bestScore = -Infinity, fallback = null, fallbackScore = -Infinity;
+    S.enemies.forEach(function (enemy) {
+      if (enemy.y < rangeLine) return;
+      var score = enemy.y + C.enemies[enemy.type].radius * .35 + (enemy.type === "boss" ? 10 : 0);
+      if (taken && taken.indexOf(enemy) >= 0) {
+        if (score > fallbackScore) { fallbackScore = score; fallback = enemy; }
+        return;
+      }
+      if (score > bestScore) { bestScore = score; best = enemy; }
+    });
+    return best || fallback;
+  };
+  Game.getChainLightningJumpTarget = function (from, chain, taken) {
+    var best = null, bestDistance = Infinity, fallback = null, fallbackDistance = Infinity;
+    S.enemies.forEach(function (enemy) {
+      if (chain.hitEnemies.indexOf(enemy) >= 0) return;
+      var dx = enemy.x - from.x, dy = enemy.y - from.y, distance = dx * dx + dy * dy;
+      if (taken && taken.indexOf(enemy) >= 0) {
+        if (distance < fallbackDistance) { fallbackDistance = distance; fallback = enemy; }
+        return;
+      }
+      if (distance < bestDistance) { bestDistance = distance; best = enemy; }
+    });
+    return best || fallback;
+  };
+  Game.buildChainLightning = function (skill, origin, start, taken) {
+    var chain = {
+      type: "chainLightning", originX: origin.x, originY: origin.y,
+      nodes: [{ target: start, x: start.x, y: start.y, struck: false }],
+      hitEnemies: [start], next: 0, timer: 0, life: .32, jumpDelay: Math.max(.03, skill.jumpDelay || .08),
+      damage: skill.damage, stunDuration: skill.stunDuration,
+      burnEnabled: !!skill.burnEnabled, burnDps: skill.burnDps || 0, burnDuration: skill.burnDuration || 0
+    };
+    var cursor = start;
+    for (var i = 0; i < skill.bounces; i++) {
+      var next = Game.getChainLightningJumpTarget(cursor, chain, taken);
+      if (!next) break;
+      chain.nodes.push({ target: next, x: next.x, y: next.y, struck: false });
+      chain.hitEnemies.push(next);
+      cursor = next;
+    }
+    return chain;
+  };
+  Game.launchChainLightning = function () {
+    var skill = S.player.skills.chainLightning, count, taken = [], made = 0, origin, start, chain;
+    if (!skill.unlocked || skill.fireTimer > 0) return false;
+    count = 1 + (skill.extraChains || 0);
+    origin = Game.getSkillMuzzle();
+    for (var i = 0; i < count; i++) {
+      start = Game.getChainLightningStart(taken);
+      if (!start) break;
+      chain = Game.buildChainLightning(skill, origin, start, taken);
+      chain.nodes.forEach(function (node) { if (taken.indexOf(node.target) < 0) taken.push(node.target); });
+      S.skillProjectiles.push(chain);
+      made++;
+    }
+    if (!made) return false;
+    skill.fireTimer = skill.fireInterval;
+    return true;
+  };
+  Game.resolveChainLightningNode = function (chain) {
+    var node = chain.nodes[chain.next], enemy = node.target, index = S.enemies.indexOf(enemy);
+    chain.next++;
+    if (index < 0) return false;
+    node.x = enemy.x; node.y = enemy.y; node.struck = true;
+    S.explosions.push({ type: "chainSpark", x: enemy.x, y: enemy.y, radius: 13, life: .26, duration: .26 });
+    Game.damageEnemy(enemy, chain.damage, { critical: false, noWeaponEffects: true });
+    if (chain.burnEnabled && chain.burnDps > 0) Game.applyBurn(enemy, chain.burnDps, chain.burnDuration);
+    Game.applyStun(enemy, chain.stunDuration);
+    Game.burst(enemy.x, enemy.y, 3, "#c9a1ff");
+    if (enemy.hp <= 0) Game.killEnemy(index);
+    return true;
+  };
+  Game.updateChainLightnings = function (chain, dt) {
+    if (chain.next < chain.nodes.length) {
+      chain.timer -= dt;
+      while (chain.next < chain.nodes.length && chain.timer <= 0) {
+        Game.resolveChainLightningNode(chain);
+        chain.timer += chain.jumpDelay;
+      }
+      if (chain.next >= chain.nodes.length) chain.timer = chain.life;
+      return false;
+    }
+    chain.timer -= dt;
+    return chain.timer <= 0;
+  };
+  Game.getHailCoverage = function (skill, point) {
+    var score = 0;
+    S.enemies.forEach(function (enemy) {
+      var info = C.enemies[enemy.type], dx = enemy.x - point.x, dy = enemy.y - point.y, reach = skill.radius + info.radius;
+      if (dx * dx + dy * dy > reach * reach) return;
+      score += enemy.type === "boss" ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
+    });
+    return score;
+  };
+  Game.getHailTargetPoint = function (skill, taken) {
+    var rangeLine = Game.getSkillRangeLine("hailGenerator"), others = taken || [], margin = skill.radius * .5;
+    var best = null, bestScore = -1, bestWeighted = -1, bestGap = Infinity;
+    S.enemies.forEach(function (enemy) {
+      if (enemy.y < rangeLine) return;
+      var point = { x: U.clamp(enemy.x, margin, C.width - margin), y: U.clamp(enemy.y, 60, C.height - 120) };
+      var score = Game.getHailCoverage(skill, point), penalty = 1, nearest = Infinity;
+      others.forEach(function (other) {
+        var dx = point.x - other.x, dy = point.y - other.y, gap = Math.sqrt(dx * dx + dy * dy);
+        nearest = Math.min(nearest, gap);
+        if (gap < skill.radius) penalty = Math.min(penalty, gap / skill.radius);
+      });
+      var weighted = score * penalty;
+      if (weighted > bestWeighted || (Math.abs(weighted - bestWeighted) < .000001 && score > bestScore)) {
+        bestWeighted = weighted;
+        bestScore = score;
+        best = point;
+        bestGap = nearest;
+      }
+    });
+    if (best && bestGap < 1) {
+      var push = skill.radius * .55, direction = best.x + push <= C.width - margin ? 1 : -1;
+      best = { x: U.clamp(best.x + direction * push, margin, C.width - margin), y: best.y };
+    }
+    return best;
+  };
+  Game.spawnHailStorm = function (skill, point) {
+    S.hailStorms.push({
+      x: point.x, y: point.y, radius: skill.radius, life: skill.duration, duration: skill.duration,
+      damage: skill.damage, hitInterval: skill.hitInterval, tickTimer: 0, slowFactor: skill.slowFactor, freezeDuration: skill.freezeDuration,
+      explodeOnEnd: !!skill.explodeOnEnd, explosionRadius: skill.explosionRadius, explosionSlowFactor: skill.explosionSlowFactor, explosionSlowDuration: skill.explosionSlowDuration
+    });
+  };
+  Game.launchHailGenerator = function () {
+    var skill = S.player.skills.hailGenerator, count = 1 + skill.extraHails, taken = [], launched = 0;
+    if (!skill.unlocked || skill.active || skill.fireTimer > 0) return false;
+    for (var i = 0; i < count; i++) {
+      var point = Game.getHailTargetPoint(skill, taken);
+      if (!point) break;
+      taken.push(point);
+      Game.spawnHailStorm(skill, point);
+      launched++;
+    }
+    if (!launched) return false;
+    skill.active = true;
+    skill.activeElapsed = 0;
+    skill.fireTimer = skill.fireInterval;
+    return true;
+  };
+  Game.explodeHailStorm = function (storm) {
+    S.explosions.push({ type: "hailFrost", x: storm.x, y: storm.y, radius: storm.explosionRadius, life: .5, duration: .5 });
+    S.enemies.forEach(function (enemy) {
+      var info = C.enemies[enemy.type], dx = enemy.x - storm.x, dy = enemy.y - storm.y, reach = storm.explosionRadius + info.radius;
+      if (dx * dx + dy * dy > reach * reach) return;
+      Game.applySlow(enemy, storm.explosionSlowDuration, storm.explosionSlowFactor);
+    });
+    Game.burst(storm.x, storm.y, 18, C.colors.ice);
+  };
+  Game.updateHailStorms = function (dt) {
+    if (!S.hailStorms || !S.hailStorms.length) return;
+    for (var i = S.hailStorms.length - 1; i >= 0; i--) {
+      var storm = S.hailStorms[i];
+      storm.life -= dt;
+      if (storm.life <= 0) {
+        if (storm.explodeOnEnd) Game.explodeHailStorm(storm);
+        S.hailStorms.splice(i, 1);
+        continue;
+      }
+      storm.tickTimer -= dt;
+      if (storm.tickTimer > 0) continue;
+      storm.tickTimer = storm.hitInterval;
+      for (var j = S.enemies.length - 1; j >= 0; j--) {
+        var enemy = S.enemies[j], info = C.enemies[enemy.type];
+        var dx = enemy.x - storm.x, dy = enemy.y - storm.y, reach = storm.radius + info.radius;
+        if (dx * dx + dy * dy > reach * reach) continue;
+        Game.damageEnemy(enemy, storm.damage, { critical: false, noWeaponEffects: true, silentText: true });
+        Game.applySlow(enemy, storm.freezeDuration, storm.slowFactor);
+        Game.burst(enemy.x, enemy.y, 1, C.colors.ice);
+        if (enemy.hp <= 0) Game.killEnemy(j);
+      }
+    }
+  };
+  Game.getFuelBombCoverage = function (skill, point) {
+    var score = 0;
+    S.enemies.forEach(function (enemy) {
+      if (Game.isFlyingEnemy(enemy)) return;
+      var info = C.enemies[enemy.type], dx = enemy.x - point.x, dy = enemy.y - point.y, reach = skill.radius + info.radius;
+      if (dx * dx + dy * dy > reach * reach) return;
+      score += enemy.type === "boss" ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
+    });
+    return score;
+  };
+  Game.getFuelBombTarget = function (skill, taken, ignoreRange) {
+    var rangeLine = ignoreRange ? -Infinity : Game.getSkillRangeLine("fuelBomb"), others = taken || [], margin = skill.radius * .5;
+    var best = null, bestScore = -1, bestWeighted = -1, bestGap = Infinity;
+    S.enemies.forEach(function (enemy) {
+      if (enemy.y < rangeLine || Game.isFlyingEnemy(enemy)) return;
+      var point = { x: U.clamp(enemy.x, margin, C.width - margin), y: U.clamp(enemy.y, 60, C.height - 120) };
+      var score = Game.getFuelBombCoverage(skill, point), penalty = 1, nearest = Infinity;
+      others.forEach(function (other) {
+        var dx = point.x - other.x, dy = point.y - other.y, gap = Math.sqrt(dx * dx + dy * dy);
+        nearest = Math.min(nearest, gap);
+        if (gap < skill.radius) penalty = Math.min(penalty, gap / skill.radius);
+      });
+      var weighted = score * penalty;
+      if (weighted > bestWeighted || (Math.abs(weighted - bestWeighted) < .000001 && score > bestScore)) {
+        bestWeighted = weighted;
+        bestScore = score;
+        best = point;
+        bestGap = nearest;
+      }
+    });
+    if (best && bestGap < 1) {
+      var push = skill.radius * .55, direction = best.x + push <= C.width - margin ? 1 : -1;
+      best = { x: U.clamp(best.x + direction * push, margin, C.width - margin), y: best.y };
+    }
+    return best;
+  };
+  Game.spawnFuelShell = function (skill, point, damageScale) {
+    var scale = damageScale === undefined ? 1 : damageScale, origin = Game.getSkillMuzzle();
+    S.fuelShells.push({
+      originX: origin.x, originY: origin.y, x: origin.x, y: origin.y, targetX: point.x, targetY: point.y,
+      elapsed: 0, flightTime: skill.flightTime, arcHeight: skill.arcHeight || 0, damageScale: scale,
+      radius: skill.radius, duration: skill.duration, hitInterval: skill.hitInterval,
+      damage: skill.damage * scale, burnDps: skill.burnDps * scale, burnDuration: skill.burnDuration,
+      slowFactor: skill.slowFactor, slowDuration: skill.slowDuration, groundOnly: !!skill.groundOnly,
+      explodeOnEnd: !!skill.explodeOnEnd,
+      explosionRadius: skill.radius * (skill.explosionRadiusScale || 1),
+      explosionDamage: skill.damage * (skill.explosionDamageScale || 0) * scale
+    });
+    return S.fuelShells[S.fuelShells.length - 1];
+  };
+  Game.spawnFuelPool = function (shell) {
+    S.fuelPools.push({
+      x: shell.targetX, y: shell.targetY, radius: shell.radius, life: shell.duration, duration: shell.duration,
+      damage: shell.damage, hitInterval: shell.hitInterval, tickTimer: 0, burnDps: shell.burnDps, burnDuration: shell.burnDuration,
+      slowFactor: shell.slowFactor, slowDuration: shell.slowDuration, groundOnly: shell.groundOnly,
+      explodeOnEnd: shell.explodeOnEnd, explosionRadius: shell.explosionRadius, explosionDamage: shell.explosionDamage
+    });
+    Game.burst(shell.targetX, shell.targetY, 6, C.colors.fire);
+    return S.fuelPools[S.fuelPools.length - 1];
+  };
+  Game.launchFuelBomb = function () {
+    var skill = S.player.skills.fuelBomb, shellCount = 1 + skill.extraShells, taken = [], launched = 0;
+    if (!skill.unlocked || skill.active || skill.fireTimer > 0) return false;
+    var mainPoint = Game.getFuelBombTarget(skill, taken, false);
+    if (!mainPoint) return false;
+    taken.push(mainPoint);
+    Game.spawnFuelShell(skill, mainPoint, 1);
+    launched++;
+    for (var i = 1; i < shellCount; i++) {
+      var point = Game.getFuelBombTarget(skill, taken, true);
+      if (!point) break;
+      taken.push(point);
+      Game.spawnFuelShell(skill, point, skill.extraDamageScale);
+      launched++;
+    }
+    if (!launched) return false;
+    skill.active = true;
+    skill.activeElapsed = 0;
+    skill.activeDuration = skill.flightTime + skill.duration;
+    skill.fireTimer = skill.fireInterval;
+    return true;
+  };
+  Game.explodeFuelPool = function (pool) {
+    S.explosions.push({ type: "fuelBlast", x: pool.x, y: pool.y, radius: pool.explosionRadius, life: .5, duration: .5 });
+    for (var i = S.enemies.length - 1; i >= 0; i--) {
+      var enemy = S.enemies[i], info = C.enemies[enemy.type], dx = enemy.x - pool.x, dy = enemy.y - pool.y, reach = pool.explosionRadius + info.radius;
+      if (dx * dx + dy * dy > reach * reach) continue;
+      if (!Game.canHitEnemy(pool, enemy)) continue;
+      Game.damageEnemy(enemy, pool.explosionDamage, { critical: false, noWeaponEffects: true, silentText: true });
+      Game.applyBurn(enemy, pool.burnDps, pool.burnDuration);
+      if (enemy.hp <= 0) Game.killEnemy(i);
+    }
+    Game.burst(pool.x, pool.y, 18, C.colors.fire);
+  };
+  Game.updateFuelBombs = function (dt) {
+    var i, shell, pool, progress;
+    for (i = S.fuelShells.length - 1; i >= 0; i--) {
+      shell = S.fuelShells[i];
+      shell.elapsed += dt;
+      progress = U.clamp(shell.elapsed / shell.flightTime, 0, 1);
+      shell.x = shell.originX + (shell.targetX - shell.originX) * progress;
+      shell.y = shell.originY + (shell.targetY - shell.originY) * progress;
+      if (progress >= 1) { Game.spawnFuelPool(shell); S.fuelShells.splice(i, 1); }
+    }
+    for (i = S.fuelPools.length - 1; i >= 0; i--) {
+      pool = S.fuelPools[i];
+      pool.life -= dt;
+      if (pool.life <= 0) {
+        if (pool.explodeOnEnd) Game.explodeFuelPool(pool);
+        S.fuelPools.splice(i, 1);
+        continue;
+      }
+      pool.tickTimer -= dt;
+      if (pool.tickTimer > 0) continue;
+      pool.tickTimer = pool.hitInterval;
+      for (var j = S.enemies.length - 1; j >= 0; j--) {
+        var enemy = S.enemies[j], info = C.enemies[enemy.type];
+        if (!Game.canHitEnemy(pool, enemy)) continue;
+        var dx = enemy.x - pool.x, dy = enemy.y - pool.y, reach = pool.radius + info.radius;
+        if (dx * dx + dy * dy > reach * reach) continue;
+        Game.damageEnemy(enemy, pool.damage, { critical: false, noWeaponEffects: true, silentText: true });
+        Game.applyBurn(enemy, pool.burnDps, pool.burnDuration);
+        if (pool.slowFactor < 1) Game.applySlow(enemy, pool.slowDuration, pool.slowFactor);
+        Game.burst(enemy.x, enemy.y, 1, C.colors.fire);
+        if (enemy.hp <= 0) Game.killEnemy(j);
       }
     }
   };

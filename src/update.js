@@ -58,6 +58,7 @@
     Game.updateBombardment(dt);
     Game.updateElectromagneticZones(dt);
     Game.updateWhirlwinds(dt);
+    Game.updateDrones(dt);
     for (var k = S.enemies.length - 1; k >= 0; k--) {
       var current = S.enemies[k], info = C.enemies[current.type];
       current.hitFlash = Math.max(0, current.hitFlash - dt);
@@ -67,22 +68,23 @@
         current.hp -= (current.burnDps || 10 + p.burn * 3) * dt * (current.damageTakenTimer > 0 ? current.damageTakenMultiplier || 1 : 1);
         if (current.hp <= 0) { Game.killEnemy(k); continue; }
       }
-      if (current.regenPerSecond > 0) current.hp = Math.min(current.maxHp, current.hp + current.regenPerSecond * dt);
+      if (current.regenPerSecond > 0) current.hp = Math.min(current.maxHp, current.hp + current.regenPerSecond * dt * Game.getHealScale(current));
       current.slow = Math.max(0, current.slow - dt);
       if (current.slow === 0) current.slowFactor = .58;
       current.damageTakenTimer = Math.max(0, (current.damageTakenTimer || 0) - dt);
       if (current.damageTakenTimer === 0) current.damageTakenMultiplier = 1;
+      current.wound = Math.max(0, (current.wound || 0) - dt);
+      current.woundExtra = Math.max(0, (current.woundExtra || 0) - dt);
       current.stun = Math.max(0, (current.stun || 0) - dt);
       if (current.stun > 0) continue;
       var speed = info.speed * (current.slow > 0 ? current.slowFactor || .58 : 1) * (current.type === "boss" && current.hp < current.maxHp * .5 ? 1.5 : 1);
-      var wallLine = wall.y - wall.height / 2, ranged = info.ranged;
-      var holdY = ranged ? wallLine - ranged.standoff : wallLine - info.radius - 3;
+      var ranged = info.ranged, holdY = Game.getEnemyHoldY(info);
       if (current.y >= holdY) {
         current.y = holdY;
         if (current.attackTimer <= 0) {
           if (ranged) { Game.throwEnemyShot(current); current.attackTimer = ranged.interval * U.rand(.9, 1.1); }
           else {
-            wall.hp -= info.damage; current.attackTimer = current.type === "boss" ? .65 : 1.0;
+            wall.hp -= info.damage; current.attackTimer = current.type === "boss" ? .65 : (info.attackInterval || 1);
             Game.burst(current.x, wall.y, 4, C.colors.red); Game.addText(current.x, wall.y - 19, "-" + info.damage, C.colors.red);
             if (wall.hp <= 0) { wall.hp = 0; session.message = "城墙失守"; S.screen = "defeat"; }
           }
@@ -94,6 +96,8 @@
     }
     Game.updateArmoredCars(dt);
     Game.updateEnemyShots(dt);
+    Game.updateHailStorms(dt);
+    Game.updateFuelBombs(dt);
     Game.flushPendingSpawns();
     Game.updateEffects(dt);
     var waveSpawned = !!plan && session.spawnCount >= plan.total && (!plan.boss || session.bossSpawned);
@@ -120,6 +124,7 @@
       car.contacts.forEach(function (contact) { contact.hitTimer = Math.max(0, contact.hitTimer - dt); });
       for (var j = S.enemies.length - 1; j >= 0; j--) {
         var enemy = S.enemies[j], radius = C.enemies[enemy.type].radius;
+        if (!Game.canHitEnemy(car, enemy)) continue;
         var nearestX = U.clamp(enemy.x, car.x - car.width / 2, car.x + car.width / 2);
         var nearestY = U.clamp(enemy.y, car.y - car.length / 2, car.y + car.length / 2);
         var dx = enemy.x - nearestX, dy = enemy.y - nearestY;
