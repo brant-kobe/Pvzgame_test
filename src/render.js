@@ -317,24 +317,80 @@
     Game.drawBombardment();
   };
 
-  function drawZombieHead(r, info, cx, cy, scale) {
+  function drawZombieHead(r, info, cx, cy, scale, frost) {
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(scale, scale);
     var skinGradient = ctx.createLinearGradient(-r, -r, r, r);
-    skinGradient.addColorStop(0, "#e1ad86"); skinGradient.addColorStop(.55, "#a8665e"); skinGradient.addColorStop(1, "#5a3842");
+    if (frost) { skinGradient.addColorStop(0, "#f4fbff"); skinGradient.addColorStop(.55, "#b6dbea"); skinGradient.addColorStop(1, "#6f9cb0"); }
+    else { skinGradient.addColorStop(0, "#e1ad86"); skinGradient.addColorStop(.55, "#a8665e"); skinGradient.addColorStop(1, "#5a3842"); }
     ctx.fillStyle = skinGradient;
     ctx.beginPath(); ctx.arc(0, 0, r * .58, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "rgba(93, 46, 50, .55)";
-    ctx.beginPath(); ctx.arc(r * .25, r * .02, r * .4, -.8, 1.25); ctx.fill();
-    ctx.fillStyle = "#273336";
+    if (!frost) {
+      ctx.fillStyle = "rgba(93, 46, 50, .55)";
+      ctx.beginPath(); ctx.arc(r * .25, r * .02, r * .4, -.8, 1.25); ctx.fill();
+    }
+    ctx.fillStyle = frost ? "#9fc4d4" : "#273336";
     ctx.beginPath(); ctx.arc(-r * .22, -r * .41, r * .3, Math.PI * 1.05, Math.PI * 1.9); ctx.arc(r * .26, -r * .38, r * .3, Math.PI * 1.1, Math.PI * 1.95); ctx.fill();
     ctx.fillStyle = info.accent;
     ctx.beginPath(); ctx.arc(-r * .22, -r * .06, Math.max(1, r * .13), 0, Math.PI * 2); ctx.arc(r * .22, -r * .06, Math.max(1, r * .13), 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#211b24";
     ctx.beginPath(); ctx.arc(-r * .22, -r * .06, Math.max(.5, r * .06), 0, Math.PI * 2); ctx.arc(r * .22, -r * .06, Math.max(.5, r * .06), 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#3b2029"; ctx.lineWidth = Math.max(1, r * .08); ctx.lineCap = "round";
+    ctx.strokeStyle = frost ? "#6f9cb0" : "#3b2029"; ctx.lineWidth = Math.max(1, r * .08); ctx.lineCap = "round";
     ctx.beginPath(); ctx.moveTo(-r * .23, r * .21); ctx.quadraticCurveTo(0, r * .32, r * .25, r * .19); ctx.stroke();
+    ctx.restore();
+  }
+  function drawFlameCrown(r, phase) {
+    var tongues = [[-r * .72, r * .05, -r * 1.02, -r * 1.04, .76], [r * .72, r * .14, r * 1.04, -r * .96, .7], [-r * .3, r * .56, -r * .44, r * .04, .5], [r * .34, r * .62, r * .5, r * .1, .46]], i;
+    ctx.save();
+    ctx.shadowColor = "rgba(255, 155, 82, .8)";
+    ctx.shadowBlur = Math.max(6, r * .7);
+    for (i = 0; i < tongues.length; i++) {
+      var rootX = tongues[i][0], rootY = tongues[i][1], size = tongues[i][4];
+      var tipX = tongues[i][2] + Math.sin(phase + i * 2.1) * r * .16, tipY = tongues[i][3] + Math.cos(phase * .8 + i) * r * .05;
+      var half = r * .24 * size;
+      ctx.fillStyle = i < 2 ? "#ff9b52" : "#ff8a44";
+      ctx.beginPath();
+      ctx.moveTo(rootX - half, rootY);
+      ctx.quadraticCurveTo(rootX - half * 1.2, rootY - r * .5 * size, tipX, tipY);
+      ctx.quadraticCurveTo(rootX + half * 1.2, rootY - r * .5 * size, rootX + half, rootY);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#ffd166";
+      ctx.beginPath();
+      ctx.moveTo(rootX - half * .45, rootY - r * .06);
+      ctx.quadraticCurveTo(rootX - half * .55, rootY - r * .42 * size, tipX + (rootX - tipX) * .3, tipY + r * .26);
+      ctx.quadraticCurveTo(rootX + half * .55, rootY - r * .42 * size, rootX + half * .45, rootY - r * .06);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "#ffb347"; ctx.lineWidth = Math.max(1, r * .09); ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-r * .38, r * .22); ctx.lineTo(-r * .06, r * .42);
+    ctx.moveTo(r * .12, r * .16); ctx.lineTo(r * .42, r * .38);
+    ctx.moveTo(-r * .24, r * .68); ctx.lineTo(r * .16, r * .84);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawSnowmanMarks(r, phase) {
+    ctx.save();
+    ctx.fillStyle = "rgba(242, 251, 255, .96)";
+    ctx.strokeStyle = "rgba(126, 176, 196, .85)";
+    ctx.lineWidth = Math.max(1, r * .06);
+    ctx.beginPath();
+    ctx.moveTo(-r * .52, -r * 1.0);
+    ctx.quadraticCurveTo(0, -r * 1.72, r * .52, -r * 1.0);
+    ctx.quadraticCurveTo(r * .2, -r * 1.18, 0, -r * 1.14);
+    ctx.quadraticCurveTo(-r * .2, -r * 1.18, -r * .52, -r * 1.0);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(-r * .62, -r * .26, r * .22, 0, Math.PI * 2); ctx.arc(r * .62, -r * .2, r * .2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#ff9b52";
+    ctx.beginPath(); ctx.moveTo(-r * .06, -r * .74); ctx.lineTo(r * .32, -r * .62); ctx.lineTo(-r * .06, -r * .55); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "rgba(255, 255, 255, .55)";
+    for (var i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.arc(Math.sin(phase * .6 + i * 1.7) * r * .42, r * .18 + i * r * .19, Math.max(.8, r * .07), 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
   function drawBirdBody(r, info, elite, phase) {
@@ -402,13 +458,15 @@
       var isTwoHead = enemy.type === "splitter" || enemy.type === "splitterElite";
       var isArmored = enemy.type === "armored" || enemy.type === "armoredElite", isBasketball = enemy.type === "basketball" || enemy.type === "basketballElite";
       var isBird = enemy.type === "bird" || enemy.type === "birdElite";
+      var isFlame = enemy.type === "flame" || enemy.type === "flameElite";
+      var isSnowman = enemy.type === "snowman" || enemy.type === "snowmanElite";
       var auraReach = info.flying ? r * 1.7 : r;
       var shirtColor = isSplitter ? (isElite ? "#584a84" : "#463c6b")
-        : isElite ? (isRunner ? "#98633b" : isArmored ? "#5b6b78" : isBasketball ? "#96591f" : "#617745")
-        : isRunner ? "#705345" : enemy.type === "boss" ? "#4d2d3b" : isArmored ? "#46545f" : isBasketball ? "#7a4a20" : "#3f6655";
+        : isElite ? (isRunner ? "#98633b" : isArmored ? "#5b6b78" : isBasketball ? "#96591f" : isFlame ? "#4d2318" : isSnowman ? "#9fc4d4" : "#617745")
+        : isRunner ? "#705345" : enemy.type === "boss" ? "#4d2d3b" : isArmored ? "#46545f" : isBasketball ? "#7a4a20" : isFlame ? "#3a1c14" : isSnowman ? "#c6e0ea" : "#3f6655";
       var shirtShadow = isSplitter ? "#241f38"
-        : isElite ? (isArmored ? "#333f48" : isBasketball ? "#4f2d0f" : "#3b3026")
-        : isRunner ? "#382b2d" : enemy.type === "boss" ? "#281c2a" : isArmored ? "#28323a" : isBasketball ? "#4a2a12" : "#243c39";
+        : isElite ? (isArmored ? "#333f48" : isBasketball ? "#4f2d0f" : isFlame ? "#2b1109" : isSnowman ? "#6d94a4" : "#3b3026")
+        : isRunner ? "#382b2d" : enemy.type === "boss" ? "#281c2a" : isArmored ? "#28323a" : isBasketball ? "#4a2a12" : isFlame ? "#22100b" : isSnowman ? "#7fa6b6" : "#243c39";
       ctx.save();
       ctx.translate(enemy.x, enemy.y);
       ctx.scale(pulse, pulse);
@@ -476,10 +534,12 @@
       if (isTwoHead) {
         drawZombieHead(r, info, -r * .4, -r * .74, .74);
         drawZombieHead(r, info, r * .4, -r * .74, .74);
-      } else drawZombieHead(r, info, 0, -r * .72, 1);
+      } else drawZombieHead(r, info, 0, -r * .72, 1, isSnowman);
 
       // 特殊僵尸的识别部件。
        if (isRunner) { ctx.strokeStyle = isElite ? "#fff0a5" : "#ffe0a7"; ctx.lineWidth = Math.max(1, r * .12); ctx.beginPath(); ctx.moveTo(-r * .7, r * .55); ctx.lineTo(-r * 1.18, r * .9); ctx.moveTo(r * .7, r * .48); ctx.lineTo(r * 1.16, r * .72); ctx.stroke(); }
+      if (isFlame) drawFlameCrown(r, S.session.elapsed * 6 + enemy.x * .06 + enemy.y * .04);
+      if (isSnowman) drawSnowmanMarks(r, S.session.elapsed * 1.6 + enemy.x * .05);
       if (enemy.type === "boss") { ctx.fillStyle = "#6d3949"; ctx.beginPath(); ctx.moveTo(-r * .65, -r * 1.18); ctx.lineTo(-r * .82, -r * 1.7); ctx.lineTo(-r * .35, -r * 1.35); ctx.lineTo(0, -r * 1.78); ctx.lineTo(r * .3, -r * 1.3); ctx.lineTo(r * .82, -r * 1.7); ctx.lineTo(r * .65, -r * 1.1); ctx.closePath(); ctx.fill(); ctx.strokeStyle = C.colors.red; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, Math.PI * 2); ctx.stroke(); }
       if (info.regenPerSecond && enemy.hp < enemy.maxHp) {
         ctx.save();
@@ -1173,7 +1233,7 @@
     S.codexPage = page;
     var selectedEnemy = S.selectedZombieCodexId ? C.enemies[S.selectedZombieCodexId] : null;
     if (selectedEnemy && (selectedEnemy.codexCategory || "minion") === selected.id) {
-      panel(26, 148, 308, 385, "rgba(17, 47, 62, .94)", "rgba(104,216,255,.22)", 16);
+      panel(26, 148, 308, 400, "rgba(17, 47, 62, .94)", "rgba(104,216,255,.22)", 16);
       drawCodexEnemyModel(S.selectedZombieCodexId, selectedEnemy, 40, 153, 280, 152, true);
       text(selectedEnemy.name, C.width / 2, 330, "bold 20px Segoe UI, Microsoft YaHei", C.colors.text, "center");
       text("生命 " + selectedEnemy.hp + "   ·   移速 " + selectedEnemy.speed + " / 秒", 44, 353, "bold 11px Segoe UI, Microsoft YaHei", C.colors.cyan);
@@ -1187,17 +1247,9 @@
       text("应对建议", 44, 465, "bold 11px Segoe UI, Microsoft YaHei", C.colors.yellow);
       ctx.font = "10px Segoe UI, Microsoft YaHei"; ctx.fillStyle = C.colors.muted; ctx.textAlign = "left";
       U.wrapText(ctx, selectedEnemy.tactics || "暂无应对建议。", 44, 482, 272, 12);
-      var elementTraits = enemyElementTraits(selectedEnemy);
-      if (elementTraits.length) {
-        text("属性克制", 44, 526, "bold 10px Segoe UI, Microsoft YaHei", C.colors.yellow);
-        ctx.font = "bold 10px Segoe UI, Microsoft YaHei";
-        var traitX = 96;
-        elementTraits.forEach(function (item) {
-          text(item.text, traitX, 526, "bold 10px Segoe UI, Microsoft YaHei", item.color);
-          traitX += ctx.measureText(item.text).width + 12;
-        });
-      }
-      Game.button(C.width / 2 - 82, 553, 164, 40, "返回图鉴列表", C.colors.cyan);
+      var traitY = drawCodexTraitRow("属性克制", enemyElementTraits(selectedEnemy), 522);
+      drawCodexTraitRow("状态抗性", enemyStatusTraits(selectedEnemy), traitY);
+      Game.button(C.width / 2 - 82, 558, 164, 38, "返回图鉴列表", C.colors.cyan);
       return;
     }
     entryIds.slice(page * 4, page * 4 + 4).forEach(function (id, index) {
@@ -1223,6 +1275,28 @@
       labels.push({ text: info.name + "系伤害 " + (scale > 1 ? "+" : "−") + Math.round(Math.abs(scale - 1) * 100) + "%", color: info.color });
     });
     return labels;
+  }
+  function enemyStatusTraits(enemy) {
+    var labels = [], immune = enemy && enemy.statusImmune, scales = enemy && enemy.statusDurationScale;
+    Object.keys(C.statusEffects || {}).forEach(function (id) {
+      var info = C.statusEffects[id], element = (C.elements || {})[info.element], color = element ? element.color : C.colors.muted, scale = scales ? scales[id] : undefined;
+      if (immune && immune[id]) labels.push({ text: "免疫" + info.name, color: color });
+      else if (scale !== undefined && scale !== null && scale !== 1) labels.push({ text: info.name + "时间 " + (scale > 1 ? "+" : "−") + Math.round(Math.abs(scale - 1) * 100) + "%", color: color });
+    });
+    return labels;
+  }
+  function drawCodexTraitRow(label, items, y) {
+    if (!items.length) return y;
+    text(label, 44, y, "bold 10px Segoe UI, Microsoft YaHei", C.colors.yellow);
+    var x = 96, line = y;
+    items.forEach(function (item) {
+      ctx.font = "bold 10px Segoe UI, Microsoft YaHei";
+      var width = ctx.measureText(item.text).width;
+      if (x > 96 && x + width > 334) { line += 14; x = 44; }
+      text(item.text, x, line, "bold 10px Segoe UI, Microsoft YaHei", item.color);
+      x += width + 12;
+    });
+    return line + 16;
   }
   Game.drawSkillCodex = function () {
     Game.overlay();

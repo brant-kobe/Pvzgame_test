@@ -134,7 +134,7 @@
         if (!contact) { contact = { enemy: enemy, hitTimer: 0, stunChecked: false }; car.contacts.push(contact); }
         if (contact.hitTimer > 0) continue;
         Game.damageEnemy(enemy, car.damage, { critical: false, noWeaponEffects: true, silentText: true, element: car.element });
-        Game.applySlow(enemy, car.slowDuration, car.slowFactor);
+        Game.applySlow(enemy, car.slowDuration, car.slowFactor, car.element);
         if (!contact.stunChecked) {
           contact.stunChecked = true;
           if (Math.random() < car.stunChance) Game.applyStun(enemy, car.stunDuration);

@@ -30,6 +30,12 @@
     var info = enemy && C.enemies[enemy.type], table = info && info.damageTakenByElement, scale = table ? table[element] : undefined;
     return scale === undefined || scale === null ? 1 : scale;
   };
+  Game.getStatusScale = function (enemy, status) {
+    var info = enemy && C.enemies[enemy.type], immune = info && info.statusImmune, table = info && info.statusDurationScale;
+    if (immune && immune[status]) return 0;
+    var scale = table ? table[status] : undefined;
+    return scale === undefined || scale === null ? 1 : scale;
+  };
   Game.spawnEnemy = function (type, options) {
     var info = C.enemies[type], opts = options || {}, radius = info.radius;
     var edge = Math.max(22, radius + 4);
@@ -381,7 +387,7 @@
       var enemy = S.enemies[i], ex = enemy.x - skill.activeX, ey = enemy.y - skill.activeY, along = ex * ux + ey * uy, across = Math.abs(ex * uy - ey * ux), reach = skill.beamWidth / 2 + C.enemies[enemy.type].radius;
       if (along < 0 || along > length || across > reach) continue;
       if (skill.crippleEnabled && skill.damageTakenDuration > 0) { enemy.damageTakenTimer = Math.max(enemy.damageTakenTimer || 0, skill.damageTakenDuration); enemy.damageTakenMultiplier = skill.damageTakenMultiplier; }
-      if (skill.slowEnabled && skill.slowDuration > 0) Game.applySlow(enemy, skill.slowDuration, skill.slowFactor);
+      if (skill.slowEnabled && skill.slowDuration > 0) Game.applySlow(enemy, skill.slowDuration, skill.slowFactor, Game.getSkillElement("highEnergyBeam"));
       Game.damageEnemy(enemy, skill.damage, { critical: false, noWeaponEffects: true, silentText: true, element: Game.getSkillElement("highEnergyBeam") });
       if (enemy.hp <= 0) Game.killEnemy(i);
     }
@@ -533,34 +539,42 @@
     if (enemy.armorCharges === 0) Game.addText(enemy.x, enemy.y - C.enemies[enemy.type].radius - 12, "护甲破碎", C.colors.cyan);
     return true;
   };
-  Game.applySlow = function (enemy, duration, factor) {
+  Game.applySlow = function (enemy, duration, factor, element) {
+    var scale = Game.getStatusScale(enemy, element === "ice" ? "freeze" : "slow");
+    if (scale <= 0) return false;
     if (Game.blockWithArmor(enemy)) return false;
-    enemy.slow = Math.max(enemy.slow || 0, duration);
+    enemy.slow = Math.max(enemy.slow || 0, duration * scale);
     enemy.slowFactor = Math.min(enemy.slowFactor || .58, factor);
     return true;
   };
   Game.applyStun = function (enemy, duration) {
     if (!duration || duration <= 0) return false;
+    var scale = Game.getStatusScale(enemy, "stun");
+    if (scale <= 0) return false;
     if (Game.blockWithArmor(enemy)) return false;
-    enemy.stun = Math.max(enemy.stun || 0, duration);
+    enemy.stun = Math.max(enemy.stun || 0, duration * scale);
     return true;
   };
   Game.applyBurn = function (enemy, dps, duration) {
+    var scale = Game.getStatusScale(enemy, "burn");
+    if (scale <= 0) return false;
     if (Game.blockWithArmor(enemy)) return false;
-    enemy.burn = Math.max(enemy.burn || 0, duration);
+    enemy.burn = Math.max(enemy.burn || 0, duration * scale);
     enemy.burnDps = Math.max(enemy.burnDps || 0, dps);
     return true;
   };
   Game.applyWound = function (enemy, duration, factor, extraDuration, extraFactor) {
     var base = duration > 0, extra = extraDuration > 0;
     if (!base && !extra) return false;
+    var scale = Game.getStatusScale(enemy, "wound");
+    if (scale <= 0) return false;
     if (Game.blockWithArmor(enemy)) return false;
     if (base) {
-      enemy.wound = Math.max(enemy.wound || 0, duration);
+      enemy.wound = Math.max(enemy.wound || 0, duration * scale);
       enemy.woundFactor = Math.max(enemy.woundFactor || 0, factor || 0);
     }
     if (extra) {
-      enemy.woundExtra = Math.max(enemy.woundExtra || 0, extraDuration);
+      enemy.woundExtra = Math.max(enemy.woundExtra || 0, extraDuration * scale);
       enemy.woundExtraFactor = Math.max(enemy.woundExtraFactor || 0, extraFactor || 0);
     }
     return true;
@@ -623,7 +637,7 @@
         } else {
           Game.damageEnemy(enemy, projectile.damage, projectile);
           if (projectile.knockback > 0) Game.applyKnockback(enemy, projectile.x - projectile.vx, projectile.y - projectile.vy, projectile.knockback);
-          if (projectile.freezeDuration > 0) Game.applySlow(enemy, projectile.freezeDuration, projectile.slowFactor);
+          if (projectile.freezeDuration > 0) Game.applySlow(enemy, projectile.freezeDuration, projectile.slowFactor, projectile.element);
           if (projectile.woundDuration > 0 || projectile.woundExtraDuration > 0) Game.applyWound(enemy, projectile.woundDuration, projectile.woundFactor, projectile.woundExtraDuration, projectile.woundExtraFactor);
           Game.splitDryIceProjectile(projectile, enemy);
           if (enemy.hp <= 0) Game.killEnemy(j);
@@ -663,7 +677,7 @@
         var enemy = S.enemies[j], info = C.enemies[enemy.type], dx = enemy.x - zone.x, dy = enemy.y - zone.y, reach = zone.radius + info.radius;
         if (dx * dx + dy * dy > reach * reach) continue;
         Game.damageEnemy(enemy, zone.damage * dt, { critical: false, noWeaponEffects: true, silentText: true, element: zone.element });
-        Game.applySlow(enemy, .24, zone.slowFactor);
+        Game.applySlow(enemy, .24, zone.slowFactor, zone.element);
         if (enemy.hp <= 0) Game.killEnemy(j);
       }
     }
@@ -794,7 +808,7 @@
         var enemy = S.enemies[k], dx = enemy.x - zone.x, dy = enemy.y - zone.y, reach = zone.radius + C.enemies[enemy.type].radius;
         if (dx * dx + dy * dy > reach * reach) continue;
         Game.damageEnemy(enemy, zone.damage * dt, { critical: false, noWeaponEffects: true, silentText: true, element: zone.element });
-        Game.applySlow(enemy, .24, zone.slowFactor);
+        Game.applySlow(enemy, .24, zone.slowFactor, zone.element);
         if (enemy.hp <= 0) Game.killEnemy(k);
       }
     }
@@ -1171,7 +1185,7 @@
     S.enemies.forEach(function (enemy) {
       var info = C.enemies[enemy.type], dx = enemy.x - storm.x, dy = enemy.y - storm.y, reach = storm.explosionRadius + info.radius;
       if (dx * dx + dy * dy > reach * reach) return;
-      Game.applySlow(enemy, storm.explosionSlowDuration, storm.explosionSlowFactor);
+      Game.applySlow(enemy, storm.explosionSlowDuration, storm.explosionSlowFactor, storm.element);
     });
     Game.burst(storm.x, storm.y, 18, C.colors.ice);
   };
@@ -1193,7 +1207,7 @@
         var dx = enemy.x - storm.x, dy = enemy.y - storm.y, reach = storm.radius + info.radius;
         if (dx * dx + dy * dy > reach * reach) continue;
         Game.damageEnemy(enemy, storm.damage, { critical: false, noWeaponEffects: true, silentText: true, element: storm.element });
-        Game.applySlow(enemy, storm.freezeDuration, storm.slowFactor);
+        Game.applySlow(enemy, storm.freezeDuration, storm.slowFactor, storm.element);
         Game.burst(enemy.x, enemy.y, 1, C.colors.ice);
         if (enemy.hp <= 0) Game.killEnemy(j);
       }
@@ -1321,7 +1335,7 @@
         if (dx * dx + dy * dy > reach * reach) continue;
         Game.damageEnemy(enemy, pool.damage, { critical: false, noWeaponEffects: true, silentText: true, element: pool.element });
         Game.applyBurn(enemy, pool.burnDps, pool.burnDuration);
-        if (pool.slowFactor < 1) Game.applySlow(enemy, pool.slowDuration, pool.slowFactor);
+        if (pool.slowFactor < 1) Game.applySlow(enemy, pool.slowDuration, pool.slowFactor, pool.element);
         Game.burst(enemy.x, enemy.y, 1, C.colors.fire);
         if (enemy.hp <= 0) Game.killEnemy(j);
       }
@@ -1428,7 +1442,7 @@
     if (Game.blockWithArmor(enemy)) { enemy.hitFlash = .08; Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, "格挡", C.colors.cyan); return; }
     var element = Game.getDamageElement(bullet);
     enemy.lastHitElement = element;
-    var actualDamage = amount * Game.getElementDamageScale(enemy, element) * (enemy.damageTakenTimer > 0 ? enemy.damageTakenMultiplier || 1 : 1); enemy.hp -= actualDamage; enemy.hitFlash = .08; if (!bullet.noWeaponEffects && S.player.burn) Game.applyBurn(enemy, 10 + S.player.burn * 3, 1.5 + S.player.burn * .4); if (!bullet.noWeaponEffects && S.player.freeze) Game.applySlow(enemy, 1.2 + S.player.freeze * .25, .58); if (!bullet.silentText) Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, bullet.critical ? Math.ceil(actualDamage) + " 暴击" : String(Math.ceil(actualDamage)), bullet.critical ? C.colors.yellow : C.colors.text);
+    var actualDamage = amount * Game.getElementDamageScale(enemy, element) * (enemy.damageTakenTimer > 0 ? enemy.damageTakenMultiplier || 1 : 1); enemy.hp -= actualDamage; enemy.hitFlash = .08; if (!bullet.noWeaponEffects && S.player.burn) Game.applyBurn(enemy, 10 + S.player.burn * 3, 1.5 + S.player.burn * .4); if (!bullet.noWeaponEffects && S.player.freeze) Game.applySlow(enemy, 1.2 + S.player.freeze * .25, .58, element); if (!bullet.silentText) Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, bullet.critical ? Math.ceil(actualDamage) + " 暴击" : String(Math.ceil(actualDamage)), bullet.critical ? C.colors.yellow : C.colors.text);
   };
   Game.throwEnemyShot = function (enemy) {
     var info = C.enemies[enemy.type], ranged = info.ranged;

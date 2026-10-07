@@ -119,6 +119,13 @@
       fire: { name: "火", color: "#ff9b52", detail: "高温与燃烧伤害。" },
       wind: { name: "风", color: "#63e6a0", detail: "气流与切割伤害。" }
     },
+    statusEffects: {
+      burn: { name: "燃烧", element: "fire" },
+      freeze: { name: "冻结", element: "ice" },
+      slow: { name: "减速", element: "physical" },
+      stun: { name: "麻痹", element: "electric" },
+      wound: { name: "重伤", element: "wind" }
+    },
     enemies: {
       normal: { name: "普通僵尸", codexCategory: "minion", description: "尸潮中的基础单位，生命与速度均衡，会持续向防线推进。", tactics: "优先利用自动锁定快速清理；单体威胁低，数量增加后会给城墙造成压力。", hp: 28, speed: 20, radius: 14, damage: 10, xp: 8, color: "#6eaa7b", accent: "#b1e4a0" },
       runner: { name: "快跑僵尸", codexCategory: "minion", description: "体型轻巧、生命较低，但移动速度明显快于普通僵尸。", tactics: "尽早击杀以免快速逼近城墙；齐射、连发和冰冻效果都能有效应对。", hp: 16, speed: 42, radius: 11, damage: 7, xp: 7, color: "#e5a052", accent: "#ffe0a7" },
@@ -134,6 +141,10 @@
       basketballElite: { name: "篮球僵尸精英", codexCategory: "elite", description: "篮球僵尸的精英形态，站得更远、抛得更快、砸得更重，同样不会靠近城墙。", tactics: "它停在更远的位置，靠防线前的减速与近战完全拦不住；应当用中远距离技能或提前集火在它出手前解决。它同样怕电（+50%），用电系技能收益最高。", hp: 320, speed: 30, radius: 19, damage: 16, xp: 30, color: "#a85f1f", accent: "#ffd166", ranged: { standoff: 113, interval: 1.9, projectileSpeed: 230, projectileRadius: 12, damage: 22 }, damageTakenByElement: { electric: 1.5 } },
       bird: { name: "飞鸟僵尸", codexCategory: "minion", description: "被尸群驱赶着飞行的黑色怪鸟，一路飞到城墙前才开始啄击防线；它全程停在半空，贴地推进的装甲车、龙卷风与燃油弹都碰不到它。", tactics: "贴地技能对它完全无效，只能用步枪、干冰弹、温压弹、冰雹、气刃、无人机、电链、空袭或射线解决；它飞得不慢，应在抵达城墙前点掉。", hp: 24, speed: 36, radius: 12, damage: 9, xp: 10, color: "#12171c", accent: "#9fb2bd", flying: true, attackInterval: .7 },
       birdElite: { name: "飞鸟僵尸精英", codexCategory: "elite", description: "飞鸟僵尸的精英形态，翼展更大、俯冲更快，撞击防线的力度也更高，同样免疫一切贴地推进的伤害。", tactics: "它同样无视装甲车、龙卷风与燃油弹，需要集中步枪火力或用空中技能处理；撞击伤害高于小怪，别让它反复啄击城墙。", hp: 300, speed: 46, radius: 17, damage: 16, xp: 30, color: "#0b0f14", accent: "#ffd166", flying: true, attackInterval: .6 },
+      flame: { name: "火焰僵尸", codexCategory: "minion", description: "周身燃着不灭火焰的僵尸，高温让皮肉焦硬：火系伤害减半，燃烧与冻结完全无效，只有冰系能重创它。", tactics: "火系技能对它几乎无效：减伤 50% 且无法点燃、冻不住；改用干冰弹、冰雹发生器等冰系技能，伤害 ×1.5，也更容易在它贴脸前解决。", hp: 46, speed: 24, radius: 15, damage: 11, xp: 13, color: "#c2451f", accent: "#ffb347", damageTakenByElement: { fire: .5, ice: 1.5 }, statusImmune: { burn: true, freeze: true } },
+      snowman: { name: "雪人僵尸", codexCategory: "minion", description: "由积雪堆成的僵尸，寒气护体：冰系伤害减半、冻结时间减半，但冰雪之躯遇火会被打出 1.5 倍伤害。", tactics: "用火系对付它：温压弹、燃油弹与火场伤害 ×1.5，还能正常点燃；冰系技能伤害减半且只能冻住一半时间，别用它扛线。", hp: 52, speed: 17, radius: 16, damage: 12, xp: 14, color: "#bcd9e4", accent: "#9fe8ff", damageTakenByElement: { ice: .5, fire: 1.5 }, statusDurationScale: { freeze: .5 } },
+      flameElite: { name: "火焰僵尸精英", codexCategory: "elite", description: "火焰僵尸的精英形态，体型更大、火焰更旺：同样免疫燃烧与冻结、火系伤害减半，冰系伤害则额外 ×1.5。", tactics: "它比小怪更耐打，火系与冻结依然对它无效；冰雹发生器虽然冻不住它，但每次砸击都按冰系 ×1.5 结算伤害。", hp: 380, speed: 30, radius: 21, damage: 18, xp: 33, color: "#a13616", accent: "#ffd166", damageTakenByElement: { fire: .5, ice: 1.5 }, statusImmune: { burn: true, freeze: true } },
+      snowmanElite: { name: "雪人僵尸精英", codexCategory: "elite", description: "雪人僵尸的精英形态，冰雪外壳更厚：冰系伤害减半、冻结时间减半，火系伤害则额外 ×1.5。", tactics: "火系依然是最优解，温压弹与燃油弹的持续灼烧能最快融掉它；冰系技能在这里收益最差，冻结时间还要再打对折。", hp: 430, speed: 22, radius: 22, damage: 19, xp: 34, color: "#9fc4d4", accent: "#ffd166", damageTakenByElement: { ice: .5, fire: 1.5 }, statusDurationScale: { freeze: .5 } },
       boss: { name: "尸潮领主", codexCategory: "boss", description: "关卡首领，体型巨大、生命值极高；生命低于一半时进入狂暴状态，移动速度提升。", tactics: "持续输出并留意其接近城墙；燃烧、暴击与高伤害构筑有助于缩短战斗时间。", hp: 3000, speed: 10, radius: 34, damage: 24, xp: 100, color: "#9d5264", accent: "#ffb0bc" }
     },
     skillDefaults: {
