@@ -437,9 +437,22 @@
     ctx.fillStyle = "#07090c";
     ctx.beginPath(); ctx.arc(-r * .16, -r * .82, Math.max(.5, r * .045), 0, Math.PI * 2); ctx.arc(r * .16, -r * .82, Math.max(.5, r * .045), 0, Math.PI * 2); ctx.fill();
   }
+  function statusInfo(id) { return (C.statusEffects || {})[id] || { name: "", color: C.colors.text, label: "" }; }
+  function drawFreezeShell(enemy, r, info) {
+    var reach = r * (info.flying ? 1.5 : enemy.type === "boss" ? 1.45 : 1.18);
+    ctx.save();
+    ctx.fillStyle = "rgba(140, 233, 255, .2)";
+    ctx.beginPath(); ctx.arc(0, -r * .1, reach, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(206, 248, 255, .72)"; ctx.lineWidth = Math.max(1, r * .08);
+    ctx.beginPath(); ctx.arc(0, -r * .1, reach, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
   function drawEnemyVitals(enemy, r) {
     var info = C.enemies[enemy.type], reach = info && info.flying ? r * 1.6 : r;
-    if (enemy.stun > 0) text("晕", enemy.x, enemy.y - reach - 17, "bold 10px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    if (Game.isHardControlled(enemy)) {
+      var control = statusInfo(enemy.controlType);
+      text(control.label || "控", enemy.x, enemy.y - reach - 17, "bold 10px Segoe UI, Microsoft YaHei", control.color, "center");
+    }
     if (enemy.armorCharges > 0) {
       var armorLabel = "甲 " + enemy.armorCharges, armorBadgeWidth = armorLabel.length > 3 ? 30 : 22;
       U.roundedRect(ctx, enemy.x - reach - armorBadgeWidth - 3, enemy.y - reach - 18, armorBadgeWidth, 12, 4, "rgba(12, 30, 40, .88)", enemy.armorFlash > 0 ? C.colors.cyan : "rgba(104, 216, 255, .5)");
@@ -476,10 +489,11 @@
         ctx.beginPath(); ctx.arc(0, 0, auraReach + 4, 0, Math.PI * 2); ctx.stroke();
         ctx.shadowBlur = 0;
       }
-      if (enemy.slow > 0 || enemy.stun > 0) {
-        ctx.strokeStyle = enemy.stun > 0 ? C.colors.yellow : C.colors.ice;
-        ctx.lineWidth = enemy.stun > 0 ? 2.5 : 1.5;
-        ctx.setLineDash(enemy.stun > 0 ? [3, 2] : [5, 4]);
+      var controlled = Game.isHardControlled(enemy);
+      if (enemy.slow > 0 || controlled) {
+        ctx.strokeStyle = controlled ? statusInfo(enemy.controlType).color : statusInfo("slow").color;
+        ctx.lineWidth = controlled ? 2.5 : 1.5;
+        ctx.setLineDash(controlled ? [3, 2] : [5, 4]);
         ctx.beginPath(); ctx.arc(0, 0, auraReach + 7, 0, Math.PI * 2); ctx.stroke();
         ctx.setLineDash([]);
       }
@@ -488,6 +502,7 @@
 
       if (isBird) {
         drawBirdBody(r, info, isElite, S.session.elapsed * 8 + enemy.x * .07 + enemy.y * .05);
+        if (Game.isHardControlled(enemy) && enemy.controlType === "freeze") drawFreezeShell(enemy, r, info);
         ctx.restore();
         drawEnemyVitals(enemy, r);
         return;
@@ -577,6 +592,7 @@
         ctx.beginPath(); ctx.arc(ballX - ballR * 1.05, ballY, ballR * .72, -Math.PI * .42, Math.PI * .42); ctx.stroke();
         ctx.beginPath(); ctx.arc(ballX + ballR * 1.05, ballY, ballR * .72, Math.PI * .58, Math.PI * 1.42); ctx.stroke();
       }
+      if (Game.isHardControlled(enemy) && enemy.controlType === "freeze") drawFreezeShell(enemy, r, info);
       ctx.restore();
       drawEnemyVitals(enemy, r);
     });
@@ -1279,9 +1295,9 @@
   function enemyStatusTraits(enemy) {
     var labels = [], immune = enemy && enemy.statusImmune, scales = enemy && enemy.statusDurationScale;
     Object.keys(C.statusEffects || {}).forEach(function (id) {
-      var info = C.statusEffects[id], element = (C.elements || {})[info.element], color = element ? element.color : C.colors.muted, scale = scales ? scales[id] : undefined;
-      if (immune && immune[id]) labels.push({ text: "免疫" + info.name, color: color });
-      else if (scale !== undefined && scale !== null && scale !== 1) labels.push({ text: info.name + "时间 " + (scale > 1 ? "+" : "−") + Math.round(Math.abs(scale - 1) * 100) + "%", color: color });
+      var info = C.statusEffects[id], category = (C.statusCategories || {})[info.category], prefix = category ? category.name + "·" : "", scale = scales ? scales[id] : undefined;
+      if (immune && immune[id]) labels.push({ text: prefix + "免疫" + info.name, color: info.color });
+      else if (scale !== undefined && scale !== null && scale !== 1) labels.push({ text: prefix + info.name + "时间 " + (scale > 1 ? "+" : "−") + Math.round(Math.abs(scale - 1) * 100) + "%", color: info.color });
     });
     return labels;
   }

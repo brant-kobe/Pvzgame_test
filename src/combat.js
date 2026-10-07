@@ -42,7 +42,7 @@
     var x = opts.x === undefined ? U.rand(edge, C.width - edge) : U.clamp(opts.x, radius, C.width - radius);
     var y = opts.y === undefined ? -radius - 8 : U.clamp(opts.y, -radius, S.wall ? S.wall.y - S.wall.height / 2 - radius - 3 : C.height);
     var maxHp = Math.round(info.hp * ((S.session && S.session.hpScale) || 1) * Game.getWaveHpScale());
-    var enemy = { type: type, x: x, y: y, hp: maxHp, maxHp: maxHp, slow: 0, slowFactor: .58, damageTakenTimer: 0, damageTakenMultiplier: 1, burn: 0, burnDps: 0, wound: 0, woundFactor: 0, woundExtra: 0, woundExtraFactor: 0, hitFlash: 0, attackTimer: 0, regenPerSecond: info.regenPerSecond || 0, armorCharges: info.armorCharges || 0, armorStamp: -1e9, armorFlash: 0 };
+    var enemy = { type: type, x: x, y: y, hp: maxHp, maxHp: maxHp, slow: 0, slowFactor: .58, damageTakenTimer: 0, damageTakenMultiplier: 1, burn: 0, burnDps: 0, frostbite: 0, frostbiteDps: 0, control: 0, controlType: "", wound: 0, woundFactor: 0, woundExtra: 0, woundExtraFactor: 0, hitFlash: 0, attackTimer: 0, regenPerSecond: info.regenPerSecond || 0, armorCharges: info.armorCharges || 0, armorStamp: -1e9, armorFlash: 0 };
     if (type === "boss") enemy.x = C.width / 2;
     S.enemies.push(enemy);
     if (info.codexCategory === "elite" && !opts.silent) {
@@ -205,7 +205,7 @@
     S.enemies.forEach(function (enemy) {
       if (enemy.y < rifleLine) return;
       var info = C.enemies[enemy.type];
-      var speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
+      var speed = Game.isHardControlled(enemy) ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
       if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
       var attackY = Game.getEnemyHoldY(info);
       var predictedX = enemy.x, predictedY = enemy.y, flightTime = 0;
@@ -297,7 +297,7 @@
     var rangeLine = Game.getSkillRangeLine(type);
     S.enemies.forEach(function (enemy) {
       if (enemy.y < rangeLine) return;
-      var info = C.enemies[enemy.type], speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
+      var info = C.enemies[enemy.type], speed = Game.isHardControlled(enemy) ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
       if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
       var attackY = Game.getEnemyHoldY(info);
       var predictedX = enemy.x, predictedY = enemy.y, flightTime = 0, targetX, targetY;
@@ -387,7 +387,7 @@
       var enemy = S.enemies[i], ex = enemy.x - skill.activeX, ey = enemy.y - skill.activeY, along = ex * ux + ey * uy, across = Math.abs(ex * uy - ey * ux), reach = skill.beamWidth / 2 + C.enemies[enemy.type].radius;
       if (along < 0 || along > length || across > reach) continue;
       if (skill.crippleEnabled && skill.damageTakenDuration > 0) { enemy.damageTakenTimer = Math.max(enemy.damageTakenTimer || 0, skill.damageTakenDuration); enemy.damageTakenMultiplier = skill.damageTakenMultiplier; }
-      if (skill.slowEnabled && skill.slowDuration > 0) Game.applySlow(enemy, skill.slowDuration, skill.slowFactor, Game.getSkillElement("highEnergyBeam"));
+      if (skill.slowEnabled && skill.slowDuration > 0) Game.applySlow(enemy, skill.slowDuration, skill.slowFactor);
       Game.damageEnemy(enemy, skill.damage, { critical: false, noWeaponEffects: true, silentText: true, element: Game.getSkillElement("highEnergyBeam") });
       if (enemy.hp <= 0) Game.killEnemy(i);
     }
@@ -409,7 +409,7 @@
     var lanes = 1 + skill.spread;
     for (var lane = 0; lane < lanes; lane++) {
       var bulletAngle = angle + (lane - (lanes - 1) / 2) * C.spreadAngle;
-      S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(bulletAngle) * skill.projectileSpeed, vy: Math.sin(bulletAngle) * skill.projectileSpeed, radius: skill.projectileRadius, damage: skill.damage, knockback: skill.knockback, pierce: skill.pierce, splitCount: skill.splitCount, freezeDuration: skill.freezeDuration, slowFactor: skill.slowFactor, critical: false, element: Game.getSkillElement(type), hitEnemies: [] });
+      S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(bulletAngle) * skill.projectileSpeed, vy: Math.sin(bulletAngle) * skill.projectileSpeed, radius: skill.projectileRadius, damage: skill.damage, knockback: skill.knockback, pierce: skill.pierce, splitCount: skill.splitCount, slowDuration: skill.slowDuration, freezeDuration: skill.freezeDuration, slowFactor: skill.slowFactor, critical: false, element: Game.getSkillElement(type), hitEnemies: [] });
     }
   };
   Game.launchArmoredCars = function (skill) {
@@ -539,20 +539,25 @@
     if (enemy.armorCharges === 0) Game.addText(enemy.x, enemy.y - C.enemies[enemy.type].radius - 12, "护甲破碎", C.colors.cyan);
     return true;
   };
-  Game.applySlow = function (enemy, duration, factor, element) {
-    var scale = Game.getStatusScale(enemy, element === "ice" ? "freeze" : "slow");
+  Game.isHardControlled = function (enemy) { return !!enemy && (enemy.control || 0) > 0; };
+  Game.applyHardControl = function (enemy, type, duration) {
+    if (!duration || duration <= 0) return false;
+    var scale = Game.getStatusScale(enemy, type);
+    if (scale <= 0) return false;
+    if (Game.blockWithArmor(enemy)) return false;
+    var time = duration * scale;
+    if (time >= (enemy.control || 0)) { enemy.control = time; enemy.controlType = type; }
+    return true;
+  };
+  Game.applyStun = function (enemy, duration) { return Game.applyHardControl(enemy, "stun", duration); };
+  Game.applyFreeze = function (enemy, duration) { return Game.applyHardControl(enemy, "freeze", duration); };
+  Game.applyParalysis = function (enemy, duration) { return Game.applyHardControl(enemy, "paralysis", duration); };
+  Game.applySlow = function (enemy, duration, factor) {
+    var scale = Game.getStatusScale(enemy, "slow");
     if (scale <= 0) return false;
     if (Game.blockWithArmor(enemy)) return false;
     enemy.slow = Math.max(enemy.slow || 0, duration * scale);
     enemy.slowFactor = Math.min(enemy.slowFactor || .58, factor);
-    return true;
-  };
-  Game.applyStun = function (enemy, duration) {
-    if (!duration || duration <= 0) return false;
-    var scale = Game.getStatusScale(enemy, "stun");
-    if (scale <= 0) return false;
-    if (Game.blockWithArmor(enemy)) return false;
-    enemy.stun = Math.max(enemy.stun || 0, duration * scale);
     return true;
   };
   Game.applyBurn = function (enemy, dps, duration) {
@@ -561,6 +566,14 @@
     if (Game.blockWithArmor(enemy)) return false;
     enemy.burn = Math.max(enemy.burn || 0, duration * scale);
     enemy.burnDps = Math.max(enemy.burnDps || 0, dps);
+    return true;
+  };
+  Game.applyFrostbite = function (enemy, dps, duration) {
+    var scale = Game.getStatusScale(enemy, "frostbite");
+    if (scale <= 0) return false;
+    if (Game.blockWithArmor(enemy)) return false;
+    enemy.frostbite = Math.max(enemy.frostbite || 0, duration * scale);
+    enemy.frostbiteDps = Math.max(enemy.frostbiteDps || 0, dps);
     return true;
   };
   Game.applyWound = function (enemy, duration, factor, extraDuration, extraFactor) {
@@ -602,7 +615,7 @@
     var angle = Math.atan2(projectile.vy, projectile.vx), count = projectile.splitCount;
     for (var i = 0; i < count; i++) {
       var shardAngle = angle + (i - (count - 1) / 2) * .2;
-      S.skillProjectiles.push({ type: "iceShard", x: enemy.x, y: enemy.y, vx: Math.cos(shardAngle) * 245, vy: Math.sin(shardAngle) * 245, radius: Math.max(3, projectile.radius * .58), damage: projectile.damage * .45, knockback: projectile.knockback * .5, pierce: 0, splitCount: 0, freezeDuration: projectile.freezeDuration, slowFactor: projectile.slowFactor, critical: false, element: projectile.element, hitEnemies: [enemy], isShard: true });
+      S.skillProjectiles.push({ type: "iceShard", x: enemy.x, y: enemy.y, vx: Math.cos(shardAngle) * 245, vy: Math.sin(shardAngle) * 245, radius: Math.max(3, projectile.radius * .58), damage: projectile.damage * .45, knockback: projectile.knockback * .5, pierce: 0, splitCount: 0, slowDuration: projectile.slowDuration, freezeDuration: projectile.freezeDuration, slowFactor: projectile.slowFactor, critical: false, element: projectile.element, hitEnemies: [enemy], isShard: true });
     }
   };
   Game.updateSkillProjectiles = function (dt) {
@@ -637,7 +650,8 @@
         } else {
           Game.damageEnemy(enemy, projectile.damage, projectile);
           if (projectile.knockback > 0) Game.applyKnockback(enemy, projectile.x - projectile.vx, projectile.y - projectile.vy, projectile.knockback);
-          if (projectile.freezeDuration > 0) Game.applySlow(enemy, projectile.freezeDuration, projectile.slowFactor, projectile.element);
+          if (projectile.slowDuration > 0) Game.applySlow(enemy, projectile.slowDuration, projectile.slowFactor);
+          if (projectile.freezeDuration > 0) Game.applyFreeze(enemy, projectile.freezeDuration);
           if (projectile.woundDuration > 0 || projectile.woundExtraDuration > 0) Game.applyWound(enemy, projectile.woundDuration, projectile.woundFactor, projectile.woundExtraDuration, projectile.woundExtraFactor);
           Game.splitDryIceProjectile(projectile, enemy);
           if (enemy.hp <= 0) Game.killEnemy(j);
@@ -655,7 +669,7 @@
     centerX = enemy.x; centerY = enemy.y;
     S.explosions.push({ type: "electromagneticStrike", x: centerX, y: centerY, radius: 18, life: .3, duration: .3 });
     Game.damageEnemy(enemy, strike.damage, { critical: false, noWeaponEffects: true, element: strike.element });
-    Game.applyStun(enemy, strike.stunDuration);
+    Game.applyParalysis(enemy, strike.stunDuration);
     if (enemy.hp <= 0) Game.killEnemy(targetIndex);
     if (strike.explosion) {
       S.explosions.push({ type: "electromagnetic", x: centerX, y: centerY, radius: strike.explosionRadius, life: .48, duration: .48 });
@@ -677,7 +691,7 @@
         var enemy = S.enemies[j], info = C.enemies[enemy.type], dx = enemy.x - zone.x, dy = enemy.y - zone.y, reach = zone.radius + info.radius;
         if (dx * dx + dy * dy > reach * reach) continue;
         Game.damageEnemy(enemy, zone.damage * dt, { critical: false, noWeaponEffects: true, silentText: true, element: zone.element });
-        Game.applySlow(enemy, .24, zone.slowFactor, zone.element);
+        Game.applySlow(enemy, .24, zone.slowFactor);
         if (enemy.hp <= 0) Game.killEnemy(j);
       }
     }
@@ -686,7 +700,7 @@
   function bombardmentCoverage(skill, point, impactTime) {
     var score = 0;
     S.enemies.forEach(function (enemy) {
-      var info = C.enemies[enemy.type], speed = enemy.stun > 0 ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
+      var info = C.enemies[enemy.type], speed = Game.isHardControlled(enemy) ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
       if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
       var attackY = Game.getEnemyHoldY(info), predictedY = Math.min(attackY, enemy.y + speed * impactTime);
       var dx = enemy.x - point.x, dy = predictedY - point.y, distance = Math.sqrt(dx * dx + dy * dy), reach = skill.blastRadius + info.radius;
@@ -730,7 +744,7 @@
     var rangeLine = Game.getSkillRangeLine("bombardment");
     S.enemies.forEach(function (candidate) {
       if (candidate.y < rangeLine) return;
-      var candidateInfo = C.enemies[candidate.type], candidateSpeed = candidate.stun > 0 ? 0 : candidateInfo.speed * (candidate.slow > 0 ? candidate.slowFactor || .58 : 1);
+      var candidateInfo = C.enemies[candidate.type], candidateSpeed = Game.isHardControlled(candidate) ? 0 : candidateInfo.speed * (candidate.slow > 0 ? candidate.slowFactor || .58 : 1);
       if (candidate.type === "boss" && candidate.hp < candidate.maxHp * .5) candidateSpeed *= 1.5;
       var candidateAttackY = Game.getEnemyHoldY(candidateInfo), targetY = candidate.y;
       for (var step = 0; step < 3; step++) {
@@ -808,7 +822,7 @@
         var enemy = S.enemies[k], dx = enemy.x - zone.x, dy = enemy.y - zone.y, reach = zone.radius + C.enemies[enemy.type].radius;
         if (dx * dx + dy * dy > reach * reach) continue;
         Game.damageEnemy(enemy, zone.damage * dt, { critical: false, noWeaponEffects: true, silentText: true, element: zone.element });
-        Game.applySlow(enemy, .24, zone.slowFactor, zone.element);
+        Game.applySlow(enemy, .24, zone.slowFactor);
         if (enemy.hp <= 0) Game.killEnemy(k);
       }
     }
@@ -1104,7 +1118,7 @@
     S.explosions.push({ type: "chainSpark", x: enemy.x, y: enemy.y, radius: 13, life: .26, duration: .26 });
     Game.damageEnemy(enemy, chain.damage, { critical: false, noWeaponEffects: true, element: chain.element });
     if (chain.burnEnabled && chain.burnDps > 0) Game.applyBurn(enemy, chain.burnDps, chain.burnDuration);
-    Game.applyStun(enemy, chain.stunDuration);
+    Game.applyParalysis(enemy, chain.stunDuration);
     Game.burst(enemy.x, enemy.y, 3, "#c9a1ff");
     if (enemy.hp <= 0) Game.killEnemy(index);
     return true;
@@ -1160,8 +1174,8 @@
   Game.spawnHailStorm = function (skill, point) {
     S.hailStorms.push({
       x: point.x, y: point.y, radius: skill.radius, life: skill.duration, duration: skill.duration,
-      damage: skill.damage, hitInterval: skill.hitInterval, tickTimer: 0, slowFactor: skill.slowFactor, freezeDuration: skill.freezeDuration, element: Game.getSkillElement("hailGenerator"),
-      explodeOnEnd: !!skill.explodeOnEnd, explosionRadius: skill.explosionRadius, explosionSlowFactor: skill.explosionSlowFactor, explosionSlowDuration: skill.explosionSlowDuration
+      damage: skill.damage, hitInterval: skill.hitInterval, tickTimer: 0, slowFactor: skill.slowFactor, slowDuration: skill.slowDuration, freezeDuration: skill.freezeDuration, element: Game.getSkillElement("hailGenerator"),
+      explodeOnEnd: !!skill.explodeOnEnd, explosionRadius: skill.explosionRadius, explosionFreezeDuration: skill.explosionFreezeDuration
     });
   };
   Game.launchHailGenerator = function () {
@@ -1185,7 +1199,7 @@
     S.enemies.forEach(function (enemy) {
       var info = C.enemies[enemy.type], dx = enemy.x - storm.x, dy = enemy.y - storm.y, reach = storm.explosionRadius + info.radius;
       if (dx * dx + dy * dy > reach * reach) return;
-      Game.applySlow(enemy, storm.explosionSlowDuration, storm.explosionSlowFactor, storm.element);
+      Game.applyFreeze(enemy, storm.explosionFreezeDuration);
     });
     Game.burst(storm.x, storm.y, 18, C.colors.ice);
   };
@@ -1207,7 +1221,8 @@
         var dx = enemy.x - storm.x, dy = enemy.y - storm.y, reach = storm.radius + info.radius;
         if (dx * dx + dy * dy > reach * reach) continue;
         Game.damageEnemy(enemy, storm.damage, { critical: false, noWeaponEffects: true, silentText: true, element: storm.element });
-        Game.applySlow(enemy, storm.freezeDuration, storm.slowFactor, storm.element);
+        Game.applySlow(enemy, storm.slowDuration, storm.slowFactor);
+        Game.applyFreeze(enemy, storm.freezeDuration);
         Game.burst(enemy.x, enemy.y, 1, C.colors.ice);
         if (enemy.hp <= 0) Game.killEnemy(j);
       }
@@ -1335,7 +1350,7 @@
         if (dx * dx + dy * dy > reach * reach) continue;
         Game.damageEnemy(enemy, pool.damage, { critical: false, noWeaponEffects: true, silentText: true, element: pool.element });
         Game.applyBurn(enemy, pool.burnDps, pool.burnDuration);
-        if (pool.slowFactor < 1) Game.applySlow(enemy, pool.slowDuration, pool.slowFactor, pool.element);
+        if (pool.slowFactor < 1) Game.applySlow(enemy, pool.slowDuration, pool.slowFactor);
         Game.burst(enemy.x, enemy.y, 1, C.colors.fire);
         if (enemy.hp <= 0) Game.killEnemy(j);
       }
@@ -1442,7 +1457,7 @@
     if (Game.blockWithArmor(enemy)) { enemy.hitFlash = .08; Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, "格挡", C.colors.cyan); return; }
     var element = Game.getDamageElement(bullet);
     enemy.lastHitElement = element;
-    var actualDamage = amount * Game.getElementDamageScale(enemy, element) * (enemy.damageTakenTimer > 0 ? enemy.damageTakenMultiplier || 1 : 1); enemy.hp -= actualDamage; enemy.hitFlash = .08; if (!bullet.noWeaponEffects && S.player.burn) Game.applyBurn(enemy, 10 + S.player.burn * 3, 1.5 + S.player.burn * .4); if (!bullet.noWeaponEffects && S.player.freeze) Game.applySlow(enemy, 1.2 + S.player.freeze * .25, .58, element); if (!bullet.silentText) Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, bullet.critical ? Math.ceil(actualDamage) + " 暴击" : String(Math.ceil(actualDamage)), bullet.critical ? C.colors.yellow : C.colors.text);
+    var actualDamage = amount * Game.getElementDamageScale(enemy, element) * (enemy.damageTakenTimer > 0 ? enemy.damageTakenMultiplier || 1 : 1); enemy.hp -= actualDamage; enemy.hitFlash = .08; if (!bullet.noWeaponEffects && S.player.burn) Game.applyBurn(enemy, 10 + S.player.burn * 3, 1.5 + S.player.burn * .4); if (!bullet.noWeaponEffects && S.player.freeze && element === "ice") { Game.applySlow(enemy, 1.2 + S.player.freeze * .25, .58); Game.applyFreeze(enemy, C.rifleFreezeDuration); } if (!bullet.silentText) Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, bullet.critical ? Math.ceil(actualDamage) + " 暴击" : String(Math.ceil(actualDamage)), bullet.critical ? C.colors.yellow : C.colors.text);
   };
   Game.throwEnemyShot = function (enemy) {
     var info = C.enemies[enemy.type], ranged = info.ranged;

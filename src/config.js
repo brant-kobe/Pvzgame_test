@@ -109,6 +109,7 @@
     bossHealth: { bars: 3, width: 108, barHeight: 9, offsetY: 12, headExtent: 1.78, track: "rgba(255, 107, 107, .42)" },
     ranges: { far: 480, mid: 320, near: 125 },
     rifleRange: "far",
+    rifleFreezeDuration: .35,
     skillRangeHoldMs: 350,
     colors: { bg: "#0b202c", text: "#f4f8fb", muted: "#9ab0bc", green: "#63e6a0", yellow: "#ffd166", red: "#ff6b6b", cyan: "#68d8ff", ice: "#58aaff", fire: "#ff9b52", purple: "#c9a1ff" },
     elements: {
@@ -119,12 +120,20 @@
       fire: { name: "火", color: "#ff9b52", detail: "高温与燃烧伤害。" },
       wind: { name: "风", color: "#63e6a0", detail: "气流与切割伤害。" }
     },
+    statusCategories: {
+      damage: { name: "伤害", detail: "持续掉血的负面状态，不限制行动。" },
+      soft: { name: "软控", detail: "只降低移动速度，不影响攻击。" },
+      hard: { name: "硬控", detail: "被控期间完全无法移动与攻击。" },
+      debuff: { name: "削弱", detail: "不限制行动，只削弱敌人能力。" }
+    },
     statusEffects: {
-      burn: { name: "燃烧", element: "fire" },
-      freeze: { name: "冻结", element: "ice" },
-      slow: { name: "减速", element: "physical" },
-      stun: { name: "麻痹", element: "electric" },
-      wound: { name: "重伤", element: "wind" }
+      burn: { name: "燃烧", category: "damage", color: "#ff9b52" },
+      frostbite: { name: "冻伤", category: "damage", color: "#58aaff" },
+      slow: { name: "减速", category: "soft", color: "#8fb4c4" },
+      stun: { name: "眩晕", category: "hard", color: "#ffd166", label: "晕" },
+      freeze: { name: "冻结", category: "hard", color: "#8ce9ff", label: "冻" },
+      paralysis: { name: "麻痹", category: "hard", color: "#c9a1ff", label: "麻" },
+      wound: { name: "重伤", category: "debuff", color: "#5ef2a0" }
     },
     enemies: {
       normal: { name: "普通僵尸", codexCategory: "minion", description: "尸潮中的基础单位，生命与速度均衡，会持续向防线推进。", tactics: "优先利用自动锁定快速清理；单体威胁低，数量增加后会给城墙造成压力。", hp: 28, speed: 20, radius: 14, damage: 10, xp: 8, color: "#6eaa7b", accent: "#b1e4a0" },
@@ -149,13 +158,13 @@
     },
     skillDefaults: {
       thermobaric: { unlocked: false, level: 0, fireInterval: 5, projectileSpeed: 250, projectileRadius: 8, impactDamage: 32, impactKnockback: 24, explosionDamage: 58, explosionRadius: 68, explosionKnockback: 42, burnDps: 10, burnDuration: 2.5, pierce: 0, burst: 0 },
-      dryIce: { unlocked: false, level: 0, fireInterval: 3.5, projectileSpeed: 300, projectileRadius: 7, damage: 28, knockback: 12, pierce: 3, freezeDuration: 0, slowFactor: .58, splitCount: 0, spread: 0, burst: 0 },
+      dryIce: { unlocked: false, level: 0, fireInterval: 3.5, projectileSpeed: 300, projectileRadius: 7, damage: 28, knockback: 12, pierce: 3, slowDuration: 0, slowFactor: .58, freezeDuration: 0, splitCount: 0, spread: 0, burst: 0 },
       armoredCar: { unlocked: false, level: 0, fireInterval: 6.3, speed: 100, carWidth: 42, carLength: 80, damage: 4, hitInterval: .12, slowFactor: .55, slowDuration: 1.2, stunChance: 0, stunDuration: .6, extraCars: 0, sizeLevel: 0, groundOnly: true },
       bombardment: { unlocked: false, level: 0, fireInterval: 11, bombSpeed: 560, damage: 180, blastRadius: 45, centerRadius: 17, knockback: 105, extraBombs: 0, stunDuration: 0, centerDamageMultiplier: 1, thermonuclear: false, heatDuration: 4, heatDps: 25, heatSlowFactor: .5, bombDropDelay: .42, bombMinSeparationRatio: .9, bombAltScoreRatio: .45 },
       electromagnetic: { unlocked: false, level: 0, fireInterval: 3, damage: 72, stunDuration: 2.5, extraTargets: 0, explosion: false, explosionDamage: 44, explosionRadius: 54, matrix: false, matrixDuration: 4, matrixDps: 12, matrixRadius: 38, matrixSlowFactor: .5 },
       highEnergyBeam: { unlocked: false, level: 0, fireInterval: 3, damage: 6, baseDamageHits: 20, bonusDamageHits: 0, damageHits: 20, beamWidth: 16, duration: 4, slowEnabled: false, slowFactor: .1, slowDuration: 1, crippleEnabled: false, damageTakenMultiplier: 1.25, damageTakenDuration: 5, overcharged: false },
       whirlwindCannon: { unlocked: false, level: 0, fireInterval: 12, duration: 10, speed: 72, radius: 40, damage: 20, hitInterval: .35, pullSpeed: 18, clusterRadius: 58, clusterWeight: 130, threatWeight: 60, clusterJitter: .55, extraTornadoes: 0, stormGather: false, stormDuration: 2, stormRadiusScale: 1.7, stormDamageScale: 1, stormPullScale: 1.2, groundOnly: true },
-      hailGenerator: { unlocked: false, level: 0, fireInterval: 6, duration: 1.5, radius: 46, damage: 16, hitInterval: .25, slowFactor: .35, freezeDuration: 1.1, extraHails: 0, explodeOnEnd: false, explosionRadius: 62, explosionSlowFactor: .22, explosionSlowDuration: 2.5 },
+      hailGenerator: { unlocked: false, level: 0, fireInterval: 6, duration: 1.5, radius: 46, damage: 16, hitInterval: .25, slowFactor: .35, slowDuration: 1.1, freezeDuration: .6, extraHails: 0, explodeOnEnd: false, explosionRadius: 62, explosionFreezeDuration: 1.5 },
       fuelBomb: { unlocked: false, level: 0, fireInterval: 5, flightTime: .5, arcHeight: 22, radius: 52, duration: 1, damage: 13, hitInterval: .25, burnDps: 7, burnDuration: 3, slowFactor: 1, slowDuration: 0, extraShells: 0, extraDamageScale: .7, explodeOnEnd: false, explosionDamageScale: 2.6, explosionRadiusScale: 1.35, groundOnly: true },
       airBlade: { unlocked: false, level: 0, fireInterval: 4.5, projectileSpeed: 400, projectileRadius: 9, damage: 34, knockback: 26, pierce: 3, spread: 0, burst: 0, woundDuration: 5, woundFactor: .5, woundExtraDuration: 0, woundExtraFactor: 0 },
       drone: { unlocked: false, level: 0, fireInterval: 9, duration: 6, speed: 96, radius: 20, damage: 18, hitInterval: .35, clusterRadius: 52, clusterWeight: 110, threatWeight: 55, clusterJitter: .6, sizeLevel: 0, stunDuration: 0, bladeEnabled: false },
@@ -171,7 +180,7 @@
       { id: "crit", name: "暴击", rarity: "普通", max: 5, icon: "♦", desc: "暴击率 +12%", detail: "每级增加 12% 暴击率，最高 5 级。暴击子弹造成基础伤害的 1.5 倍；可与弱点打击叠加。", apply: function (p) { p.crit += .12; } },
       { id: "weakpoint", name: "弱点打击", rarity: "稀有", max: 3, icon: "☄", desc: "暴击伤害 +50%", detail: "每级使暴击伤害倍率增加 0.5，最高 3 级。与暴击率配合时收益更高。", apply: function (p) { p.critDamage += .5; } },
       { id: "burn", name: "燃烧弹", rarity: "稀有", max: 3, icon: "♨", desc: "命中后附加持续伤害", detail: "将子弹切换为火焰属性，命中后施加持续燃烧；燃烧伤害和持续时间随等级提升，最高 3 级。", apply: function (p) { p.burn += 1; p.bulletType = "fire"; } },
-      { id: "freeze", name: "冰冻弹", rarity: "稀有", max: 3, icon: "❄", desc: "命中后减缓敌人移动", detail: "将子弹切换为冰冻属性，命中后减缓敌人移动；减速持续时间随等级提升，最高 3 级。", apply: function (p) { p.freeze += .12; p.bulletType = "ice"; } }
+      { id: "freeze", name: "冰冻弹", rarity: "稀有", max: 3, icon: "❄", desc: "命中后冻结并减速", detail: "将子弹切换为冰冻属性，命中后短暂冻结敌人（0.35 秒）并减缓其移动；减速持续时间随等级提升，最高 3 级。", apply: function (p) { p.freeze += .12; p.bulletType = "ice"; } }
     ],
     skillTraits: [
       { id: "unlockThermobaric", skillId: "thermobaric", unlocksSkill: true, name: "温压弹", rarity: "稀有", max: 1, icon: "♨", desc: "解锁温压弹技能", detail: "首次获取后解锁温压弹，技能槽显示 Lv1；之后可获取温压弹专属词条继续升级。", apply: function () {} },
@@ -182,7 +191,7 @@
       { id: "thermoKnockback", skillId: "thermobaric", name: "击退强化", rarity: "稀有", max: 3, icon: "⇢", desc: "温压弹击退距离 +25%", detail: "每级强化温压弹命中冲击和爆炸冲击的击退距离 25%，最高 3 级。", apply: function (p) { p.skills.thermobaric.impactKnockback *= 1.25; p.skills.thermobaric.explosionKnockback *= 1.25; } },
       { id: "thermoImpact", skillId: "thermobaric", name: "冲击伤害增加", rarity: "稀有", max: 5, icon: "✦", desc: "温压弹冲击伤害 +25%", detail: "每级提升温压弹炮弹直接命中的冲击伤害 25%，最高 5 级；爆炸伤害由爆炸增伤强化。", apply: function (p) { p.skills.thermobaric.impactDamage *= 1.25; } },
       { id: "unlockDryIce", skillId: "dryIce", unlocksSkill: true, name: "干冰弹", rarity: "稀有", max: 1, icon: "❄", desc: "解锁干冰弹技能", detail: "首次获取后解锁干冰弹，技能槽显示 Lv1；之后可获取干冰弹专属词条继续升级。", apply: function () {} },
-      { id: "iceFreeze", skillId: "dryIce", name: "冰冻", rarity: "稀有", max: 4, icon: "❄", desc: "干冰弹命中后减速", detail: "命中后冻结敌人移动，每级增加减速持续时间并增强减速效果，最高 4 级。", apply: function (p) { var skill = p.skills.dryIce; skill.freezeDuration += .55; skill.slowFactor = Math.max(.25, skill.slowFactor - .06); } },
+      { id: "iceFreeze", skillId: "dryIce", name: "冰冻", rarity: "稀有", max: 4, icon: "❄", desc: "干冰弹命中后冻结并减速", detail: "命中后冻结敌人 0.5 秒并大幅减速，每级增加冻结与减速的持续时间，并增强减速效果，最高 4 级。", apply: function (p) { var skill = p.skills.dryIce; skill.slowDuration += .55; skill.freezeDuration += .5; skill.slowFactor = Math.max(.25, skill.slowFactor - .06); } },
       { id: "iceDamage", skillId: "dryIce", name: "干冰弹增伤", rarity: "稀有", max: 5, icon: "✦", desc: "干冰弹伤害 +25%", detail: "每级提升干冰弹及其分裂冰弹的命中伤害 25%，最高 5 级。", apply: function (p) { p.skills.dryIce.damage *= 1.25; } },
       { id: "icePierce", skillId: "dryIce", name: "干冰弹穿透", rarity: "稀有", max: 4, icon: "↠", desc: "干冰弹穿透 +1", detail: "每级增加 1 次额外穿透；基础干冰弹已可穿透 3 次。", apply: function (p) { p.skills.dryIce.pierce += 1; } },
       { id: "iceSplit", skillId: "dryIce", name: "分裂小冰弹", rarity: "稀有", max: 3, icon: "❄", desc: "干冰弹命中后分裂", detail: "干冰弹首次命中后分裂出 2 枚小冰弹，每级再增加 2 枚，最高 3 级；小冰弹造成部分伤害。", apply: function (p) { p.skills.dryIce.splitCount += 2; } },
@@ -224,7 +233,7 @@
       { id: "hailExtra", skillId: "hailGenerator", name: "连环冰雹", rarity: "稀有", max: 2, icon: "✣", desc: "每轮额外释放 1 个冰雹", detail: "每级在一次冰雹发生器释放中额外生成 1 团冰雹，最高 2 级；多余的冰雹会自动落在另一个敌群，只有单团敌人时则偏开一点落点。", apply: function (p) { p.skills.hailGenerator.extraHails += 1; } },
       { id: "hailDuration", skillId: "hailGenerator", name: "冰雹延续", rarity: "稀有", max: 2, icon: "↻", desc: "持续时间 +2 秒", detail: "每级使每团冰雹的持续时间延长 2 秒，最高 2 级；砸击间隔不变，因此总伤害随持续时间线性提高。", apply: function (p) { p.skills.hailGenerator.duration += 2; } },
       { id: "hailRadius", skillId: "hailGenerator", name: "冰雹扩张", rarity: "稀有", max: 1, icon: "◉", desc: "冰雹范围 +100%", detail: "冰雹发生器的覆盖半径扩大 100%（46 → 92 像素），伤害判定、冰雾特效与冰霜爆炸的范围一起放大。", apply: function (p) { p.skills.hailGenerator.radius *= 2; } },
-      { id: "hailFrost", skillId: "hailGenerator", name: "冰霜爆炸", rarity: "稀有", max: 1, icon: "❄", desc: "冰雹结束后爆炸并减速", detail: "每团冰雹消失时在原地炸开一圈冰霜，对范围内的敌人施加更强、更久的减速（移速 ×0.22，持续 2.5 秒）；这部分只减速、不造成伤害。", apply: function (p) { p.skills.hailGenerator.explodeOnEnd = true; } },
+      { id: "hailFrost", skillId: "hailGenerator", name: "冰霜爆炸", rarity: "稀有", max: 1, icon: "❄", desc: "冰雹结束后炸开冰霜并冻结", detail: "每团冰雹消失时在原地炸开一圈冰霜，把范围内的敌人冻结 1.5 秒；这部分只控制、不造成伤害。", apply: function (p) { p.skills.hailGenerator.explodeOnEnd = true; } },
       { id: "unlockFuelBomb", skillId: "fuelBomb", unlocksSkill: true, name: "燃油弹", rarity: "稀有", max: 1, icon: "⛽", desc: "解锁燃油弹技能", detail: "首次获取后解锁燃油弹，技能槽显示 Lv.1；技能就绪后自动向敌人最密集处投出一枚燃油弹，落地炸开一片持续灼烧的圆形火场。", apply: function () {} },
       { id: "fuelDamage", skillId: "fuelBomb", name: "燃油增伤", rarity: "稀有", max: 3, icon: "✦", desc: "灼烧伤害 +60%", detail: "每级使火场每次灼烧的伤害与附加点燃的每秒伤害都提高 60%，最高 3 级；结束爆炸的伤害按灼烧伤害换算，因此同步提高。", apply: function (p) { p.skills.fuelBomb.damage *= 1.6; p.skills.fuelBomb.burnDps *= 1.6; } },
       { id: "fuelExtra", skillId: "fuelBomb", name: "燃油+1", rarity: "稀有", max: 2, icon: "✣", desc: "额外投出 1 枚无距离限制的燃油弹", detail: "每级在每次释放中额外投出 1 枚燃油弹，最高 2 级；额外燃油弹不受近距离触发限制，会飞向场上任意位置的敌群，但灼烧、点燃与结束爆炸的伤害都降低 30%。", apply: function (p) { p.skills.fuelBomb.extraShells += 1; } },
@@ -261,7 +270,7 @@
       { id: "electromagnetic", name: "电磁穿刺", icon: "ϟ", color: "#68d8ff", range: "mid", element: "electric", status: "已实装", detail: "自动从天而降闪电劈向敌人，造成伤害并施加麻痹；可通过分流、爆炸、麻痹增伤和电磁矩阵词条强化。" },
       { id: "highEnergyBeam", name: "高能射线", icon: "ϟ", color: "#51cfff", range: "far", element: "energy", status: "已实装", detail: "幻形自动朝覆盖敌人最多的方向发射蓝色宽光束，贯穿全场并持续 4 秒、造成 20 次低额伤害；可强化伤害、减速与致残效果，也可增加脉冲次数或过载翻倍。" },
       { id: "whirlwindCannon", name: "旋风加农", icon: "☈", color: "#9fe6ff", range: "mid", element: "wind", status: "已实装", detail: "幻形召唤龙卷风主动扑向敌人最密集的位置，并优先照顾靠近城墙的敌群；持续 10 秒，沿途对接触到的敌人持续造成伤害并施加轻微牵引，持续时间结束后龙卷风消失并进入冷却。可强化伤害、牵引、持续时间与数量，也可在消失位置留下大龙卷风。" },
-      { id: "hailGenerator", name: "冰雹发生器", icon: "❆", color: "#8ce9ff", range: "mid", element: "ice", status: "已实装", detail: "在敌人最密集处释放一团持续 1.5 秒的冰雹，反复砸击范围内敌人并施加冻结减速；可强化伤害、数量、持续时间与覆盖范围，也可在冰雹消失时炸开一圈只减速不伤害的冰霜。" },
+      { id: "hailGenerator", name: "冰雹发生器", icon: "❆", color: "#8ce9ff", range: "mid", element: "ice", status: "已实装", detail: "在敌人最密集处释放一团持续 1.5 秒的冰雹，反复砸击范围内敌人并冻结、减速它们；可强化伤害、数量、持续时间与覆盖范围，也可在冰雹消失时炸开一圈只冻结不伤害的冰霜。" },
       { id: "fuelBomb", name: "燃油弹", icon: "⛽", color: "#ff7043", range: "near", element: "fire", status: "已实装", detail: "向防线前方投出一枚燃油弹，落地炸开一片持续 1 秒的圆形火场，反复灼烧范围内敌人并附加点燃；可强化灼烧伤害、额外投弹、覆盖范围、减速、结束爆炸与持续时间。贴地技能，打不到飞鸟僵尸。" },
       { id: "airBlade", name: "压缩气刃", icon: "☾", color: "#5ef2a0", range: "mid", element: "wind", status: "已实装", detail: "幻形甩出绿色月牙形气刃，沿直线穿透 3 个目标，造成伤害与轻微击退，并让命中目标在 5 秒内只回复一半生命；可强化伤害、齐射数量、连发轮次、穿透层数、击退距离与重伤强度。" },
       { id: "drone", name: "无人机", icon: "◎", color: "#a6c8ff", range: "mid", element: "physical", status: "已实装", detail: "放出一架圆形飞行器在战场上巡航，主动飞向敌人最密集、最靠近防线的位置，撞到僵尸就持续造成伤害；可强化伤害、飞行速度、持续时间与机身尺寸，也能在撞击时甩出一道只有伤害的无穿透气刃或震晕目标。它是飞行单位，能撞到飞鸟僵尸。" },

@@ -68,6 +68,11 @@
         current.hp -= (current.burnDps || 10 + p.burn * 3) * dt * (current.damageTakenTimer > 0 ? current.damageTakenMultiplier || 1 : 1);
         if (current.hp <= 0) { Game.killEnemy(k); continue; }
       }
+      if (current.frostbite > 0) {
+        current.frostbite = Math.max(0, current.frostbite - dt);
+        current.hp -= (current.frostbiteDps || 0) * dt * (current.damageTakenTimer > 0 ? current.damageTakenMultiplier || 1 : 1);
+        if (current.hp <= 0) { Game.killEnemy(k); continue; }
+      }
       if (current.regenPerSecond > 0) current.hp = Math.min(current.maxHp, current.hp + current.regenPerSecond * dt * Game.getHealScale(current));
       current.slow = Math.max(0, current.slow - dt);
       if (current.slow === 0) current.slowFactor = .58;
@@ -75,8 +80,9 @@
       if (current.damageTakenTimer === 0) current.damageTakenMultiplier = 1;
       current.wound = Math.max(0, (current.wound || 0) - dt);
       current.woundExtra = Math.max(0, (current.woundExtra || 0) - dt);
-      current.stun = Math.max(0, (current.stun || 0) - dt);
-      if (current.stun > 0) continue;
+      current.control = Math.max(0, (current.control || 0) - dt);
+      if (current.control === 0) current.controlType = "";
+      if (current.control > 0) continue;
       var speed = info.speed * (current.slow > 0 ? current.slowFactor || .58 : 1) * (current.type === "boss" && current.hp < current.maxHp * .5 ? 1.5 : 1);
       var ranged = info.ranged, holdY = Game.getEnemyHoldY(info);
       if (current.y >= holdY) {
@@ -134,7 +140,7 @@
         if (!contact) { contact = { enemy: enemy, hitTimer: 0, stunChecked: false }; car.contacts.push(contact); }
         if (contact.hitTimer > 0) continue;
         Game.damageEnemy(enemy, car.damage, { critical: false, noWeaponEffects: true, silentText: true, element: car.element });
-        Game.applySlow(enemy, car.slowDuration, car.slowFactor, car.element);
+        Game.applySlow(enemy, car.slowDuration, car.slowFactor);
         if (!contact.stunChecked) {
           contact.stunChecked = true;
           if (Math.random() < car.stunChance) Game.applyStun(enemy, car.stunDuration);
