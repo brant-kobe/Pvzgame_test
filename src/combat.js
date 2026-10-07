@@ -524,10 +524,15 @@
     });
   };
   Game.applyKnockback = function (enemy, sourceX, sourceY, distance) {
+    if (!enemy || !(distance > 0)) return false;
+    var scale = Game.getStatusScale(enemy, "knockback");
+    if (scale <= 0) return false;
+    if (Game.blockWithArmor(enemy)) return false;
     var dx = enemy.x - sourceX, dy = enemy.y - sourceY, length = Math.sqrt(dx * dx + dy * dy) || 1;
-    var radius = C.enemies[enemy.type].radius;
-    enemy.x = U.clamp(enemy.x + dx / length * distance, radius, C.width - radius);
-    enemy.y = Math.max(-radius, enemy.y + dy / length * distance);
+    var radius = C.enemies[enemy.type].radius, push = distance * scale;
+    enemy.x = U.clamp(enemy.x + dx / length * push, radius, C.width - radius);
+    enemy.y = Math.max(-radius, enemy.y + dy / length * push);
+    return true;
   };
   Game.blockWithArmor = function (enemy) {
     if (!enemy.armorCharges || enemy.armorCharges <= 0) return false;
@@ -801,7 +806,7 @@
       Game.damageEnemy(enemy, damage, { critical: false, noWeaponEffects: true, element: bomb.element });
       if (bomb.stunDuration > 0) Game.applyStun(enemy, bomb.stunDuration);
       if (distance > .001) Game.applyKnockback(enemy, bomb.targetX, bomb.targetY, bomb.knockback * (1 - Math.min(distance / (bomb.radius * 1.5), .45)));
-      else enemy.y = Math.max(-C.enemies[enemy.type].radius, enemy.y - bomb.knockback);
+      else Game.applyKnockback(enemy, bomb.targetX, bomb.targetY + 1, bomb.knockback);
       if (enemy.hp <= 0) Game.killEnemy(i);
     }
     if (bomb.thermonuclear) S.bombZones.push({ x: bomb.targetX, y: bomb.targetY, radius: bomb.radius, life: bomb.heatDuration, duration: bomb.heatDuration, damage: bomb.heatDps, slowFactor: bomb.heatSlowFactor, element: bomb.element });

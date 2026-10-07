@@ -1297,7 +1297,7 @@
     Object.keys(C.statusEffects || {}).forEach(function (id) {
       var info = C.statusEffects[id], category = (C.statusCategories || {})[info.category], prefix = category ? category.name + "·" : "", scale = scales ? scales[id] : undefined;
       if (immune && immune[id]) labels.push({ text: prefix + "免疫" + info.name, color: info.color });
-      else if (scale !== undefined && scale !== null && scale !== 1) labels.push({ text: prefix + info.name + "时间 " + (scale > 1 ? "+" : "−") + Math.round(Math.abs(scale - 1) * 100) + "%", color: info.color });
+      else if (scale !== undefined && scale !== null && scale !== 1) labels.push({ text: prefix + (info.scaleLabel || info.name + "时间") + " " + (scale > 1 ? "+" : "−") + Math.round(Math.abs(scale - 1) * 100) + "%", color: info.color });
     });
     return labels;
   }

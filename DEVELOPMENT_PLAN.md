@@ -9,7 +9,7 @@
 
 当前项目已经从单 HTML 原型整理为无构建工具依赖的模块化 Canvas 游戏。第 1 关可完整进入战斗、升级、通关或失败；第 2 关「地铁入口」、第 3 关「封锁工厂」、第 4 关「熔炉核心」、第 5 关「废弃球馆」、第 6 关「隔离区」与第 7 关「装甲坟场」均已实装，且**所有关卡一开始就全部开放**（第 2 关含 10 波与第 7 波首领，第 3 关 10 波、敌人生命 ×1.35 且第 4 波为分裂僵尸精英，第 4 关前期与第 3 关一致、后五波数量与血量同步加码，第 5 关把篮球僵尸接入波次、生命 ×1.6 并继续加码后五波，第 6 关 11 波、只用分裂/篮球/护甲三种小怪混编、生命 ×1.68，第 7 关 12 波、普通/分裂/护甲混编、生命 ×1.75 并由护甲僵尸精英坐镇，第 8 关 12 波、飞鸟/篮球/快跑混编、生命 ×2 并由飞鸟僵尸精英坐镇）。首页另有独立测试场，用于快速验证配置中的敌人和技能，不参与正式关卡进度。
 
-敌人机制已经数据化到「可选配置字段」：护甲用 `armorCharges`、远程用 `ranged`、飞行用 `flying`、属性抗性用 `damageTakenByElement`、状态免疫与时长缩放用 `statusImmune` / `statusDurationScale`，近战/远程/飞行的停步位置统一由 `Game.getEnemyHoldY` 给出。**负面状态已重构为「伤害性（燃烧 / 冻伤）/ 软控（减速）/ 硬控（眩晕 / 冻结 / 麻痹）/ 削弱（重伤）」四类，硬控期间敌人完全无法移动与攻击**。**火焰僵尸、雪人僵尸及其精英**是最新的四个单位（前者免疫燃烧与冻结这一种硬控、怕冰；后者冻结时间减半、怕火），与**飞鸟僵尸、飞鸟僵尸精英**（免疫装甲车 / 龙卷风 / 燃油弹这类贴地技能，已随第 8 关进入波次）一样，目前只进图鉴与测试场，尚未编入关卡波次。
+敌人机制已经数据化到「可选配置字段」：护甲用 `armorCharges`、远程用 `ranged`、飞行用 `flying`、属性抗性用 `damageTakenByElement`、状态免疫与缩放用 `statusImmune` / `statusDurationScale`，近战/远程/飞行的停步位置统一由 `Game.getEnemyHoldY` 给出。**负面状态已重构为「伤害性（燃烧 / 冻伤）/ 软控（减速 / 击退）/ 硬控（眩晕 / 冻结 / 麻痹）/ 削弱（重伤）」四类，硬控期间敌人完全无法移动与攻击**。**火焰僵尸、雪人僵尸及其精英**是最新的四个单位（前者免疫燃烧与冻结这一种硬控、怕冰；后者冻结时间减半、怕火），与**飞鸟僵尸、飞鸟僵尸精英**（免疫装甲车 / 龙卷风 / 燃油弹这类贴地技能，已随第 8 关进入波次）一样，目前只进图鉴与测试场，尚未编入关卡波次。
 
 人物已从 Canvas 矢量绘制改为分层 PNG 精灵：身体使用 `assets/man.png` 抠图裁切后的背影士兵，步枪为独立 PNG，握把挂在左手并随瞄准旋转。幻形悬浮在人物右上方并贴近右肩，不与背包重叠。
 
@@ -258,13 +258,14 @@
 
 ### 负面状态与状态抗性（已实现）
 
-- **状态分类**（`config.statusCategories`）：**伤害性**（`damage`）燃烧 / 冻伤，**软控**（`soft`）减速，**硬控**（`hard`）眩晕 / 冻结 / 麻痹，另有不属于最初三类、单独归入**削弱**（`debuff`）的重伤。状态表 `config.statusEffects` 给出每条状态的 `category`、图鉴配色 `color` 与硬控的头顶标记 `label`（晕 / 冻 / 麻）。
+- **状态分类**（`config.statusCategories`）：**伤害性**（`damage`）燃烧 / 冻伤，**软控**（`soft`）减速 / 击退，**硬控**（`hard`）眩晕 / 冻结 / 麻痹，另有不属于最初三类、单独归入**削弱**（`debuff`）的重伤。状态表 `config.statusEffects` 给出每条状态的 `category`、图鉴配色 `color` 与硬控的头顶标记 `label`（晕 / 冻 / 麻），按距离缩放的状态另有 `scaleLabel`（击退用「击退距离」）。
 - **硬控是三合一**：眩晕 / 冻结 / 麻痹在机制上完全等价 —— 被控期间**既不能移动也不能攻击**，三者共用 `enemy.control`（剩余秒数）+ `enemy.controlType`。`Game.applyHardControl(enemy, type, duration)` 是唯一写入口（不短于当前剩余时间的控制才覆盖并改写类型），`Game.applyStun` / `Game.applyFreeze` / `Game.applyParalysis` 是它的三个语义包装；`update.js` 每帧递减计时、归零时清空 `controlType`，随后 `if (current.control > 0) continue;` 整段跳过移动与攻击 —— 远程僵尸的投掷也在这一段里，所以被控的篮球僵尸不会砸墙。判断「是否动不了」统一用 `Game.isHardControlled(enemy)`，`updateAim` / `getSkillTargetAngle` / `bombardmentCoverage` / `getBombardmentTarget` 的落点预判都改调它。
-- **软控只有减速**：`Game.applySlow(enemy, duration, factor)` 只压移速、不影响攻击。上一轮加在它上面的「来源属性」参数已删除，因为冻结不再按属性推导。
+- **软控是减速 + 击退**：`Game.applySlow(enemy, duration, factor)` 只压移速、不影响攻击；`Game.applyKnockback(enemy, sourceX, sourceY, distance)` 把目标沿「背离来源」的方向推开 `distance × 倍率` 像素，同样不打断推进与攻击，也不写任何持续字段 —— **击退是瞬时位移而不是持续状态**，调用方仍按原来的顺序在 `Game.damageEnemy` 之后调用它。上一轮加在 `applySlow` 上的「来源属性」参数已删除，因为冻结不再按属性推导。
+- **击退也走标准入口**：`Game.applyKnockback` 与减速 / 硬控 / 伤害性状态同构 —— 先查 `Game.getStatusScale(enemy, "knockback")`（返回 0 时原地不动）、再调 `Game.blockWithArmor`，`statusDurationScale` 对击退表示**距离倍率**（`.5` = 只推开一半）。空投轰炸落点正中的退化分支（距离 ≤ 0.001 时沿正上方推满）也改成调用同一入口，不再直接写 `enemy.y`。副作用是**护甲僵尸破甲前推不动**：它每挡下一次伤害就同时挡下那一次击退。
 - **伤害性状态**：燃烧（`enemy.burn` / `enemy.burnDps`）与冻伤（`enemy.frostbite` / `enemy.frostbiteDps`）在 `update.js` 里按 `dt` 结算、吃致残射线的 `damageTakenMultiplier`、**不走属性倍率**（与燃烧同一口径）。冻伤的状态、入口、护甲与免疫接线这一轮已经全部就位，但**还没有任何技能施加它**，等新技能或新词条再接。
-- **状态抗性**：`config.enemies[].statusImmune`（状态 id → `true` 完全免疫）与 `statusDurationScale`（状态 id → 时长倍率，`.5` = 减半），唯一读取入口 `Game.getStatusScale(enemy, status)`；它在写字段之前先查（返回 0 直接不生效）再调 `Game.blockWithArmor` —— 被免疫的状态既不写字段，也不消耗护甲层数。当前两组：**火焰僵尸 / 火焰僵尸精英** `statusImmune: { burn: true, freeze: true }`（免疫燃烧与**冻结**这一种硬控，但照样吃减速、照样会被眩晕 / 麻痹）、**雪人僵尸 / 雪人僵尸精英** `statusDurationScale: { freeze: .5 }`。
+- **状态抗性**：`config.enemies[].statusImmune`（状态 id → `true` 完全免疫）与 `statusDurationScale`（状态 id → 时长倍率，`.5` = 减半；对击退则是**距离倍率**），唯一读取入口 `Game.getStatusScale(enemy, status)`；它在写字段之前先查（返回 0 直接不生效）再调 `Game.blockWithArmor` —— 被免疫的状态既不写字段，也不消耗护甲层数。当前两组：**火焰僵尸 / 火焰僵尸精英** `statusImmune: { burn: true, freeze: true }`（免疫燃烧与**冻结**这一种硬控，但照样吃减速、照样会被眩晕 / 麻痹）、**雪人僵尸 / 雪人僵尸精英** `statusDurationScale: { freeze: .5 }`；**目前还没有任何敌人声明击退抗性**，击退只被护甲格挡。
 - **冻结的来源**（全部改成显式调用 `Game.applyFreeze`）：干冰弹「冰冻」词条（每级 +0.5 秒）、冰雹发生器每次砸击 0.6 秒（每次刷新，与原减速并存）、冰霜爆炸 1.5 秒（**替换**了旧的移速 ×0.22 / 2.5 秒强减速）、步枪冰冻子弹 0.35 秒（`config.rifleFreezeDuration`，只在 `bulletType === "ice"` 且已获得「冰冻弹」词条时生效）。
-- 展示侧：僵尸图鉴详情页的「状态抗性」一行改为带分类前缀（「伤害·免疫燃烧」「硬控·免疫冻结」「硬控·冻结时间 −50%」）；战场上硬控画对应颜色的虚线环 + 头顶标记字，冻结额外套一层半透明冰壳（`drawFreezeShell`），减速仍是细虚线环。
+- 展示侧：僵尸图鉴详情页的「状态抗性」一行改为带分类前缀（「伤害·免疫燃烧」「硬控·免疫冻结」「硬控·冻结时间 −50%」「软控·击退距离 −50%」），缩放的量词由 `statusEffects[].scaleLabel` 给出（缺省「状态名 + 时间」），所以击退不会被写成「击退时间」；战场上硬控画对应颜色的虚线环 + 头顶标记字，冻结额外套一层半透明冰壳（`drawFreezeShell`），减速仍是细虚线环，击退是瞬时位移、没有持续视觉。
 
 ### 已实现技能规则
 
@@ -426,6 +427,9 @@
   **冻伤**（字段 `enemy.frostbite` / `enemy.frostbiteDps`，入口 `Game.applyFrostbite`）按燃烧同款实现：`update.js` 里独立计时并按 `dt` 掉血、吃致残射线加成、不走属性倍率，护甲与状态免疫接线一并打通 —— 按用户选择**暂时没有任何技能施加它**。
   图鉴详情页的「状态抗性」标签加上分类前缀（「伤害·免疫燃烧」「硬控·免疫冻结」「硬控·冻结时间 −50%」）；战场上硬控画对应颜色的虚线环 + 头顶标记字（晕 / 冻 / 麻），冻结额外套一层半透明冰壳（`drawFreezeShell`），减速仍是细虚线环。火焰僵尸的 `statusImmune: { burn: true, freeze: true }` 与雪人僵尸的 `statusDurationScale: { freeze: .5 }` 语义随之明确：前者免疫燃烧与**冻结这一种硬控**（照样吃减速、照样会被眩晕 / 麻痹），后者只把冻结时间打对折。
   验证：`tmp/check-status.js` 重写为 **133** 项断言（四类分类表与状态表合法性、三种硬控共用一个计时且更长的覆盖更短的、护甲先吃控制、**被控僵尸原地不动且两秒内一次都不啃墙 / 不投掷篮球**、解冻后恢复推进、减速只影响移动不影响攻击、燃烧与冻伤各自独立结算且互不触发、护甲挡冻伤、火焰僵尸免疫燃烧但吃冻伤、干冰弹 / 冰雹 / 冰霜爆炸 / 步枪冰冻子弹四条冻结链路对普通 / 雪人 / 火焰三种目标逐一核对、图鉴分类前缀与不溢出、三种硬控的战场绘制），`tmp/check-hail.js` 76 → **78** 项，`check-chain` / `check-drone` / `check-flying` / `smoke-whirlwind` 里引用 `enemy.stun` 与旧冰霜爆炸字段的断言同步改写。回归合计 **1597** 项断言全部通过（check-status 133 / check-resist 90 / check-elements 114 / smoke-whirlwind 518 / check-chain 78 / check-hail 78 / check-fuel 125 / check-airblade 86 / check-drone 95 / check-flying 77 / check-test-panel 26 / check-unlock 14 / check-level8 66 / check-hp-scale 97），`node --check` 与 `git diff --check` 通过；新画面用 `tmp/trace-draw.js status` + `tmp/replay-draw.py` 回放核对（冻结的冰壳、三种硬控的标记字与配色、减速环、燃烧 + 护甲角标同场）。
+- 把**击退并入软控**（`config.statusEffects.knockback`，软控的第二条状态），并统一它的入口与抗性语义。`Game.applyKnockback(enemy, sourceX, sourceY, distance)` 从「直接改坐标」改成与减速 / 硬控 / 伤害性状态同构的入口：先查 `Game.getStatusScale(enemy, "knockback")`（免疫时原地不动）再调 `Game.blockWithArmor`，随后按倍率缩放位移 —— 击退没有持续时长，所以倍率乘的是**距离**而不是时间，新增的 `config.statusEffects[].scaleLabel`（当前「击退距离」）让图鉴把「击退时间 −50%」正确写成「软控·击退距离 −50%」。空投轰炸里落点正中的退化分支原本直接写 `enemy.y`、绕过了入口，这一轮改成 `Game.applyKnockback(enemy, targetX, targetY + 1, knockback)`（源点下移 1 像素 → 方向仍为正上方、距离不变），行为不变但接上了抗性与护甲判定。
+  **副作用（有意保留）**：护甲僵尸每挡下一次伤害就同时挡下那一次击退，所以破甲前空投轰炸、温压弹与压缩气刃都推不动它 —— 与「护甲同时抵挡伤害与负面状态」的既有口径一致，图鉴里护甲僵尸与小怪的说明、精英的应对建议都补上了击退。目前**没有任何敌人声明击退抗性**（`statusImmune.knockback` / `statusDurationScale.knockback` 都还没被用到），需要时直接写进 `config.enemies` 即可。
+  验证：`tmp/check-status.js` 133 → **150** 项断言，新增的击退段覆盖：软控归类与 `scaleLabel`、推开距离与方向、不写硬控计时也不附带其它状态、距离为 0 或目标缺失时不生效、被推开的近战僵尸走回防线后照常啃墙、飞行单位照常被推开、护甲先吃下击退且位置不变、破甲后恢复、`statusDurationScale` 按距离减半、`statusImmune` 让目标完全不动、测试用的临时抗性已还原；图鉴侧临时给普通僵尸挂上击退抗性，断言出现「状态抗性」行、标签是「软控·击退距离 −50%」而不是「击退时间」。回归合计 **1614** 项断言全部通过（check-status 150 / check-resist 90 / check-elements 114 / smoke-whirlwind 518 / check-chain 78 / check-hail 78 / check-fuel 125 / check-airblade 86 / check-drone 95 / check-flying 77 / check-test-panel 26 / check-unlock 14 / check-level8 66 / check-hp-scale 97），`node --check` 与 `git diff --check` 通过（击退是瞬时位移，没有新的战场视觉，因此这一轮没有新增画面回放）。
 - 已使用 `node --check` 检查 `src/` 下全部 JavaScript 文件。
 - 已使用 `git diff --check` 检查补丁空白字符。
 - Windows Git 出现的 `LF will be replaced by CRLF` 仅为换行符转换提示，不影响运行。
