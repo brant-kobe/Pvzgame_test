@@ -477,6 +477,22 @@
     ctx.beginPath(); ctx.arc(0, -r * .1, reach, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
+  function statusBadgeWidth(label) { return 15 + label.length * 6; }
+  function drawStatusBadge(x, y, label, color) {
+    var width = statusBadgeWidth(label);
+    U.roundedRect(ctx, x, y, width, 12, 4, "rgba(12, 30, 40, .88)", color);
+    text(label, x + width / 2, y + 9, "bold 8px Segoe UI, Microsoft YaHei", color, "center");
+  }
+  function drawDamageBadges(enemy, reach) {
+    var marks = [], burn = statusInfo("burn"), frostbite = statusInfo("frostbite"), stacks = Game.getFrostbiteStacks(enemy);
+    if (enemy.burn > 0) marks.push({ label: burn.label, color: burn.color });
+    if (stacks > 0) marks.push({ label: frostbite.label + stacks, color: frostbite.color });
+    if (!marks.length) return;
+    var rowWidth = 0, y = enemy.y - reach - 18;
+    marks.forEach(function (mark) { mark.width = statusBadgeWidth(mark.label); rowWidth += mark.width + 3; });
+    var x = U.clamp(enemy.x + reach + 3, 2, C.width - 2 - rowWidth + 3);
+    marks.forEach(function (mark) { drawStatusBadge(x, y, mark.label, mark.color); x += mark.width + 3; });
+  }
   function drawEnemyVitals(enemy, r) {
     var info = C.enemies[enemy.type], reach = info && info.flying ? r * 1.6 : r;
     if (Game.isHardControlled(enemy)) {
@@ -488,6 +504,7 @@
       U.roundedRect(ctx, enemy.x - reach - armorBadgeWidth - 3, enemy.y - reach - 18, armorBadgeWidth, 12, 4, "rgba(12, 30, 40, .88)", enemy.armorFlash > 0 ? C.colors.cyan : "rgba(104, 216, 255, .5)");
       text(armorLabel, enemy.x - reach - armorBadgeWidth / 2 - 3, enemy.y - reach - 9, "bold 8px Segoe UI, Microsoft YaHei", C.colors.cyan, "center");
     }
+    drawDamageBadges(enemy, reach);
     if (enemy.type === "boss") { if (!enemy.hideHealthBar) Game.drawBossHealthBar(enemy, r); }
     else if (!enemy.hideHealthBar) { ctx.fillStyle = "rgba(0, 0, 0, .5)"; ctx.fillRect(enemy.x - r, enemy.y - reach - 13, r * 2, 3); ctx.fillStyle = C.colors.green; ctx.fillRect(enemy.x - r, enemy.y - reach - 13, r * 2 * U.clamp(enemy.hp / enemy.maxHp, 0, 1), 3); }
   }

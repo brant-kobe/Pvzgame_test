@@ -127,8 +127,8 @@
       debuff: { name: "削弱", detail: "不限制行动，只削弱敌人能力。" }
     },
     statusEffects: {
-      burn: { name: "燃烧", category: "damage", color: "#ff9b52" },
-      frostbite: { name: "冻伤", category: "damage", color: "#58aaff" },
+      burn: { name: "燃烧", category: "damage", color: "#ff9b52", label: "燃" },
+      frostbite: { name: "冻伤", category: "damage", color: "#58aaff", label: "霜" },
       slow: { name: "减速", category: "soft", color: "#8fb4c4" },
       knockback: { name: "击退", category: "soft", color: "#d8b06a", scaleLabel: "击退距离" },
       stun: { name: "眩晕", category: "hard", color: "#ffd166", label: "晕" },
