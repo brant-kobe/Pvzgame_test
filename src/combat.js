@@ -42,7 +42,7 @@
     var x = opts.x === undefined ? U.rand(edge, C.width - edge) : U.clamp(opts.x, radius, C.width - radius);
     var y = opts.y === undefined ? -radius - 8 : U.clamp(opts.y, -radius, S.wall ? S.wall.y - S.wall.height / 2 - radius - 3 : C.height);
     var maxHp = Math.round(info.hp * ((S.session && S.session.hpScale) || 1) * Game.getWaveHpScale());
-    var enemy = { type: type, x: x, y: y, hp: maxHp, maxHp: maxHp, slow: 0, slowFactor: .58, damageTakenTimer: 0, damageTakenMultiplier: 1, burn: 0, burnDps: 0, frostbite: 0, frostbiteDps: 0, control: 0, controlType: "", wound: 0, woundFactor: 0, woundExtra: 0, woundExtraFactor: 0, hitFlash: 0, attackTimer: 0, regenPerSecond: info.regenPerSecond || 0, armorCharges: info.armorCharges || 0, armorStamp: -1e9, armorFlash: 0 };
+    var enemy = { type: type, x: x, y: y, hp: maxHp, maxHp: maxHp, slow: 0, slowFactor: .58, damageTakenTimer: 0, damageTakenMultiplier: 1, burn: 0, burnDps: 0, frostbiteStacks: {}, frostbiteDps: {}, control: 0, controlType: "", wound: 0, woundFactor: 0, woundExtra: 0, woundExtraFactor: 0, hitFlash: 0, attackTimer: 0, regenPerSecond: info.regenPerSecond || 0, armorCharges: info.armorCharges || 0, armorStamp: -1e9, armorFlash: 0 };
     if (type === "boss") enemy.x = C.width / 2;
     S.enemies.push(enemy);
     if (info.codexCategory === "elite" && !opts.silent) {
@@ -409,7 +409,7 @@
     var lanes = 1 + skill.spread;
     for (var lane = 0; lane < lanes; lane++) {
       var bulletAngle = angle + (lane - (lanes - 1) / 2) * C.spreadAngle;
-      S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(bulletAngle) * skill.projectileSpeed, vy: Math.sin(bulletAngle) * skill.projectileSpeed, radius: skill.projectileRadius, damage: skill.damage, knockback: skill.knockback, pierce: skill.pierce, splitCount: skill.splitCount, slowDuration: skill.slowDuration, freezeDuration: skill.freezeDuration, slowFactor: skill.slowFactor, critical: false, element: Game.getSkillElement(type), hitEnemies: [] });
+      S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(bulletAngle) * skill.projectileSpeed, vy: Math.sin(bulletAngle) * skill.projectileSpeed, radius: skill.projectileRadius, damage: skill.damage, knockback: skill.knockback, pierce: skill.pierce, splitCount: skill.splitCount, slowDuration: skill.slowDuration, freezeDuration: skill.freezeDuration, slowFactor: skill.slowFactor, frostbiteEnabled: !!skill.frostbiteEnabled, frostbiteSource: type, frostbiteDps: skill.frostbiteDps, frostbiteDuration: skill.frostbiteDuration, frostbiteMaxStacks: skill.frostbiteMaxStacks, critical: false, element: Game.getSkillElement(type), hitEnemies: [] });
     }
   };
   Game.launchArmoredCars = function (skill) {
@@ -573,13 +573,49 @@
     enemy.burnDps = Math.max(enemy.burnDps || 0, dps);
     return true;
   };
-  Game.applyFrostbite = function (enemy, dps, duration) {
+  Game.applyFrostbite = function (enemy, source, dps, duration, maxStacks) {
+    if (!enemy || !source || !(dps > 0) || !(duration > 0) || !(maxStacks > 0)) return false;
     var scale = Game.getStatusScale(enemy, "frostbite");
     if (scale <= 0) return false;
     if (Game.blockWithArmor(enemy)) return false;
-    enemy.frostbite = Math.max(enemy.frostbite || 0, duration * scale);
-    enemy.frostbiteDps = Math.max(enemy.frostbiteDps || 0, dps);
+    var stacks = enemy.frostbiteStacks || (enemy.frostbiteStacks = {}), list = stacks[source] || (stacks[source] = []);
+    var time = duration * scale;
+    if (list.length < maxStacks) list.push(time);
+    else {
+      var weakest = 0;
+      for (var i = 1; i < list.length; i++) if (list[i] < list[weakest]) weakest = i;
+      if (time > list[weakest]) list[weakest] = time;
+    }
+    enemy.frostbiteDps = enemy.frostbiteDps || {};
+    enemy.frostbiteDps[source] = Math.max(enemy.frostbiteDps[source] || 0, dps);
     return true;
+  };
+  Game.getFrostbiteStacks = function (enemy, source) {
+    var stacks = enemy && enemy.frostbiteStacks, total = 0;
+    if (!stacks) return 0;
+    if (source) return stacks[source] ? stacks[source].length : 0;
+    Object.keys(stacks).forEach(function (id) { total += stacks[id].length; });
+    return total;
+  };
+  Game.getFrostbiteDps = function (enemy, source) {
+    var stacks = enemy && enemy.frostbiteStacks, table = enemy && enemy.frostbiteDps, total = 0;
+    if (!stacks || !table) return 0;
+    Object.keys(stacks).forEach(function (id) {
+      if (source && id !== source) return;
+      total += stacks[id].length * (table[id] || 0);
+    });
+    return total;
+  };
+  Game.tickFrostbite = function (enemy, dt) {
+    var stacks = enemy && enemy.frostbiteStacks;
+    if (!stacks) return;
+    Object.keys(stacks).forEach(function (id) {
+      var list = stacks[id];
+      for (var i = list.length - 1; i >= 0; i--) {
+        list[i] -= dt;
+        if (list[i] <= 0) list.splice(i, 1);
+      }
+    });
   };
   Game.applyWound = function (enemy, duration, factor, extraDuration, extraFactor) {
     var base = duration > 0, extra = extraDuration > 0;
@@ -620,7 +656,7 @@
     var angle = Math.atan2(projectile.vy, projectile.vx), count = projectile.splitCount;
     for (var i = 0; i < count; i++) {
       var shardAngle = angle + (i - (count - 1) / 2) * .2;
-      S.skillProjectiles.push({ type: "iceShard", x: enemy.x, y: enemy.y, vx: Math.cos(shardAngle) * 245, vy: Math.sin(shardAngle) * 245, radius: Math.max(3, projectile.radius * .58), damage: projectile.damage * .45, knockback: projectile.knockback * .5, pierce: 0, splitCount: 0, slowDuration: projectile.slowDuration, freezeDuration: projectile.freezeDuration, slowFactor: projectile.slowFactor, critical: false, element: projectile.element, hitEnemies: [enemy], isShard: true });
+      S.skillProjectiles.push({ type: "iceShard", x: enemy.x, y: enemy.y, vx: Math.cos(shardAngle) * 245, vy: Math.sin(shardAngle) * 245, radius: Math.max(3, projectile.radius * .58), damage: projectile.damage * .45, knockback: projectile.knockback * .5, pierce: 0, splitCount: 0, slowDuration: projectile.slowDuration, freezeDuration: projectile.freezeDuration, slowFactor: projectile.slowFactor, frostbiteEnabled: projectile.frostbiteEnabled, frostbiteSource: projectile.frostbiteSource, frostbiteDps: projectile.frostbiteDps, frostbiteDuration: projectile.frostbiteDuration, frostbiteMaxStacks: projectile.frostbiteMaxStacks, critical: false, element: projectile.element, hitEnemies: [enemy], isShard: true });
     }
   };
   Game.updateSkillProjectiles = function (dt) {
@@ -657,6 +693,7 @@
           if (projectile.knockback > 0) Game.applyKnockback(enemy, projectile.x - projectile.vx, projectile.y - projectile.vy, projectile.knockback);
           if (projectile.slowDuration > 0) Game.applySlow(enemy, projectile.slowDuration, projectile.slowFactor);
           if (projectile.freezeDuration > 0) Game.applyFreeze(enemy, projectile.freezeDuration);
+          if (projectile.frostbiteEnabled) Game.applyFrostbite(enemy, projectile.frostbiteSource, projectile.frostbiteDps, projectile.frostbiteDuration, projectile.frostbiteMaxStacks);
           if (projectile.woundDuration > 0 || projectile.woundExtraDuration > 0) Game.applyWound(enemy, projectile.woundDuration, projectile.woundFactor, projectile.woundExtraDuration, projectile.woundExtraFactor);
           Game.splitDryIceProjectile(projectile, enemy);
           if (enemy.hp <= 0) Game.killEnemy(j);
@@ -1180,6 +1217,7 @@
     S.hailStorms.push({
       x: point.x, y: point.y, radius: skill.radius, life: skill.duration, duration: skill.duration,
       damage: skill.damage, hitInterval: skill.hitInterval, tickTimer: 0, slowFactor: skill.slowFactor, slowDuration: skill.slowDuration, freezeDuration: skill.freezeDuration, element: Game.getSkillElement("hailGenerator"),
+      frostbiteEnabled: !!skill.frostbiteEnabled, frostbiteDps: skill.frostbiteDps, frostbiteDuration: skill.frostbiteDuration, frostbiteMaxStacks: skill.frostbiteMaxStacks,
       explodeOnEnd: !!skill.explodeOnEnd, explosionRadius: skill.explosionRadius, explosionFreezeDuration: skill.explosionFreezeDuration
     });
   };
@@ -1228,6 +1266,7 @@
         Game.damageEnemy(enemy, storm.damage, { critical: false, noWeaponEffects: true, silentText: true, element: storm.element });
         Game.applySlow(enemy, storm.slowDuration, storm.slowFactor);
         Game.applyFreeze(enemy, storm.freezeDuration);
+        if (storm.frostbiteEnabled) Game.applyFrostbite(enemy, "hailGenerator", storm.frostbiteDps, storm.frostbiteDuration, storm.frostbiteMaxStacks);
         Game.burst(enemy.x, enemy.y, 1, C.colors.ice);
         if (enemy.hp <= 0) Game.killEnemy(j);
       }

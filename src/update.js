@@ -68,11 +68,12 @@
         current.hp -= (current.burnDps || 10 + p.burn * 3) * dt * (current.damageTakenTimer > 0 ? current.damageTakenMultiplier || 1 : 1);
         if (current.hp <= 0) { Game.killEnemy(k); continue; }
       }
-      if (current.frostbite > 0) {
-        current.frostbite = Math.max(0, current.frostbite - dt);
-        current.hp -= (current.frostbiteDps || 0) * dt * (current.damageTakenTimer > 0 ? current.damageTakenMultiplier || 1 : 1);
+      var frostDps = Game.getFrostbiteDps(current);
+      if (frostDps > 0) {
+        current.hp -= frostDps * dt * (current.damageTakenTimer > 0 ? current.damageTakenMultiplier || 1 : 1);
         if (current.hp <= 0) { Game.killEnemy(k); continue; }
       }
+      Game.tickFrostbite(current, dt);
       if (current.regenPerSecond > 0) current.hp = Math.min(current.maxHp, current.hp + current.regenPerSecond * dt * Game.getHealScale(current));
       current.slow = Math.max(0, current.slow - dt);
       if (current.slow === 0) current.slowFactor = .58;
