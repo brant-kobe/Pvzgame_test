@@ -1506,7 +1506,7 @@
   Game.throwEnemyShot = function (enemy) {
     var info = C.enemies[enemy.type], ranged = info.ranged;
     if (!ranged) return false;
-    S.enemyShots.push({ type: "basketball", x: enemy.x, y: enemy.y + info.radius * .3, targetY: S.wall.y - S.wall.height / 2, startY: enemy.y + info.radius * .3, damage: ranged.damage, speed: ranged.projectileSpeed, radius: ranged.projectileRadius, spin: 0, travel: 0 });
+    S.enemyShots.push({ type: ranged.shot || "basketball", accent: info.accent, x: enemy.x, y: enemy.y + info.radius * .3, targetY: S.wall.y - S.wall.height / 2, startY: enemy.y + info.radius * .3, damage: ranged.damage, speed: ranged.projectileSpeed, radius: ranged.projectileRadius, spin: 0, travel: 0 });
     return true;
   };
   Game.updateEnemyShots = function (dt) {
@@ -1518,7 +1518,7 @@
       if (shot.y < shot.targetY) continue;
       shot.y = shot.targetY;
       S.wall.hp -= shot.damage;
-      Game.burst(shot.x, shot.targetY, 5, C.enemies.basketball.accent);
+      Game.burst(shot.x, shot.targetY, 5, shot.accent || C.enemies.basketball.accent);
       Game.addText(shot.x, shot.targetY - 19, "-" + shot.damage, C.colors.red);
       S.enemyShots.splice(i, 1);
       if (S.wall.hp <= 0) {
