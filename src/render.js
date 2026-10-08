@@ -393,6 +393,36 @@
     }
     ctx.restore();
   }
+  function drawThunderMarks(r, phase) {
+    var arcs = [[-r * .92, r * .74, -r * 1.04, -r * .88, -1], [r * .92, r * .8, r * 1.06, -r * .82, 1]], i;
+    ctx.save();
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.shadowColor = "rgba(201, 161, 255, .92)";
+    ctx.shadowBlur = Math.max(6, r * .78);
+    for (i = 0; i < arcs.length; i++) {
+      var rootX = arcs[i][0], rootY = arcs[i][1], tipY = arcs[i][3], dir = arcs[i][4];
+      var wobble = Math.sin(phase + i * 1.9) * r * .18;
+      ctx.strokeStyle = "rgba(168, 126, 255, .82)";
+      ctx.lineWidth = Math.max(1.6, r * .14);
+      ctx.beginPath();
+      ctx.moveTo(rootX, rootY);
+      ctx.lineTo(rootX + dir * r * .26 + wobble, rootY - r * .44);
+      ctx.lineTo(rootX + dir * r * .04 - wobble, rootY - r * .82);
+      ctx.lineTo(rootX + dir * r * .28 + wobble * .5, tipY);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(242, 236, 255, .96)";
+      ctx.lineWidth = Math.max(.8, r * .05);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#efe6ff";
+    for (i = 0; i < 3; i++) {
+      var spark = phase * .8 + i * 2.1;
+      ctx.beginPath();
+      ctx.arc(Math.sin(spark) * r * .76, -r * .22 + Math.cos(spark * .7) * r * .56, Math.max(.9, r * .08), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
   function drawBirdBody(r, info, elite, phase) {
     var flap = Math.sin(phase), wingLift = flap * r * .34, wingTilt = flap * .14, side;
     ctx.fillStyle = "rgba(0, 0, 0, .3)";
@@ -473,13 +503,14 @@
       var isBird = enemy.type === "bird" || enemy.type === "birdElite";
       var isFlame = enemy.type === "flame" || enemy.type === "flameElite";
       var isSnowman = enemy.type === "snowman" || enemy.type === "snowmanElite";
+      var isThunder = enemy.type === "thunder" || enemy.type === "thunderElite";
       var auraReach = info.flying ? r * 1.7 : r;
       var shirtColor = isSplitter ? (isElite ? "#584a84" : "#463c6b")
-        : isElite ? (isRunner ? "#98633b" : isArmored ? "#5b6b78" : isBasketball ? "#96591f" : isFlame ? "#4d2318" : isSnowman ? "#9fc4d4" : "#617745")
-        : isRunner ? "#705345" : enemy.type === "boss" ? "#4d2d3b" : isArmored ? "#46545f" : isBasketball ? "#7a4a20" : isFlame ? "#3a1c14" : isSnowman ? "#c6e0ea" : "#3f6655";
+        : isElite ? (isRunner ? "#98633b" : isArmored ? "#5b6b78" : isBasketball ? "#96591f" : isFlame ? "#4d2318" : isSnowman ? "#9fc4d4" : isThunder ? "#4c3f8f" : "#617745")
+        : isRunner ? "#705345" : enemy.type === "boss" ? "#4d2d3b" : isArmored ? "#46545f" : isBasketball ? "#7a4a20" : isFlame ? "#3a1c14" : isSnowman ? "#c6e0ea" : isThunder ? "#6b5bb5" : "#3f6655";
       var shirtShadow = isSplitter ? "#241f38"
-        : isElite ? (isArmored ? "#333f48" : isBasketball ? "#4f2d0f" : isFlame ? "#2b1109" : isSnowman ? "#6d94a4" : "#3b3026")
-        : isRunner ? "#382b2d" : enemy.type === "boss" ? "#281c2a" : isArmored ? "#28323a" : isBasketball ? "#4a2a12" : isFlame ? "#22100b" : isSnowman ? "#7fa6b6" : "#243c39";
+        : isElite ? (isArmored ? "#333f48" : isBasketball ? "#4f2d0f" : isFlame ? "#2b1109" : isSnowman ? "#6d94a4" : isThunder ? "#2b2258" : "#3b3026")
+        : isRunner ? "#382b2d" : enemy.type === "boss" ? "#281c2a" : isArmored ? "#28323a" : isBasketball ? "#4a2a12" : isFlame ? "#22100b" : isSnowman ? "#7fa6b6" : isThunder ? "#3a2f6b" : "#243c39";
       ctx.save();
       ctx.translate(enemy.x, enemy.y);
       ctx.scale(pulse, pulse);
@@ -555,6 +586,7 @@
        if (isRunner) { ctx.strokeStyle = isElite ? "#fff0a5" : "#ffe0a7"; ctx.lineWidth = Math.max(1, r * .12); ctx.beginPath(); ctx.moveTo(-r * .7, r * .55); ctx.lineTo(-r * 1.18, r * .9); ctx.moveTo(r * .7, r * .48); ctx.lineTo(r * 1.16, r * .72); ctx.stroke(); }
       if (isFlame) drawFlameCrown(r, S.session.elapsed * 6 + enemy.x * .06 + enemy.y * .04);
       if (isSnowman) drawSnowmanMarks(r, S.session.elapsed * 1.6 + enemy.x * .05);
+      if (isThunder) drawThunderMarks(r, S.session.elapsed * 7 + enemy.x * .06 + enemy.y * .04);
       if (enemy.type === "boss") { ctx.fillStyle = "#6d3949"; ctx.beginPath(); ctx.moveTo(-r * .65, -r * 1.18); ctx.lineTo(-r * .82, -r * 1.7); ctx.lineTo(-r * .35, -r * 1.35); ctx.lineTo(0, -r * 1.78); ctx.lineTo(r * .3, -r * 1.3); ctx.lineTo(r * .82, -r * 1.7); ctx.lineTo(r * .65, -r * 1.1); ctx.closePath(); ctx.fill(); ctx.strokeStyle = C.colors.red; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, Math.PI * 2); ctx.stroke(); }
       if (info.regenPerSecond && enemy.hp < enemy.maxHp) {
         ctx.save();
@@ -1288,7 +1320,7 @@
     Object.keys(table || {}).forEach(function (id) {
       var info = (C.elements || {})[id], scale = table[id];
       if (!info) return;
-      labels.push({ text: info.name + "系伤害 " + (scale > 1 ? "+" : "−") + Math.round(Math.abs(scale - 1) * 100) + "%", color: info.color });
+      labels.push({ text: info.name + "系伤害 " + (scale === 0 ? "免疫" : (scale > 1 ? "+" : "−") + Math.round(Math.abs(scale - 1) * 100) + "%"), color: info.color });
     });
     return labels;
   }
