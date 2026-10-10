@@ -97,6 +97,19 @@
     { total: 146, interval: .32, mix: ["bird", "basketball", "runner", "bird"], hpScale: 1.95 },
     { total: 168, interval: .3, mix: ["runner", "bird", "basketball", "runner"], hpScale: 2.1 }
   ];
+  var levelNineWaves = [
+    { total: 10, interval: 1.65, mix: ["runner"] },
+    { total: 14, interval: 1.55, mix: ["runner", "armored"] },
+    { total: 20, interval: 1.45, mix: ["runner", "armored", "flame"] },
+    { total: 26, interval: 1.3, mix: ["runner", "armored", "flame", "runner"], elite: "flameElite" },
+    { total: 40, interval: .9, mix: ["runner", "flame", "armored", "runner"] },
+    { total: 64, interval: .62, mix: ["runner", "armored", "flame", "runner"], hpScale: 1.2 },
+    { total: 80, interval: .44, mix: ["armored", "runner", "flame", "runner"], boss: true, hpScale: 1.35 },
+    { total: 98, interval: .4, mix: ["runner", "flame", "armored", "flame", "runner"], hpScale: 1.5 },
+    { total: 118, interval: .36, mix: ["armored", "runner", "flame", "runner", "flame"], hpScale: 1.65 },
+    { total: 138, interval: .33, mix: ["runner", "flame", "armored", "runner", "flame"], hpScale: 1.8 },
+    { total: 168, interval: .3, mix: ["armored", "flame", "runner", "flame", "runner"], hpScale: 1.95 }
+  ];
   Game.config = {
     width: 360, height: 640, maxLevel: 15, maxSkillSlots: 4, wallMaxHp: 1000, armorBlockWindow: .12, xpBase: 15, xpMultiplier: 1.13, xpBonus: 6, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12, flyingHover: 16,
     sprites: {
@@ -291,7 +304,8 @@
       { id: 5, name: "废弃球馆", subtitle: "篮球僵尸远程砸墙，尸潮更密更硬", unlocked: true, hpScale: 1.6, xpScale: .32, waves: levelFiveWaves },
       { id: 6, name: "隔离区", subtitle: "护甲、分裂与远程混编，尸潮更长", unlocked: true, hpScale: 1.68, xpScale: .29, waves: levelSixWaves },
       { id: 7, name: "装甲坟场", subtitle: "护甲僵尸成群推进，装甲精英坐镇", unlocked: true, hpScale: 1.75, xpScale: .26, waves: levelSevenWaves },
-      { id: 8, name: "环城高架", subtitle: "飞鸟与快跑压境，贴地技能失效", unlocked: true, hpScale: 2, xpScale: .165, waves: levelEightWaves }
+      { id: 8, name: "环城高架", subtitle: "飞鸟与快跑压境，贴地技能失效", unlocked: true, hpScale: 2, xpScale: .165, waves: levelEightWaves },
+      { id: 9, name: "焦土防线", subtitle: "护甲与烈焰混编，后期节奏收紧", unlocked: true, hpScale: 2.1, xpScale: .21, waves: levelNineWaves }
     ],
     waves: levelOneWaves
   };
