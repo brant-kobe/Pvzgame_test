@@ -110,6 +110,19 @@
     { total: 138, interval: .33, mix: ["runner", "flame", "armored", "runner", "flame"], hpScale: 1.8 },
     { total: 168, interval: .3, mix: ["armored", "flame", "runner", "flame", "runner"], hpScale: 1.95 }
   ];
+  var levelTenWaves = [
+    { total: 10, interval: 1.5, mix: ["normal"] },
+    { total: 14, interval: 1.35, mix: ["normal", "flame"] },
+    { total: 20, interval: 1.2, mix: ["normal", "flame", "snowman"] },
+    { total: 28, interval: .55, mix: ["normal", "flame", "snowman", "normal"], elite: "snowmanElite" },
+    { total: 38, interval: .5, mix: ["flame", "normal", "snowman", "normal"] },
+    { total: 56, interval: .45, mix: ["normal", "snowman", "flame", "normal"], hpScale: 1.2 },
+    { total: 72, interval: .42, mix: ["flame", "snowman", "normal", "normal"], boss: true, hpScale: 1.35 },
+    { total: 92, interval: .4, mix: ["normal", "flame", "snowman", "normal", "flame"], hpScale: 1.5 },
+    { total: 114, interval: .36, mix: ["snowman", "normal", "flame", "normal", "snowman"], hpScale: 1.65 },
+    { total: 138, interval: .33, mix: ["normal", "flame", "snowman", "normal", "flame"], hpScale: 1.8 },
+    { total: 162, interval: .3, mix: ["flame", "snowman", "normal", "flame", "snowman"], hpScale: 1.95 }
+  ];
   Game.config = {
     width: 360, height: 640, maxLevel: 15, maxSkillSlots: 4, wallMaxHp: 1000, armorBlockWindow: .12, xpBase: 15, xpMultiplier: 1.13, xpBonus: 6, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12, flyingHover: 16,
     sprites: {
@@ -172,6 +185,8 @@
       thunderElite: { name: "雷电僵尸精英", codexCategory: "elite", description: "雷电僵尸的精英形态，体型更大、周身电流更加暴烈：完全免疫电系伤害，也完全免疫麻痹。", tactics: "电系对它完全无效：伤害归零、也麻痹不了它；改用物理、冰系或火系技能处理，它除此之外没有任何抗性。", hp: 410, speed: 28, radius: 21, damage: 19, xp: 33, color: "#4c3f8f", accent: "#ffd166", damageTakenByElement: { electric: 0 }, statusImmune: { paralysis: true } },
       wasp: { name: "毒蜂", codexCategory: "minion", description: "被尸群惊起的巨型毒蜂，全程悬在半空向防线射出毒刺：额外承受 50% 风系伤害，能量伤害则减半。", tactics: "它是飞行单位，装甲车、龙卷风与燃油弹都碰不到；风系气刃伤害 ×1.5，高能射线的能量伤害要减半，用步枪或冰 / 火技能更稳。", hp: 30, speed: 32, radius: 13, damage: 9, xp: 14, color: "#1d2126", accent: "#a8e05f", flying: true, ranged: { standoff: 85, interval: 2.2, projectileSpeed: 240, projectileRadius: 8, damage: 13, shot: "stinger", action: "针刺" }, damageTakenByElement: { wind: 1.5, energy: .5 } },
       waspElite: { name: "毒蜂精英", codexCategory: "elite", description: "毒蜂的精英形态，体型与翼展更大，停在更远处以更快的节奏射出更重的毒刺，抗性不变。", tactics: "它停在距防线 113 像素处，靠防线前的减速与近战拦不住；同样免疫贴地技能，风系 ×1.5、能量 ×0.5，用气刃或物理技能点掉。", hp: 260, speed: 36, radius: 18, damage: 14, xp: 32, color: "#141821", accent: "#ffd166", flying: true, ranged: { standoff: 113, interval: 1.8, projectileSpeed: 260, projectileRadius: 10, damage: 18, shot: "stinger", action: "针刺" }, damageTakenByElement: { wind: 1.5, energy: .5 } },
+      wheelchair: { name: "轮椅僵尸", codexCategory: "minion", description: "坐在轮椅上的僵尸，靠着轮椅缓慢挪向防线，生命掉到一半以下时车上的输液装置会持续为他回血：额外承受 50% 火系伤害。", tactics: "它推进得很慢，可以用中远距离技能提前消耗；火系伤害 ×1.5，而且重伤能把回血压到一半、「禁疗」期间几乎回不动，别让它一直挂在半血。", hp: 90, speed: 14, radius: 17, damage: 14, xp: 18, color: "#5b6a7a", accent: "#7ef0a8", damageTakenByElement: { fire: 1.5 }, regenPerSecond: 6, regenBelowHpRatio: .5 },
+      wheelchairElite: { name: "轮椅僵尸精英", codexCategory: "elite", description: "轮椅僵尸的精英形态，轮椅更厚重、输液更急：生命低于一半后每秒回复的生命是小怪的两倍多，火系弱点不变。", tactics: "血厚且回血更快，必须一口气打穿半血以下的回复段；温压弹与燃油弹的持续火伤 ×1.5，压缩气刃的重伤能让它的回复直接减半。", hp: 520, speed: 17, radius: 22, damage: 22, xp: 38, color: "#414c5c", accent: "#ffd166", damageTakenByElement: { fire: 1.5 }, regenPerSecond: 14, regenBelowHpRatio: .5 },
       boss: { name: "尸潮领主", codexCategory: "boss", description: "关卡首领，体型巨大、生命值极高；生命低于一半时进入狂暴状态，移动速度提升。", tactics: "持续输出并留意其接近城墙；燃烧、暴击与高伤害构筑有助于缩短战斗时间。", hp: 3000, speed: 10, radius: 34, damage: 24, xp: 100, color: "#9d5264", accent: "#ffb0bc" }
     },
     skillDefaults: {
@@ -305,7 +320,8 @@
       { id: 6, name: "隔离区", subtitle: "护甲、分裂与远程混编，尸潮更长", unlocked: true, hpScale: 1.68, xpScale: .29, waves: levelSixWaves },
       { id: 7, name: "装甲坟场", subtitle: "护甲僵尸成群推进，装甲精英坐镇", unlocked: true, hpScale: 1.75, xpScale: .26, waves: levelSevenWaves },
       { id: 8, name: "环城高架", subtitle: "飞鸟与快跑压境，贴地技能失效", unlocked: true, hpScale: 2, xpScale: .165, waves: levelEightWaves },
-      { id: 9, name: "焦土防线", subtitle: "护甲与烈焰混编，后期节奏收紧", unlocked: true, hpScale: 2.1, xpScale: .21, waves: levelNineWaves }
+      { id: 9, name: "焦土防线", subtitle: "护甲与烈焰混编，后期节奏收紧", unlocked: true, hpScale: 2.1, xpScale: .21, waves: levelNineWaves },
+      { id: 10, name: "冰火交界", subtitle: "元素互克，控制手段大打折扣", unlocked: true, hpScale: 2.2, xpScale: .22, waves: levelTenWaves }
     ],
     waves: levelOneWaves
   };

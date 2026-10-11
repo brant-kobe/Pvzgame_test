@@ -516,6 +516,41 @@
     ctx.fillStyle = "#07090c";
     ctx.beginPath(); ctx.arc(-r * .17, -r * .88, Math.max(.5, r * .05), 0, Math.PI * 2); ctx.arc(r * .17, -r * .88, Math.max(.5, r * .05), 0, Math.PI * 2); ctx.fill();
   }
+  function drawWheelchair(r, info, elite, phase) {
+    var frame = elite ? "#4c5868" : "#5b6a7a", rim = elite ? "#93a8bf" : "#adc0d3", tire = elite ? "#1b232c" : "#222b35", drip = elite ? "#63d99a" : "#7ef0a8", side, wheelX, spoke, angle;
+    U.roundedRect(ctx, -r * .5, -r * .82, r, r * 1.06, r * .14, frame, rim);
+    U.roundedRect(ctx, -r * .6, r * .14, r * 1.2, r * .26, r * .1, elite ? "#2c3542" : "#38424f", rim);
+    for (side = -1; side <= 1; side += 2) {
+      wheelX = side * r * .94;
+      ctx.fillStyle = tire;
+      ctx.beginPath(); ctx.arc(wheelX, r * .3, r * .6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = elite ? "#54637a" : "#63748c";
+      ctx.beginPath(); ctx.arc(wheelX, r * .3, r * .5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = rim; ctx.lineWidth = Math.max(1, r * .055);
+      ctx.beginPath(); ctx.arc(wheelX, r * .3, r * .55, 0, Math.PI * 2); ctx.stroke();
+      for (spoke = 0; spoke < 6; spoke++) {
+        angle = phase * .3 + spoke * Math.PI / 3;
+        ctx.beginPath();
+        ctx.moveTo(wheelX, r * .3);
+        ctx.lineTo(wheelX + Math.cos(angle) * r * .5, r * .3 + Math.sin(angle) * r * .5);
+        ctx.stroke();
+      }
+    }
+    ctx.strokeStyle = rim; ctx.lineWidth = Math.max(1, r * .1); ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-r * .34, r * .58); ctx.lineTo(-r * .2, r * .96);
+    ctx.moveTo(r * .34, r * .58); ctx.lineTo(r * .2, r * .96);
+    ctx.stroke();
+    ctx.lineWidth = Math.max(1, r * .08);
+    ctx.beginPath(); ctx.moveTo(-r * .36, r * 1); ctx.lineTo(r * .36, r * 1); ctx.stroke();
+    ctx.lineWidth = Math.max(1, r * .07);
+    ctx.beginPath(); ctx.moveTo(r * 1.26, r * .2); ctx.lineTo(r * 1.26, -r * 1.02); ctx.lineTo(r * .92, -r * 1.02); ctx.stroke();
+    ctx.save();
+    ctx.shadowColor = "rgba(120, 240, 170, " + (.55 + .35 * Math.sin(phase * 4)).toFixed(2) + ")";
+    ctx.shadowBlur = Math.max(4, r * .46);
+    U.roundedRect(ctx, r * .72, -r, r * .34, r * .5, r * .1, drip, "rgba(236, 255, 240, .85)");
+    ctx.restore();
+  }
   function statusInfo(id) { return (C.statusEffects || {})[id] || { name: "", color: C.colors.text, label: "" }; }
   function drawFreezeShell(enemy, r, info) {
     var reach = r * (info.flying ? 1.5 : enemy.type === "boss" ? 1.45 : 1.18);
@@ -571,6 +606,7 @@
       var isSnowman = enemy.type === "snowman" || enemy.type === "snowmanElite";
       var isThunder = enemy.type === "thunder" || enemy.type === "thunderElite";
       var isWasp = enemy.type === "wasp" || enemy.type === "waspElite";
+      var isWheelchair = enemy.type === "wheelchair" || enemy.type === "wheelchairElite";
       var auraReach = info.flying ? r * 1.7 : r;
       var shirtColor = isSplitter ? (isElite ? "#584a84" : "#463c6b")
         : isElite ? (isRunner ? "#98633b" : isArmored ? "#5b6b78" : isBasketball ? "#96591f" : isFlame ? "#4d2318" : isSnowman ? "#9fc4d4" : isThunder ? "#4c3f8f" : "#617745")
@@ -617,10 +653,14 @@
       // 僵尸投影、双腿和歪斜的手臂。
       ctx.fillStyle = "rgba(0, 0, 0, .34)";
       ctx.beginPath(); ctx.ellipse(0, r * 1.05, r * 1.05, r * .34, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = shirtShadow; ctx.lineWidth = Math.max(2, r * .24); ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(-r * .25, r * .45); ctx.lineTo(-r * .4, r * .98); ctx.moveTo(r * .24, r * .45); ctx.lineTo(r * .4, r * .98); ctx.stroke();
-      ctx.strokeStyle = "#202b2d"; ctx.lineWidth = Math.max(2, r * .15);
-      ctx.beginPath(); ctx.moveTo(-r * .48, r * .98); ctx.lineTo(-r * .16, r * .98); ctx.moveTo(r * .16, r * .98); ctx.lineTo(r * .5, r * .98); ctx.stroke();
+      if (isWheelchair) {
+        drawWheelchair(r, info, isElite, S.session.elapsed * 1.2 + enemy.x * .05);
+      } else {
+        ctx.strokeStyle = shirtShadow; ctx.lineWidth = Math.max(2, r * .24); ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(-r * .25, r * .45); ctx.lineTo(-r * .4, r * .98); ctx.moveTo(r * .24, r * .45); ctx.lineTo(r * .4, r * .98); ctx.stroke();
+        ctx.strokeStyle = "#202b2d"; ctx.lineWidth = Math.max(2, r * .15);
+        ctx.beginPath(); ctx.moveTo(-r * .48, r * .98); ctx.lineTo(-r * .16, r * .98); ctx.moveTo(r * .16, r * .98); ctx.lineTo(r * .5, r * .98); ctx.stroke();
+      }
       ctx.strokeStyle = shirtShadow; ctx.lineWidth = Math.max(2, r * .22);
       ctx.beginPath(); ctx.moveTo(-r * .55, -r * .02); ctx.lineTo(-r * 1.02, r * .48); ctx.moveTo(r * .55, -r * .02); ctx.lineTo(r * 1.02, r * .36); ctx.stroke();
 
@@ -663,11 +703,12 @@
       if (isSnowman) drawSnowmanMarks(r, S.session.elapsed * 1.6 + enemy.x * .05);
       if (isThunder) drawThunderMarks(r, S.session.elapsed * 7 + enemy.x * .06 + enemy.y * .04);
       if (enemy.type === "boss") { ctx.fillStyle = "#6d3949"; ctx.beginPath(); ctx.moveTo(-r * .65, -r * 1.18); ctx.lineTo(-r * .82, -r * 1.7); ctx.lineTo(-r * .35, -r * 1.35); ctx.lineTo(0, -r * 1.78); ctx.lineTo(r * .3, -r * 1.3); ctx.lineTo(r * .82, -r * 1.7); ctx.lineTo(r * .65, -r * 1.1); ctx.closePath(); ctx.fill(); ctx.strokeStyle = C.colors.red; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, Math.PI * 2); ctx.stroke(); }
-      if (info.regenPerSecond && enemy.hp < enemy.maxHp) {
+      var regenLimit = info.regenBelowHpRatio ? enemy.maxHp * info.regenBelowHpRatio : enemy.maxHp;
+      if (info.regenPerSecond > 0 && enemy.hp < regenLimit) {
         ctx.save();
         ctx.globalAlpha = .3 + .25 * Math.sin(S.session.elapsed * 5);
         ctx.strokeStyle = C.colors.green; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0, 0, r * .82, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, r * (isWheelchair ? 1.72 : .82), 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       }
       if (enemy.wound > 0) {
@@ -999,7 +1040,7 @@
   };
 
   function drawCodexEnemyModel(id, enemy, x, y, width, height, detail) {
-    var isBoss = id === "boss", flying = !!enemy.flying, topExtent = isBoss ? 1.78 : flying ? 1.56 : 1.43, bottomExtent = flying ? 1.46 : 1.05;
+    var isBoss = id === "boss", flying = !!enemy.flying, wheelchair = id === "wheelchair" || id === "wheelchairElite", topExtent = isBoss ? 1.78 : flying ? 1.56 : 1.43, bottomExtent = flying ? 1.46 : wheelchair ? 1.22 : 1.05;
     var totalExtent = topExtent + bottomExtent, scale = Math.min(detail ? 3.2 : 2.7, (height - 8) / (enemy.radius * totalExtent));
     var centerX = x + width / 2, centerY = y + height / 2;
     var modelY = centerY + (topExtent - bottomExtent) * enemy.radius * scale / 2;
@@ -1337,7 +1378,7 @@
       var r = Game.getLevelRowRect(index), cy = r.y + r.h / 2;
       var unlocked = Game.isLevelUnlocked(level.id), completed = Game.isLevelCompleted(level.id);
       if (completed) U.roundedRect(ctx, r.x + 2, r.y + 8, 4, r.h - 16, 2, C.colors.green);
-      text("0" + level.id, r.x + 26, cy + 2, "bold 19px Segoe UI, Microsoft YaHei", unlocked ? (completed ? C.colors.green : C.colors.cyan) : "#667985", "center");
+      text(level.id < 10 ? "0" + level.id : "" + level.id, r.x + 26, cy + 2, "bold 19px Segoe UI, Microsoft YaHei", unlocked ? (completed ? C.colors.green : C.colors.cyan) : "#667985", "center");
       text(level.name, r.x + 54, cy - 8, "bold 15px Segoe UI, Microsoft YaHei", unlocked ? C.colors.text : "#71828b");
       text(level.subtitle, r.x + 54, cy + 12, "11px Segoe UI, Microsoft YaHei", unlocked ? C.colors.muted : "#56666e");
       if (!unlocked) text("未解锁", r.x + r.w - 16, cy + 4, "bold 11px Segoe UI, Microsoft YaHei", "#7e8d94", "right");
@@ -1381,6 +1422,7 @@
       if (rangedInfo) text((selectedEnemy.flying ? "远程飞行单位" : "远程单位") + "   ·   每 " + rangedInfo.interval + " 秒" + rangedAction + "一次，距防线 " + rangedInfo.standoff + " 像素" + (selectedEnemy.flying ? "处悬停" : "处停下"), 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
       else if (selectedEnemy.flying) text("飞行单位   ·   免疫装甲车、龙卷风与燃油弹等贴地技能", 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
       else if (selectedEnemy.armorCharges) text("装甲 " + selectedEnemy.armorCharges + " 层   ·   可抵挡等量的伤害与负面状态", 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
+      else if (selectedEnemy.regenPerSecond) text("生命回复 " + selectedEnemy.regenPerSecond + " 点 / 秒" + (selectedEnemy.regenBelowHpRatio ? "   ·   仅在生命低于 " + Math.round(selectedEnemy.regenBelowHpRatio * 100) + "% 时生效" : "   ·   持续生效，受重伤压制"), 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
       text("单位特征", 44, 404, "bold 11px Segoe UI, Microsoft YaHei", C.colors.yellow);
       ctx.font = "11px Segoe UI, Microsoft YaHei"; ctx.fillStyle = C.colors.text; ctx.textAlign = "left";
       U.wrapText(ctx, selectedEnemy.description || "详细资料待补充。", 44, 422, 272, 13);

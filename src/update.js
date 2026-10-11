@@ -74,7 +74,10 @@
         if (current.hp <= 0) { Game.killEnemy(k); continue; }
       }
       Game.tickFrostbite(current, dt);
-      if (current.regenPerSecond > 0) current.hp = Math.min(current.maxHp, current.hp + current.regenPerSecond * dt * Game.getHealScale(current));
+      if (current.regenPerSecond > 0) {
+        var regenLimit = info.regenBelowHpRatio ? current.maxHp * info.regenBelowHpRatio : current.maxHp;
+        if (current.hp < regenLimit) current.hp = Math.min(regenLimit, current.hp + current.regenPerSecond * dt * Game.getHealScale(current));
+      }
       current.slow = Math.max(0, current.slow - dt);
       if (current.slow === 0) current.slowFactor = .58;
       current.damageTakenTimer = Math.max(0, (current.damageTakenTimer || 0) - dt);
