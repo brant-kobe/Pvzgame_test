@@ -551,6 +551,59 @@
     U.roundedRect(ctx, r * .72, -r, r * .34, r * .5, r * .1, drip, "rgba(236, 255, 240, .85)");
     ctx.restore();
   }
+  function drawFrostBeast(r, info, elite, phase) {
+    var shell = elite ? "#5f8ba1" : "#87b6c9", rim = elite ? "#dff4ff" : "#eafaff", plate = elite ? "rgba(26, 56, 74, .55)" : "rgba(38, 74, 96, .48)";
+    var limb = elite ? "#4a7186" : "#6b9cb1", shard = elite ? "#bdeaff" : "#dcf6ff", tips = elite ? [-1.1, -.74, -.38, .38, .74, 1.1] : [-1.02, -.68, .68, 1.02];
+    var side, ring, line, tipX, baseY, tipH, angle, wave = Math.sin(phase) * .06;
+    ctx.fillStyle = "rgba(0, 0, 0, .32)";
+    ctx.beginPath(); ctx.ellipse(0, r, r * 1.28, r * .28, 0, 0, Math.PI * 2); ctx.fill();
+    for (side = -1; side <= 1; side += 2) {
+      U.roundedRect(ctx, side * r * 1.24 - r * .2, r * .12, r * .4, r * .42, r * .15, limb, rim);
+      U.roundedRect(ctx, side * r * 1.16 - r * .2, r * .54, r * .4, r * .44, r * .15, limb, rim);
+    }
+    ctx.fillStyle = limb;
+    ctx.beginPath(); ctx.moveTo(-r * .18, r * .68); ctx.lineTo(r * .18, r * .68); ctx.lineTo(0, r * 1.02); ctx.closePath(); ctx.fill();
+    U.roundedRect(ctx, -r * .26, -r * .64, r * .52, r * .64, r * .2, elite ? "#54809a" : "#79a9be", rim);
+    ctx.fillStyle = elite ? "#5b8aa2" : "#8dbcce";
+    ctx.beginPath(); ctx.ellipse(0, -r * .86, r * .44, r * .38, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = rim; ctx.lineWidth = Math.max(1, r * .06); ctx.stroke();
+    ctx.fillStyle = info.accent;
+    ctx.beginPath(); ctx.arc(-r * .18, -r * .94, Math.max(1, r * .1), 0, Math.PI * 2); ctx.arc(r * .18, -r * .94, Math.max(1, r * .1), 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#0d1a22";
+    ctx.beginPath(); ctx.arc(-r * .18, -r * .94, Math.max(.5, r * .045), 0, Math.PI * 2); ctx.arc(r * .18, -r * .94, Math.max(.5, r * .045), 0, Math.PI * 2); ctx.fill();
+    ctx.save();
+    ctx.shadowColor = "rgba(150, 230, 255, .45)"; ctx.shadowBlur = Math.max(4, r * .5);
+    ctx.fillStyle = shell;
+    ctx.beginPath(); ctx.ellipse(0, r * .1, r * 1.4, r * .82, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = rim; ctx.lineWidth = Math.max(1.2, r * .08);
+    ctx.beginPath(); ctx.ellipse(0, r * .1, r * 1.4, r * .82, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = plate; ctx.lineWidth = Math.max(1, r * .05);
+    for (ring = 0; ring < 2; ring++) {
+      ctx.beginPath(); ctx.ellipse(0, r * .1, r * (.96 - ring * .34), r * (.55 - ring * .21), 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    for (line = 0; line < 8; line++) {
+      angle = Math.PI * line / 4;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(angle) * r * .58, r * .1 + Math.sin(angle) * r * .34);
+      ctx.lineTo(Math.cos(angle) * r * 1.32, r * .1 + Math.sin(angle) * r * .77);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(244, 254, 255, .3)";
+    ctx.beginPath(); ctx.ellipse(-r * .42, -r * .24, r * .54, r * .24, -.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = shard;
+    ctx.strokeStyle = "rgba(248, 254, 255, .85)"; ctx.lineWidth = Math.max(1, r * .05);
+    for (line = 0; line < tips.length; line++) {
+      tipX = tips[line];
+      baseY = r * .1 - r * .82 * Math.sqrt(Math.max(0, 1 - (tipX / 1.4) * (tipX / 1.4)));
+      tipH = r * (.3 + .22 * Math.cos(tipX * 1.2)) + wave * r;
+      ctx.beginPath();
+      ctx.moveTo(tipX * r - r * .16, baseY);
+      ctx.lineTo(tipX * r + r * .16, baseY);
+      ctx.lineTo(tipX * r, baseY - tipH);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  }
   function statusInfo(id) { return (C.statusEffects || {})[id] || { name: "", color: C.colors.text, label: "" }; }
   function drawFreezeShell(enemy, r, info) {
     var reach = r * (info.flying ? 1.5 : enemy.type === "boss" ? 1.45 : 1.18);
@@ -607,6 +660,7 @@
       var isThunder = enemy.type === "thunder" || enemy.type === "thunderElite";
       var isWasp = enemy.type === "wasp" || enemy.type === "waspElite";
       var isWheelchair = enemy.type === "wheelchair" || enemy.type === "wheelchairElite";
+      var isFrostBeast = enemy.type === "frostBeast" || enemy.type === "frostBeastElite";
       var auraReach = info.flying ? r * 1.7 : r;
       var shirtColor = isSplitter ? (isElite ? "#584a84" : "#463c6b")
         : isElite ? (isRunner ? "#98633b" : isArmored ? "#5b6b78" : isBasketball ? "#96591f" : isFlame ? "#4d2318" : isSnowman ? "#9fc4d4" : isThunder ? "#4c3f8f" : "#617745")
@@ -644,6 +698,14 @@
 
       if (isWasp) {
         drawWaspBody(r, info, isElite, S.session.elapsed * 11 + enemy.x * .07 + enemy.y * .05);
+        if (Game.isHardControlled(enemy) && enemy.controlType === "freeze") drawFreezeShell(enemy, r, info);
+        ctx.restore();
+        drawEnemyVitals(enemy, r);
+        return;
+      }
+
+      if (isFrostBeast) {
+        drawFrostBeast(r, info, isElite, S.session.elapsed * 1.6 + enemy.x * .05 + enemy.y * .03);
         if (Game.isHardControlled(enemy) && enemy.controlType === "freeze") drawFreezeShell(enemy, r, info);
         ctx.restore();
         drawEnemyVitals(enemy, r);
@@ -1429,7 +1491,7 @@
       text("应对建议", 44, 465, "bold 11px Segoe UI, Microsoft YaHei", C.colors.yellow);
       ctx.font = "10px Segoe UI, Microsoft YaHei"; ctx.fillStyle = C.colors.muted; ctx.textAlign = "left";
       U.wrapText(ctx, selectedEnemy.tactics || "暂无应对建议。", 44, 482, 272, 12);
-      var traitY = drawCodexTraitRow("属性克制", enemyElementTraits(selectedEnemy), 522);
+      var traitY = drawCodexTraitRow("属性克制", enemyElementTraits(selectedEnemy), 516);
       drawCodexTraitRow("状态抗性", enemyStatusTraits(selectedEnemy), traitY);
       Game.button(C.width / 2 - 82, 558, 164, 38, "返回图鉴列表", C.colors.cyan);
       return;
@@ -1474,11 +1536,11 @@
     items.forEach(function (item) {
       ctx.font = "bold 10px Segoe UI, Microsoft YaHei";
       var width = ctx.measureText(item.text).width;
-      if (x > 96 && x + width > 334) { line += 14; x = 44; }
+      if (x > 96 && x + width > 334) { line += 12; x = 44; }
       text(item.text, x, line, "bold 10px Segoe UI, Microsoft YaHei", item.color);
       x += width + 12;
     });
-    return line + 16;
+    return line + 12;
   }
   Game.drawSkillCodex = function () {
     Game.overlay();
