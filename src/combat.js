@@ -534,6 +534,17 @@
     enemy.y = Math.max(-radius, enemy.y + dy / length * push);
     return true;
   };
+  Game.applyPull = function (enemy, sourceX, sourceY, distance) {
+    if (!enemy || !(distance > 0)) return false;
+    var scale = Game.getStatusScale(enemy, "pull");
+    if (scale <= 0) return false;
+    if (Game.blockWithArmor(enemy)) return false;
+    var dx = sourceX - enemy.x, dy = sourceY - enemy.y, length = Math.sqrt(dx * dx + dy * dy) || 1;
+    var radius = C.enemies[enemy.type].radius, pull = distance * scale;
+    enemy.x = U.clamp(enemy.x + dx / length * pull, radius, C.width - radius);
+    enemy.y = Math.max(-radius, enemy.y + dy / length * pull);
+    return true;
+  };
   Game.blockWithArmor = function (enemy) {
     if (!enemy.armorCharges || enemy.armorCharges <= 0) return false;
     var elapsed = (S.session && S.session.elapsed) || 0;
@@ -967,9 +978,7 @@
         var dx = enemy.x - tornado.x, dy = enemy.y - tornado.y, reach = tornado.radius + info.radius;
         if (dx * dx + dy * dy > reach * reach) continue;
         var distance = Math.sqrt(dx * dx + dy * dy) || 1;
-        var pull = tornado.pullSpeed * dt * (.35 + .65 * (1 - distance / reach));
-        enemy.x = U.clamp(enemy.x - dx / distance * pull, info.radius, C.width - info.radius);
-        enemy.y = Math.max(-info.radius, enemy.y - dy / distance * pull);
+        Game.applyPull(enemy, tornado.x, tornado.y, tornado.pullSpeed * dt * (.35 + .65 * (1 - distance / reach)));
         var contactIndex = -1;
         for (var k = 0; k < tornado.contacts.length; k++) if (tornado.contacts[k].enemy === enemy) { contactIndex = k; break; }
         if (contactIndex < 0) { tornado.contacts.push({ enemy: enemy, hitTimer: 0 }); contactIndex = tornado.contacts.length - 1; }

@@ -1428,27 +1428,68 @@
     Game.button(188, 365, 150, 44, "技能图鉴", C.colors.purple);
     Game.button(C.width / 2 - 82, 425, 164, 42, "进入测试场", C.colors.yellow);
   };
+  function dot(x, y, radius, fill, stroke) {
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.lineWidth = 1.2; ctx.strokeStyle = stroke; ctx.stroke(); }
+  }
+  function drawLevelInfoButton(index, unlocked) {
+    var rect = Game.getLevelInfoRect(index), cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
+    dot(cx, cy, rect.w / 2, "rgba(13, 34, 46, .92)", unlocked ? "rgba(104, 216, 255, .5)" : "rgba(153, 205, 218, .22)");
+    text("?", cx, cy + 5, "bold 13px Segoe UI, Microsoft YaHei", unlocked ? C.colors.cyan : "#667985", "center");
+  }
+  Game.drawLevelBrief = function () {
+    var level = C.levels.filter(function (item) { return item.id === S.levelPreview; })[0];
+    if (!level) return;
+    var layout = Game.getLevelBriefLayout(), box = layout.box, close = Game.getLevelBriefCloseRect();
+    var left = box.x + 20, right = box.x + box.w - 20;
+    var titles = ["小怪", "精英", "首领"], colors = [C.colors.green, C.colors.yellow, C.colors.red];
+    U.roundedRect(ctx, 0, 0, C.width, C.height, 0, "rgba(3, 9, 13, .78)");
+    panel(box.x, box.y, box.w, box.h, "rgba(10, 35, 49, .98)", "rgba(153, 205, 218, .24)", 20);
+    badge("MISSION BRIEF", C.width / 2 - 75, box.y + 14, 150, C.colors.cyan);
+    U.roundedRect(ctx, close.x, close.y, close.w, close.h, 9, "rgba(16, 41, 54, .96)", "rgba(153, 205, 218, .24)");
+    text("×", close.x + close.w / 2, close.y + close.h / 2 + 5, "bold 15px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text((level.id < 10 ? "0" + level.id : "" + level.id) + "  " + level.name, C.width / 2, box.y + 64, "bold 21px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    text(level.subtitle, C.width / 2, box.y + 86, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    U.roundedRect(ctx, left, box.y + 100, right - left, 1, .5, "rgba(153, 205, 218, .16)");
+    text("关卡简介", left, box.y + 122, "bold 12px Segoe UI, Microsoft YaHei", C.colors.cyan);
+    ctx.fillStyle = C.colors.text;
+    ctx.font = "12px Segoe UI, Microsoft YaHei";
+    ctx.textAlign = "left";
+    U.wrapText(ctx, level.brief || level.subtitle, left, box.y + 142, right - left, 16);
+    layout.groups.forEach(function (group, index) {
+      text(titles[index], left, box.y + group.y, "bold 12px Segoe UI, Microsoft YaHei", colors[index]);
+      if (!group.rows.length) { text("—", left + 6, box.y + group.y + 20, "12px Segoe UI, Microsoft YaHei", C.colors.muted); return; }
+      group.rows.forEach(function (item) {
+        dot(left + 6, box.y + item.y - 4, 6, item.entry.color, item.entry.accent);
+        text(item.entry.name, left + 20, box.y + item.y, "bold 13px Segoe UI, Microsoft YaHei", C.colors.text);
+        text(item.entry.waves.length > 1 ? "第 " + item.entry.wave + " 波起 · 覆盖 " + item.entry.waves.length + " 波" : "第 " + item.entry.wave + " 波", right, box.y + item.y, "10px Segoe UI, Microsoft YaHei", C.colors.muted, "right");
+      });
+    });
+  };
   Game.drawLevelSelect = function () {
     var geo = C.levelSelect, rowHeight = Game.getLevelRowRect(0).h;
     Game.overlay();
     panel(geo.panelX, geo.panelY, geo.panelWidth, geo.panelHeight, "rgba(10, 35, 49, .94)", "rgba(153, 205, 218, .18)", 20);
     badge("MISSION SELECT", 105, 68, 150, C.colors.cyan);
     text("选择关卡", C.width / 2, 112, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
-    text("所有关卡已开放 · 点击任意一行直接开战", C.width / 2, 135, "12px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text("所有关卡已开放 · 点击行开战，点 ? 看详情", C.width / 2, 135, "12px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     U.roundedRect(ctx, geo.listX, geo.listY, geo.listWidth, rowHeight * C.levels.length, 14, "rgba(13, 34, 46, .92)", "rgba(153, 205, 218, .16)");
     C.levels.forEach(function (level, index) {
       var r = Game.getLevelRowRect(index), cy = r.y + r.h / 2;
       var unlocked = Game.isLevelUnlocked(level.id), completed = Game.isLevelCompleted(level.id);
       if (completed) U.roundedRect(ctx, r.x + 2, r.y + 8, 4, r.h - 16, 2, C.colors.green);
-      text(level.id < 10 ? "0" + level.id : "" + level.id, r.x + 26, cy + 2, "bold 19px Segoe UI, Microsoft YaHei", unlocked ? (completed ? C.colors.green : C.colors.cyan) : "#667985", "center");
-      text(level.name, r.x + 54, cy - 8, "bold 15px Segoe UI, Microsoft YaHei", unlocked ? C.colors.text : "#71828b");
-      text(level.subtitle, r.x + 54, cy + 12, "11px Segoe UI, Microsoft YaHei", unlocked ? C.colors.muted : "#56666e");
+      text(level.id < 10 ? "0" + level.id : "" + level.id, r.x + 26, cy + 7, "bold 19px Segoe UI, Microsoft YaHei", unlocked ? (completed ? C.colors.green : C.colors.cyan) : "#667985", "center");
+      text(level.name, r.x + 54, cy + 5, "bold 15px Segoe UI, Microsoft YaHei", unlocked ? C.colors.text : "#71828b");
+      drawLevelInfoButton(index, unlocked);
       if (!unlocked) text("未解锁", r.x + r.w - 16, cy + 4, "bold 11px Segoe UI, Microsoft YaHei", "#7e8d94", "right");
       else if (completed) text("已通关", r.x + r.w - 16, cy + 4, "bold 11px Segoe UI, Microsoft YaHei", C.colors.green, "right");
       else text("›", r.x + r.w - 18, cy + 7, "bold 20px Segoe UI, Microsoft YaHei", C.colors.cyan, "center");
       if (index < C.levels.length - 1) U.roundedRect(ctx, r.x + 16, r.y + r.h - .5, r.w - 32, 1, .5, "rgba(153, 205, 218, .14)");
     });
     Game.button(C.width / 2 - 72, geo.backY, 144, geo.backHeight, "返回首页", "#4b7180");
+    if (S.levelPreview) Game.drawLevelBrief();
   };
   function drawCodexTab(x, y, w, label, active, color) {
     U.roundedRect(ctx, x, y, w, 31, 10, active ? "rgba(49, 105, 125, .95)" : "rgba(13, 29, 39, .9)", active ? color : "rgba(153,205,218,.18)");

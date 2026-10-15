@@ -176,9 +176,19 @@
     if (S.screen === "zombieCodex" || S.screen === "skillCodex") { handleCodexPointer(point, S.screen); return; }
     if (S.screen === "levelSelect") {
       var geo = C.levelSelect;
+      if (S.levelPreview) {
+        var close = Game.getLevelBriefCloseRect(), box = Game.getLevelBriefPanel();
+        if (point.x >= close.x && point.x <= close.x + close.w && point.y >= close.y && point.y <= close.y + close.h) Game.closeLevelPreview();
+        else if (point.x < box.x || point.x > box.x + box.w || point.y < box.y || point.y > box.y + box.h) Game.closeLevelPreview();
+        return;
+      }
       for (var li = 0; li < C.levels.length; li++) {
         var row = Game.getLevelRowRect(li);
-        if (point.x >= row.x && point.x <= row.x + row.w && point.y >= row.y && point.y <= row.y + row.h) { Game.start(C.levels[li].id); return; }
+        if (point.x < row.x || point.x > row.x + row.w || point.y < row.y || point.y > row.y + row.h) continue;
+        var info = Game.getLevelInfoRect(li);
+        if (point.x >= info.x && point.x <= info.x + info.w && point.y >= info.y && point.y <= info.y + info.h) { Game.openLevelPreview(C.levels[li].id); return; }
+        Game.start(C.levels[li].id);
+        return;
       }
       if (point.y >= geo.backY - 8 && point.y <= geo.backY + geo.backHeight + 8) Game.backToMenu();
       return;

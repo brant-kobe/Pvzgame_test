@@ -2,7 +2,7 @@
 (function (Game) {
   "use strict";
   var C = Game.config;
-  Game.state = { screen: "menu", selectedLevel: 1, player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null };
+  Game.state = { screen: "menu", selectedLevel: 1, player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null };
   Game.reset = function () {
     var s = Game.state;
     var level = C.levels.find(function (item) { return item.id === s.selectedLevel; });
@@ -17,7 +17,7 @@
       skills[id].burstAngle = -Math.PI / 2;
     });
     s.player = { x: C.width / 2, y: C.height - 58, aimAngle: -Math.PI / 2, manualAimTimer: 0, maxHp: 100, hp: 100, damage: 28, fireInterval: .52, fireTimer: .05, magazineSize: C.magazineCapacity, ammo: C.magazineCapacity, reloadDuration: C.reloadDuration, reloadTimer: 0, rifleEnabled: true, burst: 0, burstShotsRemaining: 0, burstTimer: 0, burstAngle: -Math.PI / 2, spread: 0, pierce: 0, bulletRadius: 4, crit: .08, critDamage: 1.5, burn: 0, freeze: 0, bulletType: "normal", skills: skills, skillOrder: [], level: 1, xp: 0, nextXp: C.xpBase, traits: {} };
-    s.bullets = []; s.skillProjectiles = []; s.armoredCars = []; s.bombDrops = []; s.bombZones = []; s.electromagneticZones = []; s.tornadoes = []; s.drones = []; s.hailStorms = []; s.fuelShells = []; s.fuelPools = []; s.enemyShots = []; s.explosions = []; s.enemies = []; s.pendingSpawns = []; s.particles = []; s.texts = []; s.upgradeCards = []; s.skillRangePreview = null;
+    s.bullets = []; s.skillProjectiles = []; s.armoredCars = []; s.bombDrops = []; s.bombZones = []; s.electromagneticZones = []; s.tornadoes = []; s.drones = []; s.hailStorms = []; s.fuelShells = []; s.fuelPools = []; s.enemyShots = []; s.explosions = []; s.enemies = []; s.pendingSpawns = []; s.particles = []; s.texts = []; s.upgradeCards = []; s.skillRangePreview = null; s.levelPreview = null;
     s.wall = { x: C.width / 2, y: C.height - 125, width: C.width - 30, height: 30, maxHp: C.wallMaxHp, hp: C.wallMaxHp };
     s.session = { level: s.selectedLevel, waves: waves, xpScale: (level && level.xpScale) || 1, hpScale: (level && level.hpScale) || 1, elapsed: 0, wave: 1, spawnCount: 0, spawnTimer: .25, eliteSpawned: false, bossSpawned: false, kills: 0, message: "", messageTimer: 0 };
   };
@@ -26,10 +26,17 @@
     if (s.wall) s.wall.y = C.height - 125;
     if (s.player) s.player.y = C.height - 58;
   };
-  Game.openLevelSelect = function () { Game.state.screen = "levelSelect"; };
+  Game.openLevelSelect = function () { Game.state.levelPreview = null; Game.state.screen = "levelSelect"; };
+  Game.openLevelPreview = function (levelId) {
+    var level = C.levels.find(function (item) { return item.id === levelId; });
+    if (!level) return false;
+    Game.state.levelPreview = level.id;
+    return true;
+  };
+  Game.closeLevelPreview = function () { Game.state.levelPreview = null; };
   Game.openZombieCodex = function () { Game.state.zombieCodexCategory = "minion"; Game.state.selectedZombieCodexId = null; Game.state.codexPage = 0; Game.state.screen = "zombieCodex"; };
   Game.openSkillCodex = function () { Game.state.selectedSkillCodexId = null; Game.state.codexPage = 0; Game.state.screen = "skillCodex"; };
-  Game.backToMenu = function () { Game.state.screen = "menu"; };
+  Game.backToMenu = function () { Game.state.levelPreview = null; Game.state.screen = "menu"; };
   Game.getTestEnemyIds = function () { return Object.keys(C.enemies); };
   Game.startTestArena = function () {
     var s = Game.state, enemyIds = Game.getTestEnemyIds();
@@ -110,6 +117,54 @@
     var geo = C.levelSelect, count = Math.max(1, C.levels.length);
     var height = Math.min(geo.rowHeight, (geo.backY - 12 - geo.listY) / count);
     return { x: geo.listX, y: geo.listY + index * height, w: geo.listWidth, h: height };
+  };
+  Game.getLevelInfoRect = function (index) {
+    var geo = C.levelSelect, row = Game.getLevelRowRect(index), size = geo.infoSize;
+    return { x: row.x + geo.infoX - size / 2, y: row.y + (row.h - size) / 2, w: size, h: size };
+  };
+  Game.getLevelBriefPanel = function () {
+    var geo = C.levelSelect, roster = Game.getLevelRoster(Game.state.levelPreview);
+    var rows = roster.minions.length + roster.elites.length + (roster.boss ? 1 : 0);
+    var height = geo.briefTop + geo.briefHeadingStep * 3 + geo.briefGroupGap * 3 + geo.briefRowStep * rows + geo.briefBottom;
+    return { x: geo.briefX, y: geo.briefY, w: geo.briefWidth, h: Math.max(geo.briefMinHeight, height) };
+  };
+  Game.getLevelBriefCloseRect = function () {
+    var geo = C.levelSelect, box = Game.getLevelBriefPanel();
+    return { x: box.x + box.w - geo.briefCloseSize - 10, y: box.y + 10, w: geo.briefCloseSize, h: geo.briefCloseSize };
+  };
+  Game.getLevelBriefLayout = function () {
+    var geo = C.levelSelect, roster = Game.getLevelRoster(Game.state.levelPreview), y = geo.briefTop, groups = [];
+    [roster.minions, roster.elites, roster.boss ? [roster.boss] : []].forEach(function (list) {
+      var group = { y: y, rows: [] };
+      list.forEach(function (entry, index) { group.rows.push({ entry: entry, y: y + geo.briefHeadingStep + index * geo.briefRowStep }); });
+      y += geo.briefHeadingStep + list.length * geo.briefRowStep + geo.briefGroupGap;
+      groups.push(group);
+    });
+    return { box: Game.getLevelBriefPanel(), groups: groups };
+  };
+  Game.getLevelRoster = function (levelId) {
+    var level = C.levels.find(function (item) { return item.id === levelId; });
+    var minions = [], elites = [], boss = null, bossWave = 0, minionSeen = {}, eliteSeen = {}, bossId = null;
+    function collect(list, seen, id, wave) {
+      var info = C.enemies[id];
+      if (!info) return;
+      if (seen[id]) { if (seen[id].waves.indexOf(wave) < 0) seen[id].waves.push(wave); return; }
+      seen[id] = { id: id, name: info.name, color: info.color, accent: info.accent, wave: wave, waves: [wave] };
+      list.push(seen[id]);
+    }
+    if (level && level.waves) {
+      level.waves.forEach(function (wave, index) {
+        var number = index + 1, unique = [];
+        (wave.mix || []).forEach(function (id) { if (unique.indexOf(id) < 0) unique.push(id); });
+        unique.forEach(function (id) { collect(minions, minionSeen, id, number); });
+        if (wave.elite) collect(elites, eliteSeen, wave.elite, number);
+        (wave.elitePool || []).forEach(function (id) { collect(elites, eliteSeen, id, number); });
+        if (wave.boss) bossWave = number;
+      });
+    }
+    Object.keys(C.enemies).forEach(function (id) { if (!bossId && (C.enemies[id].codexCategory || "minion") === "boss") bossId = id; });
+    if (bossId && bossWave) boss = { id: bossId, name: C.enemies[bossId].name, color: C.enemies[bossId].color, accent: C.enemies[bossId].accent, wave: bossWave, waves: [bossWave] };
+    return { minions: minions, elites: elites, boss: boss };
   };
   Game.getContinueLevel = function () {
     var pending = C.levels.filter(function (level) { return Game.isLevelUnlocked(level.id) && !Game.isLevelCompleted(level.id); });

@@ -131,7 +131,7 @@
     },
     skillRing: { offsetX: 64, offsetY: -100 },
     skillSlots: { offsetX: -54, y: 46, width: 48, height: 18, gap: 3 },
-    levelSelect: { panelX: 16, panelY: 42, panelWidth: 328, panelHeight: 578, listX: 30, listY: 144, listWidth: 300, rowHeight: 66, backY: 566, backHeight: 40 },
+    levelSelect: { panelX: 16, panelY: 42, panelWidth: 328, panelHeight: 578, listX: 30, listY: 144, listWidth: 300, rowHeight: 66, backY: 566, backHeight: 40, infoX: 150, infoSize: 20, briefX: 22, briefY: 72, briefWidth: 316, briefTop: 190, briefHeadingStep: 20, briefRowStep: 22, briefGroupGap: 6, briefBottom: 20, briefMinHeight: 340, briefCloseSize: 28 },
     bossHealth: { bars: 3, width: 108, barHeight: 9, offsetY: 12, headExtent: 1.78, track: "rgba(255, 107, 107, .42)" },
     ranges: { far: 480, mid: 320, near: 125 },
     rifleRange: "far",
@@ -148,7 +148,7 @@
     },
     statusCategories: {
       damage: { name: "伤害", detail: "持续掉血的负面状态，不限制行动。" },
-      soft: { name: "软控", detail: "限制移动但不打断攻击：减速与击退。" },
+      soft: { name: "软控", detail: "限制移动但不打断攻击：减速、击退与牵引。" },
       hard: { name: "硬控", detail: "被控期间完全无法移动与攻击。" },
       debuff: { name: "削弱", detail: "不限制行动，只削弱敌人能力。" }
     },
@@ -157,6 +157,7 @@
       frostbite: { name: "冻伤", category: "damage", color: "#58aaff", label: "霜" },
       slow: { name: "减速", category: "soft", color: "#8fb4c4" },
       knockback: { name: "击退", category: "soft", color: "#d8b06a", scaleLabel: "击退距离" },
+      pull: { name: "牵引", category: "soft", color: "#9fe6ff", scaleLabel: "牵引速度" },
       stun: { name: "眩晕", category: "hard", color: "#ffd166", label: "晕" },
       freeze: { name: "冻结", category: "hard", color: "#8ce9ff", label: "冻" },
       paralysis: { name: "麻痹", category: "hard", color: "#c9a1ff", label: "麻" },
@@ -187,8 +188,8 @@
       waspElite: { name: "毒蜂精英", codexCategory: "elite", description: "毒蜂的精英形态，体型与翼展更大，停在更远处以更快的节奏射出更重的毒刺，抗性不变。", tactics: "它停在距防线 113 像素处，靠防线前的减速与近战拦不住；同样免疫贴地技能，风系 ×1.5、能量 ×0.5，用气刃或物理技能点掉。", hp: 260, speed: 36, radius: 18, damage: 14, xp: 32, color: "#141821", accent: "#ffd166", flying: true, ranged: { standoff: 113, interval: 1.8, projectileSpeed: 260, projectileRadius: 10, damage: 18, shot: "stinger", action: "针刺" }, damageTakenByElement: { wind: 1.5, energy: .5 } },
       wheelchair: { name: "轮椅僵尸", codexCategory: "minion", description: "坐在轮椅上的僵尸，靠着轮椅缓慢挪向防线，生命掉到一半以下时车上的输液装置会持续为他回血：额外承受 50% 火系伤害。", tactics: "它推进得很慢，可以用中远距离技能提前消耗；火系伤害 ×1.5，而且重伤能把回血压到一半、「禁疗」期间几乎回不动，别让它一直挂在半血。", hp: 90, speed: 14, radius: 17, damage: 14, xp: 18, color: "#5b6a7a", accent: "#7ef0a8", damageTakenByElement: { fire: 1.5 }, regenPerSecond: 6, regenBelowHpRatio: .5 },
       wheelchairElite: { name: "轮椅僵尸精英", codexCategory: "elite", description: "轮椅僵尸的精英形态，轮椅更厚重、输液更急：生命低于一半后每秒回复的生命是小怪的两倍多，火系弱点不变。", tactics: "血厚且回血更快，必须一口气打穿半血以下的回复段；温压弹与燃油弹的持续火伤 ×1.5，压缩气刃的重伤能让它的回复直接减半。", hp: 520, speed: 17, radius: 22, damage: 22, xp: 38, color: "#414c5c", accent: "#ffd166", damageTakenByElement: { fire: 1.5 }, regenPerSecond: 14, regenBelowHpRatio: .5 },
-      frostBeast: { name: "寒霜兽", codexCategory: "minion", description: "披着冰壳的巨型乌龟，挪动得极慢但几乎不受冰与火的控制：完全免疫冻结、麻痹、燃烧与冻伤，代价是额外承受 200% 火系伤害。", tactics: "冰冻、燃烧、麻痹与冻伤对它一律无效，冰系技能只剩减速可用；火系直伤 ×3，温压弹、燃油弹与火场是最快的解法，物理步枪也可以慢慢磨。", hp: 200, speed: 12, radius: 22, damage: 18, xp: 26, color: "#87b6c9", accent: "#a9e8ff", damageTakenByElement: { fire: 3 }, statusImmune: { burn: true, freeze: true, paralysis: true, frostbite: true } },
-      frostBeastElite: { name: "寒霜兽精英", codexCategory: "elite", description: "寒霜兽的精英形态，冰壳更厚、体型更大：同样免疫冻结、麻痹、燃烧与冻伤，也照样额外承受 200% 火系伤害。", tactics: "它更耐打但一样慢，冰冻、燃烧、麻痹与冻伤依旧无效；火系直伤 ×3 是最快的解法，只堆冰系或控制的构筑会被它硬生生拖住。", hp: 760, speed: 15, radius: 27, damage: 26, xp: 52, color: "#5f8ba1", accent: "#ffd166", damageTakenByElement: { fire: 3 }, statusImmune: { burn: true, freeze: true, paralysis: true, frostbite: true } },
+      frostBeast: { name: "寒霜兽", codexCategory: "minion", description: "披着冰壳的巨型乌龟，挪动得极慢，也几乎推不动：完全免疫冻结、麻痹、燃烧、冻伤与击退，代价是额外承受 200% 火系伤害。", tactics: "冰冻、燃烧、麻痹、冻伤与击退全都无效，只有眩晕还能控住它；温压弹与燃油弹的直伤 ×3 最快。", hp: 200, speed: 12, radius: 22, damage: 18, xp: 26, color: "#87b6c9", accent: "#a9e8ff", damageTakenByElement: { fire: 3 }, statusImmune: { burn: true, freeze: true, paralysis: true, frostbite: true, knockback: true } },
+      frostBeastElite: { name: "寒霜兽精英", codexCategory: "elite", description: "寒霜兽的精英形态，冰壳更厚、体型更大：同样免疫冻结、麻痹、燃烧、冻伤与击退，也照样额外承受 200% 火系伤害。", tactics: "它更耐打但一样慢，冰冻、燃烧、麻痹、冻伤与击退依旧无效，只有眩晕能短暂控住它；温压弹直伤 ×3 最快。", hp: 760, speed: 15, radius: 27, damage: 26, xp: 52, color: "#5f8ba1", accent: "#ffd166", damageTakenByElement: { fire: 3 }, statusImmune: { burn: true, freeze: true, paralysis: true, frostbite: true, knockback: true } },
       boss: { name: "尸潮领主", codexCategory: "boss", description: "关卡首领，体型巨大、生命值极高；生命低于一半时进入狂暴状态，移动速度提升。", tactics: "持续输出并留意其接近城墙；燃烧、暴击与高伤害构筑有助于缩短战斗时间。", hp: 3000, speed: 10, radius: 34, damage: 24, xp: 100, color: "#9d5264", accent: "#ffb0bc" }
     },
     skillDefaults: {
@@ -314,16 +315,16 @@
       { id: "chainLightning", name: "跃迁电子", icon: "☇", color: "#b98cff", range: "mid", element: "electric", status: "已实装", detail: "幻形朝中距离的敌人射出一条紫色电链，命中后依次弹射到最近的未命中目标，基础弹射 5 次、最多命中 6 个目标；每个被电链打到的目标都受到伤害并被麻痹，只从电链路径上经过、没有被选中的僵尸不会受伤。可强化伤害、麻痹时长与弹射次数，也能额外释放一条电链或让命中目标燃烧。" }
     ],
     levels: [
-      { id: 1, name: "街区警戒线", subtitle: "基础尸潮防守", unlocked: true, hpScale: 1, xpScale: 1.76, waves: levelOneWaves },
-      { id: 2, name: "地铁入口", subtitle: "分裂僵尸与更密集的波次", unlocked: true, hpScale: 1, xpScale: .63, waves: levelTwoWaves },
-      { id: 3, name: "封锁工厂", subtitle: "更密集的尸潮与分裂精英", unlocked: true, hpScale: 1.35, xpScale: .43, waves: levelThreeWaves },
-      { id: 4, name: "熔炉核心", subtitle: "后期尸潮成倍压上，个体更硬", unlocked: true, hpScale: 1.35, xpScale: .34, waves: levelFourWaves },
-      { id: 5, name: "废弃球馆", subtitle: "篮球僵尸远程砸墙，尸潮更密更硬", unlocked: true, hpScale: 1.6, xpScale: .32, waves: levelFiveWaves },
-      { id: 6, name: "隔离区", subtitle: "护甲、分裂与远程混编，尸潮更长", unlocked: true, hpScale: 1.68, xpScale: .29, waves: levelSixWaves },
-      { id: 7, name: "装甲坟场", subtitle: "护甲僵尸成群推进，装甲精英坐镇", unlocked: true, hpScale: 1.75, xpScale: .26, waves: levelSevenWaves },
-      { id: 8, name: "环城高架", subtitle: "飞鸟与快跑压境，贴地技能失效", unlocked: true, hpScale: 2, xpScale: .165, waves: levelEightWaves },
-      { id: 9, name: "焦土防线", subtitle: "护甲与烈焰混编，后期节奏收紧", unlocked: true, hpScale: 2.1, xpScale: .21, waves: levelNineWaves },
-      { id: 10, name: "冰火交界", subtitle: "元素互克，控制手段大打折扣", unlocked: true, hpScale: 2.2, xpScale: .22, waves: levelTenWaves }
+      { id: 1, name: "街区警戒线", subtitle: "基础尸潮防守", brief: "基础教学关：普通、快跑与分裂僵尸轮番上场，第 4 波随机出现一只精英。", unlocked: true, hpScale: 1, xpScale: 1.76, waves: levelOneWaves },
+      { id: 2, name: "地铁入口", subtitle: "分裂僵尸与更密集的波次", brief: "分裂僵尸首次成规模登场，被击杀后会分裂出两只幼体，需要及时清场。", unlocked: true, hpScale: 1, xpScale: .63, waves: levelTwoWaves },
+      { id: 3, name: "封锁工厂", subtitle: "更密集的尸潮与分裂精英", brief: "尸潮密度与个体生命同步上调，第 4 波固定登场分裂僵尸精英。", unlocked: true, hpScale: 1.35, xpScale: .43, waves: levelThreeWaves },
+      { id: 4, name: "熔炉核心", subtitle: "后期尸潮成倍压上，个体更硬", brief: "前五波与第 3 关一致，后五波投放量与生命值同时加码，考验持续输出。", unlocked: true, hpScale: 1.35, xpScale: .34, waves: levelFourWaves },
+      { id: 5, name: "废弃球馆", subtitle: "篮球僵尸远程砸墙，尸潮更密更硬", brief: "篮球僵尸会停在远处把篮球砸向城墙，必须在它进入投掷距离前点掉。", unlocked: true, hpScale: 1.6, xpScale: .32, waves: levelFiveWaves },
+      { id: 6, name: "隔离区", subtitle: "护甲、分裂与远程混编，尸潮更长", brief: "护甲僵尸加入混编：装甲会吃掉伤害与负面状态，先剥甲再输出。", unlocked: true, hpScale: 1.68, xpScale: .29, waves: levelSixWaves },
+      { id: 7, name: "装甲坟场", subtitle: "护甲僵尸成群推进，装甲精英坐镇", brief: "不投放快跑与远程单位，压力全部来自推进缓慢但极难啃的护甲群体。", unlocked: true, hpScale: 1.75, xpScale: .26, waves: levelSevenWaves },
+      { id: 8, name: "环城高架", subtitle: "飞鸟与快跑压境，贴地技能失效", brief: "飞鸟全程停在半空，装甲车、龙卷风与燃油弹都打不到，改用对空手段。", unlocked: true, hpScale: 2, xpScale: .165, waves: levelEightWaves },
+      { id: 9, name: "焦土防线", subtitle: "护甲与烈焰混编，后期节奏收紧", brief: "火焰僵尸免疫燃烧与冻结、火系伤害减半，前期放慢、后期明显加快。", unlocked: true, hpScale: 2.1, xpScale: .21, waves: levelNineWaves },
+      { id: 10, name: "冰火交界", subtitle: "元素互克，控制手段大打折扣", brief: "火焰与雪人的抗性互补，只堆单一元素或只堆冰冻控制都会被卡住一半。", unlocked: true, hpScale: 2.2, xpScale: .22, waves: levelTenWaves }
     ],
     waves: levelOneWaves
   };
