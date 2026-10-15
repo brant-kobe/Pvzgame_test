@@ -188,7 +188,7 @@ git diff --check
 ### 四、结构调整计划（先于内容）
 
 1. **波次按关卡存储**：在 `config.js` 中把 `waves` 移到关卡维度，例如 `C.levelWaves = { 1: [...现有 5 波...], 2: [...10 波...] }`（或在每个 `levels` 条目加 `waves` 字段）。保留 `C.waves` 作为第 1 关别名以兼容旧引用，逐步迁移。
-2. **统一取波接口**：新增 `Game.getLevelWaves(levelId)`；`Game.reset`/`Game.start` 把当前关卡的波次存入 `S.session.waves`；之后 `update.js`（`spawnWaveEnemy`、主更新、胜利判定）与 `render.js`（HUD“第 N / M 波”）一律读 `S.session.waves`，不再直接读 `C.waves`。
+2. **统一取波接口**：新增 `Game.getLevelWaves(levelId)`；`Game.reset`/`Game.start` 把当前关卡的波次存入 `S.session.waves`；之后 `update.js`（`spawnWaveEnemy`、主更新、胜利判定）与 `render.js`（HUD“第 N / M 波”）一律读 `S.session.waves`，不再直接读 `C.waves`。（最终未采用 `Game.getLevelWaves`：波次直接用 `config.levels[].waves`，由 `Game.reset` 存入 `S.session.waves`。）
 3. **解锁机制**：新增 `Game.isLevelUnlocked(id)` = 静态 `unlocked: true` 或 `localStorage` 记录“前一关已通关”；第 1 关胜利时写入解锁记录。`Game.start` 改用该动态判断。
 4. **输入泛化**：选关界面按 `C.levels` 遍历生成点击区，点击已解锁关卡调用 `Game.start(level.id)`；菜单“开始战斗”改为进入**当前已解锁的最新一关**（或仍固定第 1 关，待确认，默认最新已解锁）。
 5. **HUD/结算**：波次显示来自当前关卡 `waves.length`；胜利结算追加“已解锁第 3 关（待开放）”之类的提示（按 D3）。
