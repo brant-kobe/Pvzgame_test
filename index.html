@@ -38,8 +38,22 @@
       </div>
     </aside>
   </main>
+  <div id="account-dialog" hidden>
+    <div class="account-dialog-card">
+      <h2 id="account-dialog-title">登录账户</h2>
+      <p id="account-dialog-note"></p>
+      <label class="account-dialog-row" id="account-dialog-user-row"><span>用户名</span><input id="account-dialog-user" type="text" maxlength="16" autocomplete="username" /></label>
+      <label class="account-dialog-row"><span>密码</span><input id="account-dialog-pass" type="password" maxlength="64" autocomplete="current-password" /></label>
+      <p id="account-dialog-error"></p>
+      <div class="account-dialog-actions">
+        <button id="account-dialog-cancel" type="button">取消</button>
+        <button id="account-dialog-submit" type="button" class="primary">确定</button>
+      </div>
+    </div>
+  </div>
   <!-- 使用有序的普通脚本，保持直接双击 index.html 也能运行。 -->
   <script src="src/config.js"></script>
+  <script src="src/accounts.js"></script>
   <script src="src/utils.js"></script>
   <script src="src/state.js"></script>
   <script src="src/combat.js"></script>

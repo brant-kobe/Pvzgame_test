@@ -410,3 +410,14 @@ git diff --check
 ## 2026-10-03 · HUD 显示关卡编号
 
 - 战斗 HUD 关卡标题调整为“关卡数字 关卡名称”，例如“3 封锁工厂”。
+
+---
+
+## 2026-10-16 · 账户与数据层（全栈）
+
+- 项目从纯前端单机扩展为全栈：新增 `server/`（FastAPI + SQLAlchemy + SQLite，Python 3.13 的 `.venv`）承载账户、登录会话、关卡进度与每关统计；前端新增 `src/accounts.js` 作为账户数据的唯一入口（内存缓存 + 异步落库），游戏本体仍是零依赖原生 JS。
+- 数据库 `data/blockline.db`：`accounts` / `sessions` / `level_progress`（`completed_at`、`best_time`、`best_kills`、`attempts`、`wins`）/ `resources` / `schema_version`；连接统一 `foreign_keys=ON`、WAL、`busy_timeout`。密码用 PBKDF2-SHA256（20 万次迭代 + 16 字节随机盐）哈希，会话 token 只以 sha256 存库、经 HttpOnly + SameSite=Strict Cookie 下发，30 天有效期并滑动续期。
+- 接口：`/api/health`、`/api/auth/{register,login,logout}`、`/api/me`、`/api/me/progress`、`/api/me/resources`、`DELETE /api/me`；统一 `{"error":{"code","message"}}` 错误体，写接口校验同源。
+- 界面：菜单底部新增「账户：未登录 / 用户名」按钮（菜单几何收进 `config.menu`）；新增登录 / 注册界面与账户中心（用户名、注册时间、通关进度、最近 5 关最佳用时与击杀、资源占位、导入旧进度 / 注销 / 删除账户），表单由 `#account-dialog` DOM 浮层承载；菜单、关卡选择与结算界面显示状态横幅，结算界面标注成绩是否已保存。
+- 进度写入从 localStorage 改为账户层：`Game.winLevel` 与失守统一走 `Game.reportRun` / `Game.loseLevel`，通关与失败都会上报（失败只累加尝试次数）；未登录 / 离线时成绩只存在于本次会话、刷新即失效，旧键 `blockline.progress` 仅作为「导入旧进度」的一次性来源。
+- 验证：数据层 35 项、接口 45 项、前端账户层 111 项断言全部通过；`tmp/` 下 34 个回归脚本全部通过；画面用 `tmp/trace-draw.js account <界面>` + `tmp/replay-draw.py` 出图核对；真实服务在 `127.0.0.1:8787` 起服后 `/api/health` 为 200，而 `data/` 与 `server/` 下的文件返回 404。

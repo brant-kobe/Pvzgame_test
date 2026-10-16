@@ -95,9 +95,13 @@
     if (S.screen === "levelSelect") Game.drawLevelSelect();
     if (S.screen === "zombieCodex") Game.drawZombieCodex();
     if (S.screen === "skillCodex") Game.drawSkillCodex();
+    if (S.screen === "login") Game.drawLogin();
+    if (S.screen === "account") Game.drawAccount();
     if (S.screen === "upgrade") Game.drawUpgrade();
     if (S.screen === "paused") Game.drawPause();
     if (S.screen === "victory" || S.screen === "defeat") Game.drawResult();
+    if (S.screen === "menu" || S.screen === "levelSelect" || S.screen === "victory" || S.screen === "defeat") Game.drawAccountBanner();
+    if (Game.syncAccountDialog) Game.syncAccountDialog();
   };
 
   Game.drawBackground = function () {
@@ -1415,18 +1419,111 @@
 
   Game.overlay = function () { ctx.fillStyle = "rgba(3, 9, 13, .84)"; ctx.fillRect(0, 0, C.width, C.height); };
   Game.button = function (x, y, w, h, label, color) { var gradient = ctx.createLinearGradient(x, y, x, y + h); gradient.addColorStop(0, color); gradient.addColorStop(1, "#2c9d91"); ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 16; U.roundedRect(ctx, x, y, w, h, 13, gradient); ctx.restore(); text(label, x + w / 2, y + h / 2 + 5, "bold 15px Segoe UI, Microsoft YaHei", "#071217", "center"); };
+  function pad2(value) { return value < 10 ? "0" + value : "" + value; }
+
+  function accountButtonLabel() {
+    var status = Game.accounts.getStatus();
+    if (status === "ready") {
+      var name = Game.accounts.getUsername();
+      return "账户：" + (name.length > 8 ? name.slice(0, 8) + "…" : name);
+    }
+    if (status === "offline") return "账户：离线";
+    return "账户：未登录";
+  }
+
+  function recordSummary(row) {
+    var parts = [];
+    if (row.completed) parts.push("已通关");
+    if (row.bestTime !== null && row.bestTime !== undefined) parts.push("最佳 " + U.formatTime(row.bestTime));
+    if (row.bestKills !== null && row.bestKills !== undefined) parts.push("击杀 " + row.bestKills);
+    if (!parts.length) parts.push("尝试 " + (row.attempts || 0) + " 次");
+    return parts.join(" · ");
+  }
+
   Game.drawMenu = function () {
+    var menu = C.menu, buttons = menu.buttons;
     Game.overlay();
-    panel(28, 80, C.width - 56, 474, "rgba(10, 35, 49, .78)", "rgba(153, 205, 218, .18)", 20);
+    panel(menu.panelX, menu.panelY, menu.panelWidth, menu.panelHeight, "rgba(10, 35, 49, .78)", "rgba(153, 205, 218, .18)", 20);
     badge("SURVIVAL  PROTOCOL", 102, 104, 156, C.colors.cyan);
     text("街区警戒线", C.width / 2, 164, "bold 31px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
     text("竖屏僵尸生存射击", C.width / 2, 194, "15px Segoe UI, Microsoft YaHei", C.colors.text, "center");
     text("步枪自动锁定目标 · 点击画面调整方向", C.width / 2, 229, "12px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
-    Game.button(C.width / 2 - 82, 249, 164, 46, "开始战斗", C.colors.green);
-    Game.button(C.width / 2 - 82, 309, 164, 42, "选择关卡", C.colors.cyan);
-    Game.button(22, 365, 150, 44, "僵尸图鉴", "#58aaff");
-    Game.button(188, 365, 150, 44, "技能图鉴", C.colors.purple);
-    Game.button(C.width / 2 - 82, 425, 164, 42, "进入测试场", C.colors.yellow);
+    Game.button(buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h, "开始战斗", C.colors.green);
+    Game.button(buttons.levelSelect.x, buttons.levelSelect.y, buttons.levelSelect.w, buttons.levelSelect.h, "选择关卡", C.colors.cyan);
+    Game.button(buttons.zombieCodex.x, buttons.zombieCodex.y, buttons.zombieCodex.w, buttons.zombieCodex.h, "僵尸图鉴", "#58aaff");
+    Game.button(buttons.skillCodex.x, buttons.skillCodex.y, buttons.skillCodex.w, buttons.skillCodex.h, "技能图鉴", C.colors.purple);
+    Game.button(buttons.testArena.x, buttons.testArena.y, buttons.testArena.w, buttons.testArena.h, "进入测试场", C.colors.yellow);
+    Game.button(buttons.account.x, buttons.account.y, buttons.account.w, buttons.account.h, accountButtonLabel(), "#4b7180");
+  };
+
+  Game.drawAccountBanner = function () {
+    var note = Game.accounts.getStatusNote();
+    if (!note) return;
+    var offline = Game.accounts.getStatus() === "offline";
+    var color = offline ? C.colors.red : C.colors.yellow;
+    var width = U.clamp(note.length * 12 + 26, 160, C.width - 24);
+    U.roundedRect(ctx, (C.width - width) / 2, C.menu.bannerY, width, C.menu.bannerHeight, 11, "rgba(5, 16, 23, .86)", color);
+    text(note, C.width / 2, C.menu.bannerY + 15, "bold 10px Segoe UI, Microsoft YaHei", color, "center");
+  };
+
+  function drawFakeField(rect, label, value, placeholder) {
+    text(label, rect.x, rect.y - 8, "bold 11px Segoe UI, Microsoft YaHei", C.colors.cyan);
+    U.roundedRect(ctx, rect.x, rect.y, rect.w, rect.h, 10, "rgba(13, 34, 46, .92)", "rgba(153, 205, 218, .22)");
+    if (value) text(value, rect.x + 12, rect.y + rect.h / 2 + 5, "13px Segoe UI, Microsoft YaHei", C.colors.text);
+    else text(placeholder, rect.x + 12, rect.y + rect.h / 2 + 5, "13px Segoe UI, Microsoft YaHei", C.colors.muted);
+  }
+
+  Game.drawLogin = function () {
+    var ui = C.accountUI, login = ui.login, status = Game.accounts.getStatus();
+    var register = S.accountMode === "register";
+    Game.overlay();
+    panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .96)", "rgba(153, 205, 218, .22)", 20);
+    badge("ACCOUNT ACCESS", 105, 70, 150, C.colors.cyan);
+    text(register ? "注册账户" : "登录账户", C.width / 2, 118, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    text(status === "offline" ? "未连接数据库 · 战斗仍可进行，成绩不会保存" : "登录后关卡进度与资源会保存到本机数据库", C.width / 2, 144, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    drawFakeField(login.userName, "用户名", Game.accounts.getUsername(), "点击输入用户名");
+    drawFakeField(login.password, "密码", "", "点击输入密码");
+    text(Game.accounts.state.error || "", C.width / 2, 332, "bold 11px Segoe UI, Microsoft YaHei", C.colors.red, "center");
+    Game.button(login.submit.x, login.submit.y, login.submit.w, login.submit.h, register ? "注册并登录" : "登录", C.colors.green);
+    Game.button(login.switchMode.x, login.switchMode.y, login.switchMode.w, login.switchMode.h, register ? "已有账户？去登录" : "没有账户？去注册", "#4b7180");
+    text("用户名 2–16 个中文 / 字母 / 数字 / 下划线", C.width / 2, 458, "10px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text("密码至少 6 位 · 表单项在画布上的输入浮层中填写", C.width / 2, 474, "10px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回首页", "#4b7180");
+  };
+
+  Game.drawAccount = function () {
+    var ui = C.accountUI, box = ui.account;
+    var resources = Game.accounts.getResourceList(), records = Game.accounts.getLevelRecords(), totals = Game.accounts.getTotals();
+    Game.overlay();
+    panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .96)", "rgba(153, 205, 218, .22)", 20);
+    badge("ACCOUNT", 120, 70, 120, C.colors.cyan);
+    text("账户中心", C.width / 2, 118, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    panel(38, box.cardY, 284, box.cardHeight, "rgba(17, 47, 62, .94)", "rgba(104, 216, 255, .22)", 14);
+    text(Game.accounts.getUsername(), 54, box.cardY + 30, "bold 20px Segoe UI, Microsoft YaHei", C.colors.text);
+    text("注册于 " + (Game.accounts.getCreatedAt() ? String(Game.accounts.getCreatedAt()).slice(0, 10) : "—"), 54, box.cardY + 50, "11px Segoe UI, Microsoft YaHei", C.colors.muted);
+    text("通关 " + Game.accounts.getCompletedCount() + " / " + C.levels.length + "   ·   累计通关 " + totals.wins + " 次   ·   尝试 " + totals.attempts + " 次", 54, box.cardY + 68, "11px Segoe UI, Microsoft YaHei", C.colors.cyan);
+    text("资源", 44, box.resourceY - 6, "bold 12px Segoe UI, Microsoft YaHei", C.colors.cyan);
+    panel(38, box.resourceY, 284, box.resourceHeight, "rgba(13, 34, 46, .92)", "rgba(153, 205, 218, .16)", 14);
+    resources.forEach(function (item, index) {
+      var x = 66 + index * 88;
+      dot(x, box.resourceY + 26, 6, item.color, "rgba(255, 255, 255, .24)");
+      text(item.name, x + 12, box.resourceY + 30, "11px Segoe UI, Microsoft YaHei", C.colors.text);
+      text(String(item.amount), x + 12, box.resourceY + 46, "bold 13px Segoe UI, Microsoft YaHei", item.color);
+    });
+    text("关卡记录", 44, box.recordY - 12, "bold 12px Segoe UI, Microsoft YaHei", C.colors.cyan);
+    if (!records.length) text("暂无记录 · 通关一局后会自动出现在这里", 44, box.recordY + 8, "11px Segoe UI, Microsoft YaHei", C.colors.muted);
+    records.slice(-(C.accounts.maxRecords || 5)).forEach(function (row, index) {
+      var level = C.levels.filter(function (item) { return item.id === row.levelId; })[0];
+      var y = box.recordY + 8 + index * box.recordStep;
+      text(pad2(row.levelId), 44, y, "bold 11px Segoe UI, Microsoft YaHei", row.completed ? C.colors.green : C.colors.muted);
+      text(level ? level.name : "关卡 " + row.levelId, 70, y, "11px Segoe UI, Microsoft YaHei", C.colors.text);
+      text(recordSummary(row), 322, y, "10px Segoe UI, Microsoft YaHei", C.colors.muted, "right");
+    });
+    if (Game.accounts.state.notice) text(Game.accounts.state.notice, C.width / 2, 508, "10px Segoe UI, Microsoft YaHei", C.colors.green, "center");
+    Game.button(box.importButton.x, box.importButton.y, box.importButton.w, box.importButton.h, "导入旧进度", "#4b7180");
+    Game.button(box.logoutButton.x, box.logoutButton.y, box.logoutButton.w, box.logoutButton.h, "注销登录", "#4b7180");
+    Game.button(box.deleteButton.x, box.deleteButton.y, box.deleteButton.w, box.deleteButton.h, "删除账户", C.colors.red);
+    Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回首页", "#4b7180");
   };
   function dot(x, y, radius, fill, stroke) {
     ctx.beginPath();
@@ -1639,5 +1736,23 @@
     Game.button(C.width / 2 - 82, 561, 164, 36, "返回技能列表", color);
   }
   Game.drawUpgrade = function () { Game.overlay(); panel(16, 76, C.width - 32, 414, "rgba(10, 35, 49, .94)", "rgba(153, 205, 218, .18)", 20); text("等级提升！", C.width / 2, 119, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center"); text("选择一项强化，战斗将继续", C.width / 2, 143, "12px Segoe UI, Microsoft YaHei", C.colors.text, "center"); var cardW = 98, gap = 8, start = (C.width - cardW * 3 - gap * 2) / 2; S.upgradeCards.forEach(function (trait, i) { var x = start + i * (cardW + gap), y = 190, level = S.player.traits[trait.id] || 0, rare = trait.rarity === "稀有"; panel(x, y, cardW, 218, rare ? "#263352" : "#163b4d", rare ? "rgba(201,161,255,.45)" : "rgba(104,216,255,.28)", 14); text(trait.icon, x + cardW / 2, y + 50, "bold 31px Segoe UI, Microsoft YaHei", rare ? C.colors.purple : C.colors.cyan, "center"); text(trait.name, x + cardW / 2, y + 82, "bold 14px Segoe UI, Microsoft YaHei", C.colors.text, "center"); text(trait.rarity + " · Lv." + (level + 1) + "/" + trait.max, x + cardW / 2, y + 104, "bold 11px Segoe UI, Microsoft YaHei", rare ? C.colors.purple : C.colors.green, "center"); ctx.fillStyle = C.colors.muted; ctx.font = "11px Segoe UI, Microsoft YaHei"; ctx.textAlign = "center"; U.wrapText(ctx, trait.desc, x + cardW / 2, y + 135, 78, 16); U.roundedRect(ctx, x + 17, y + 181, 64, 27, 8, "#245f73"); text("选择", x + cardW / 2, y + 199, "bold 11px Segoe UI, Microsoft YaHei", C.colors.text, "center"); }); };
-  Game.drawResult = function () { Game.overlay(); panel(30, 120, C.width - 60, 250, "rgba(10, 35, 49, .9)", "rgba(153, 205, 218, .18)", 20); var win = S.screen === "victory", session = S.session; text(win ? "关卡胜利" : "战斗失败", C.width / 2, 185, "bold 31px Segoe UI, Microsoft YaHei", win ? C.colors.green : C.colors.red, "center"); text(win ? "尸潮已被肃清" : "尸潮突破了防线", C.width / 2, 217, "15px Segoe UI, Microsoft YaHei", C.colors.text, "center"); text("用时 " + U.formatTime(session.elapsed) + "  ·  击杀 " + session.kills + "  ·  等级 " + S.player.level, C.width / 2, 253, "13px Segoe UI, Microsoft YaHei", C.colors.muted, "center"); if (win) { var next = C.levels.find(function (item) { return item.id === session.level + 1; }); text(next ? "已解锁：" + next.name : "已通关全部开放关卡", C.width / 2, 279, "12px Segoe UI, Microsoft YaHei", C.colors.green, "center"); } Game.button(42, 305, 130, 44, "重新开始", win ? C.colors.green : C.colors.yellow); Game.button(188, 305, 130, 44, "返回首页", "#4b7180"); };
+  Game.drawResult = function () {
+    Game.overlay();
+    panel(30, 120, C.width - 60, 250, "rgba(10, 35, 49, .9)", "rgba(153, 205, 218, .18)", 20);
+    var win = S.screen === "victory", session = S.session, accountState = Game.accounts.state;
+    text(win ? "关卡胜利" : "战斗失败", C.width / 2, 185, "bold 31px Segoe UI, Microsoft YaHei", win ? C.colors.green : C.colors.red, "center");
+    text(win ? "尸潮已被肃清" : "尸潮突破了防线", C.width / 2, 217, "15px Segoe UI, Microsoft YaHei", C.colors.text, "center");
+    text("用时 " + U.formatTime(session.elapsed) + "  ·  击杀 " + session.kills + "  ·  等级 " + S.player.level, C.width / 2, 253, "13px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    if (win) {
+      var next = C.levels.find(function (item) { return item.id === session.level + 1; });
+      text(next ? "已解锁：" + next.name : "已通关全部开放关卡", C.width / 2, 275, "12px Segoe UI, Microsoft YaHei", C.colors.green, "center");
+    }
+    var hint = "成绩未保存", hintColor = C.colors.muted;
+    if (session.testArena) hint = "测试场不记录成绩";
+    else if (accountState.lastReportSaved) { hint = "成绩已保存到账户 · " + Game.accounts.getUsername(); hintColor = C.colors.green; }
+    else hint = "成绩未保存 · " + (accountState.lastReportReason || Game.accounts.getStatusNote() || "未登录");
+    text(hint, C.width / 2, 293, "11px Segoe UI, Microsoft YaHei", hintColor, "center");
+    Game.button(42, 305, 130, 44, "重新开始", win ? C.colors.green : C.colors.yellow);
+    Game.button(188, 305, 130, 44, "返回首页", "#4b7180");
+  };
 })(window.Game = window.Game || {});

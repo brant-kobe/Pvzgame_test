@@ -18,10 +18,16 @@
 ├── pictures/
 │   └── pic.png             # 参考图（人物持枪与悬浮伙伴的造型参考）
 ├── styles/
-│   └── main.css            # 页面布局与 Canvas 外观
+│   └── main.css            # 页面布局、Canvas 外观与账户输入浮层
+├── server/                 # 账户后端（FastAPI + SQLAlchemy + SQLite）
+│   ├── run.py              # 启动入口：python server/run.py [--port 8787] [--db ...]
+│   ├── requirements.txt    # 后端依赖（fastapi / uvicorn[standard] / sqlalchemy）
+│   └── app/                # 应用工厂、模型、鉴权、路由与静态托管
+├── data/                   # 运行时数据库 blockline.db（已在 .gitignore 中忽略）
 ├── tmp/                    # 调试中间产物（冒烟脚本、录制回放出图等，已在 .gitignore 中忽略）
 ├── src/
 │   ├── config.js           # 敌人、词条、波次、精灵锚点和全局配置
+│   ├── accounts.js         # 账户数据层：内存缓存 + 异步落库（Game.accounts）
 │   ├── utils.js            # 通用数学、绘制和文本工具
 │   ├── state.js            # 单局运行时状态与重置
 │   ├── combat.js           # 生成、射击、碰撞、伤害、经验和词条
@@ -38,9 +44,22 @@
 
 模块通过单一的 `window.Game` 命名空间协作，并按照 `index.html` 中的顺序加载。这样不需要构建工具，直接双击入口文件仍然可以运行；后续如果引入打包工具，也可以按职责迁移为 ES Module。
 
+**账户与数据层（已实施）** 让项目成为全栈应用：`server/`（FastAPI + SQLAlchemy 后端，含 `run.py` 与 `requirements.txt`）持有 SQLite 数据库 `data/blockline.db`，账户、登录会话、关卡进度与资源全部落库；前端新增数据层 `src/accounts.js`，游戏本体仍是零依赖原生 JS。设计与规则见 [`DEVELOPMENT_PLAN.md`](./DEVELOPMENT_PLAN.md) 第 12 节。
+
 ## 运行
 
-直接双击打开 [`index.html`](./index.html)，或在当前目录启动任意静态文件服务器后访问该页面。
+### 全栈模式（推荐，账户与进度可用）
+
+```powershell
+.venv\Scripts\pip install -r server\requirements.txt   # 首次执行
+.venv\Scripts\python server\run.py                     # 打开 http://127.0.0.1:8787
+```
+
+服务只绑定 `127.0.0.1`，由它同时托管静态页面与 `/api` 接口。首次访问时首页账户按钮显示「未登录」，点它可注册或登录；数据库文件在 `data/blockline.db`（已在 `.gitignore` 中忽略）。换端口或换库：`python server\run.py --port 8790 --db tmp/other.db`。
+
+### 纯前端模式（离线试玩）
+
+直接双击打开 [`index.html`](./index.html)，或在当前目录启动任意静态文件服务器后访问该页面。此时账户功能不可用：顶栏提示「未连接数据库 · 本局进度不会保存」，**战斗、图鉴与测试场照常可玩，但成绩只保留在本次会话，刷新即失效**。
 
 ## 开发约定
 
@@ -51,6 +70,9 @@
 - 新增 Canvas 画面：放在 `src/render.js`，通过 `Game.state` 读取状态。
 - 新增鼠标、触控或键盘操作：放在 `src/input.js`。
 - 需要新增系统时，创建独立文件并在 `index.html` 中明确加载顺序。
+- 账户与进度：**只能经 `Game.accounts` 读写**（`src/accounts.js`）。`render.js` 只读缓存、不发起请求；`state.js` 的 `getProgress` / `markLevelComplete` / `isLevelCompleted` / `isLevelUnlocked` 是薄封装，不要绕过它们直接写 `localStorage`。
+- 后端：依赖固定写进 `server/requirements.txt`；账户数据的唯一来源是 `data/blockline.db`；新增接口请在 `server/app/routers/` 下按模块添加，并在 `create_app()` 里挂载。
+- 新增资源类型：在 `src/config.js` 的 `resources` 加条目，并同步 `server/app/config.py` 的 `RESOURCE_IDS`（服务端会拒绝未知资源）。
 - 替换人物外观：更新 `assets/man.png` 后生成透明裁切图（`player-man.png` / `player-body.png`），并按新图比例调整 `src/config.js` 的 `sprites.playerBody` 宽高和锚点。
 - 调整持枪位置：修改 `sprites.playerRifle` 的 `mountX` / `mountY`、宽高和锚点；`muzzleDistance` 应等于枪口到握把锚点的距离。
 - 调整幻形位置：修改 `src/config.js` 的 `skillRing.offsetX` / `offsetY`。
@@ -65,6 +87,8 @@
 - Canvas 使用逻辑坐标，并根据设备像素比提升实际渲染分辨率；业务逻辑不需要因为高清屏或 Canvas 尺寸变化而改写。
 
 ## 当前已实现
+
+- **账户系统（全栈）**：本地 FastAPI + SQLite 服务承载账户、登录会话、关卡进度与资源。首页菜单底部的「账户」按钮进入登录 / 注册界面（用户名 2–16 个中文 / 字母 / 数字 / 下划线，密码至少 6 位；密码以 PBKDF2-SHA256 加随机盐哈希存入数据库，**库里不存明文**，会话用 HttpOnly + SameSite=Strict Cookie，库中只存会话 token 的散列）。登录后进入账户中心：用户名、注册时间、通关进度、最近 5 关的最佳用时与击杀、资源占位区，以及「导入本机旧进度」「注销登录」「删除账户」（删除需重新输入密码）。**通关与失败都会上报**：胜利写入完成时间、刷新最佳用时 / 击杀并累加通关次数，失败只累加尝试次数，最佳值只取更优的一局。未登录或未连接数据库时顶栏提示「进度不会保存」，成绩只在本次会话内可见并在结算界面标注「成绩未保存」。
 
 - 竖屏战斗画面铺满浏览器高度，战场随屏幕比例纵向拉伸（逻辑高度 640–960 自适应）；玩家、城墙与幻形贴近底部，战场更长。
 - 高 DPI Canvas 渲染，适配不同屏幕分辨率，并保留逻辑坐标下的游戏计算；窗口尺寸变化时重算逻辑高度并重新排布城墙与人物。
@@ -145,6 +169,8 @@
 
 ## 当前限制与后续方向
 
+- **资源板块尚未开发**：账户中心只展示 `src/config.js` 里 `resources` 的占位条目（金币 / 宝石 / 零件，目前恒为 0）；数据库 `resources` 表与 `Game.accounts.addResource` 已就绪，产出与消耗规则留待资源板块设计。
+- **账户是本地单机形态**：服务只监听 `127.0.0.1`，没有找回密码、邮箱验证与多设备同步，换机器需要自行拷贝 `data/blockline.db`。旧版 `blockline.progress` 不再写入，只在账户中心的「导入旧进度」里作为一次性读取来源。
 - 第 11 关「高压电厂」已可完整游玩，是当前最后一关（12 波、生命 ×2.35）；针对玩家本人的投掷攻击、地图互动与更高关卡仍属于后续内容。
 - **属性克制已实装 9 组**（篮球僵尸系弱电、分裂僵尸精英系弱火、护甲僵尸系抗物理、火焰僵尸系抗火弱冰、雪人僵尸系抗冰弱火、雷电僵尸系抗电且精英免疫电系、毒蜂系弱风且抗能量、轮椅僵尸系弱火、寒霜兽系弱火且多受 200%），其余僵尸对六种属性都没有差异；**燃烧状态的每秒伤害不走属性倍率**（`update.js` 直接结算 `enemy.burn`，所以火系弱点不会放大燃烧的持续伤害），`tmp/check-hp-budget.js` 的等效血量模型同样没有把抗性算进去。
 - **毒蜂、轮椅僵尸与寒霜兽及其精英目前只在僵尸图鉴与测试场里**，还没有写进任何关卡的波次，数值也未经关卡验证（火焰僵尸与火焰僵尸精英已随第 9 关、雪人僵尸与雪人僵尸精英已随第 10 关、雷电僵尸与雷电僵尸精英已随第 11 关进入波次）；冻结免疫针对的是**冻结这一种硬控**（装甲车与冰雹的减速照常生效），麻痹免疫与麻痹减半只针对**麻痹**（眩晕与冻结照常生效），**免疫击退与免疫牵引各针对一条状态**（寒霜兽是唯一同时免疫两条的单位，两条位移都吃不到），牵引是软控里独立的第三条状态（`pull`），`statusDurationScale.pull` 的倍率分支还没有单位使用（测试里用临时抗性覆盖）；只有**破甲前的护甲僵尸**两条位移也吃不到（而且它在风圈里掉装甲的速度比只挨龙卷风伤害快得多），硬控时长按状态 id 缩放，新增硬控来源时必须走 `Game.applyFreeze` / `Game.applyStun` / `Game.applyParalysis` 而不是直接写 `enemy.control`。
@@ -167,3 +193,12 @@ git diff --check
 ```
 
 Windows Git 显示的 `LF will be replaced by CRLF` 是换行符转换提示，不代表代码错误。
+
+后端改动另需执行：
+
+```powershell
+.venv\Scripts\python -m compileall server
+.venv\Scripts\python tmp\check_db.py                           # 数据层冒烟
+.venv\Scripts\python tmp\check_api.py http://127.0.0.1:8787    # 接口冒烟（需先启动服务）
+node tmp\check-accounts.js                                     # 前端账户层冒烟
+```

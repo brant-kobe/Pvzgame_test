@@ -1532,8 +1532,8 @@
       S.enemyShots.splice(i, 1);
       if (S.wall.hp <= 0) {
         S.wall.hp = 0;
-        if (S.session) { S.session.message = "城墙失守"; S.session.messageTimer = 3; }
-        S.screen = "defeat";
+        if (S.session) S.session.messageTimer = 3;
+        Game.loseLevel("城墙失守");
         return;
       }
     }

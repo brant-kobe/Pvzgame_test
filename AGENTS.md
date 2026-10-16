@@ -5,18 +5,20 @@
 ## 项目概览
 
 - 项目：`街区警戒线`，9:16 竖屏单手 Roguelite 僵尸生存射击游戏。
-- 技术：原生 JavaScript + Canvas 2D，**无构建工具、无依赖、无包管理**。
-- 运行：直接双击 `index.html`，或用任意静态服务器托管。所有脚本通过 `index.html` 按固定顺序加载，共享单一 `window.Game` 命名空间。
+- 技术：**前端**为原生 JavaScript + Canvas 2D，**无构建工具、零运行时依赖**；**后端**（账户与数据层）为 Python 3.13 + FastAPI + SQLAlchemy + SQLite，依赖集中在 `server/requirements.txt`。
+- 运行：账户模式用 `.venv\Scripts\python server\run.py` 启动后访问 `http://127.0.0.1:8787`；纯前端离线试玩仍可直接双击 `index.html`（此时不保存进度）。所有脚本通过 `index.html` 按固定顺序加载，共享单一 `window.Game` 命名空间。
 
 ## 运行与验证
 
-无需安装依赖。改完代码后至少执行：
+前端无需安装依赖；后端依赖已装在 `.venv`（清单见 `server/requirements.txt`）。改完代码后至少执行：
 
 ```powershell
 Get-ChildItem src -Filter *.js | ForEach-Object { node --check $_.FullName }
 git diff --check
 ```
 
+- 改动 `server/` 时另需 `.venv\Scripts\python -m compileall server`（Python 语法校验）。
+- 账户相关改动必须跑三个冒烟脚本：`.venv\Scripts\python tmp\check_db.py`（数据层）、`.venv\Scripts\python tmp\check_api.py http://127.0.0.1:8787`（接口，需先起服务）、`node tmp\check-accounts.js`（前端账户层与界面几何）。
 - `node --check`：语法校验，必须全部通过。
 - `git diff --check`：空白字符校验。Windows 下出现的 `LF will be replaced by CRLF` 只是换行符提示，不是错误。
 - 逻辑回归优先用一次性 `node -e` 冒烟测试；需要模拟 Canvas 时，用 `Proxy` 桩实现 `document.getElementById("game").getContext("2d")`。
@@ -26,11 +28,12 @@ git diff --check
 
 ## 代码结构与职责
 
-脚本加载顺序（见 `index.html`）：`config → utils → state → combat → update → sprites → render → input → main`。
+脚本加载顺序（见 `index.html`）：`config → accounts → utils → state → combat → update → sprites → render → input → main`。
 
 | 文件 | 职责 | 备注 |
 | --- | --- | --- |
-| `src/config.js` | 全部静态数据：尺寸、精灵、颜色、敌人、词条、技能、波次、关卡 | 调平衡/加内容优先改这里 |
+| `src/config.js` | 全部静态数据：尺寸、精灵、颜色、敌人、词条、技能、波次、关卡、账户与界面几何 | 调平衡/加内容优先改这里 |
+| `src/accounts.js` | 账户数据层：内存缓存 + 异步落库 | `Game.accounts`；render 只读缓存 |
 | `src/utils.js` | 数学、随机、绘制、文本工具 | `Game.utils` |
 | `src/state.js` | `Game.state` 单局状态、`Game.reset`、界面切换 | 只存数据，不写绘制逻辑 |
 | `src/combat.js` | 生成、瞄准、射击、碰撞、伤害、经验、词条、技能效果 | 战斗规则集中于此 |
@@ -41,6 +44,8 @@ git diff --check
 | `src/main.js` | 初始化与 `requestAnimationFrame` 主循环 | 精灵就绪后启动，含超时保护 |
 
 **分层原则**：数据进 `config`，状态进 `state`，战斗规则进 `combat`/`update`，绘制只进 `render`，输入只进 `input`。不要把战斗逻辑写进 `render`。
+
+**后端分层**（`server/`）：`app/routers/` 只做请求解析与响应组装，数据访问一律经 SQLAlchemy 会话（不散落裸 SQL）；`app/security.py` 是密码哈希、会话签发与 `current_account` 依赖的唯一入口；`app/web.py` 负责静态托管，**只暴露 `index.html` 与 `src/`、`styles/`、`assets/`、`pictures/`**。
 
 ## 命名与代码风格
 
@@ -82,7 +87,7 @@ git diff --check
 - **测试场调试面板**：它是 `index.html` 里的 DOM 面板（`#test-controls`），不是 Canvas 绘制；`render.js` 的 `Game.updateTestControls`（由 `Game.draw` 每帧调用）负责显隐、文案与高亮，`input.js` 负责事件绑定。僵尸选择器由 `buildTestEnemyPicker` 读 `config.enemies[].codexCategory` 生成「小怪 / 精英 / 首领」三行按钮（含 `codexHidden` 的派生单位），每行是 `overflow-x: auto` + `flex-wrap: nowrap` 的**横向可拖动列表**（鼠标拖动由 `input.js` 在 `#test-enemy-rows` 上做 pointer 委托实现，拖动后要吞掉那次 `click`；触摸交给浏览器原生滚动）；按钮只在首次刷新时建一次 DOM，之后只切换 `.active`，点击走事件委托并调用 `Game.setTestEnemy(id)`。新增敌人会自动出现在对应行，不需要改 HTML。
 - **战斗平衡**：初始步枪伤害为 28；普通、快跑、分裂僵尸及其幼体、精英和首领的基础移动速度均较原配置降低约 20%。
 - **经验与通关判定**：升级门槛由 `config.xpBase / xpMultiplier / xpBonus` 决定（当前 15 XP 起、`floor(当前门槛 × 1.13 + 6)` 递推），唯一实现在 `Game.nextXpAfter`，`Game.gainXp` 与 `Game.grantMaxLevel` 都必须调用它，不要在两处各写一份公式；升到 `config.maxLevel`（当前 15）累计需要 1384 XP，HUD 经验条按当前 `nextXp` 显示进度。升到 `config.maxLevel` **不立即胜利**，只切到 `LV.MAX` 并提示清剿；胜利必须同时满足「满级 + 末波全部计划投放完成 + 首领波的首领已登场并被击杀 + `S.enemies` 与 `S.pendingSpawns` 均为空」，统一由 `update.js` 在 `flushPendingSpawns` 之后调用 `Game.winLevel`（`winLevel` 自带 `screen === "playing"` 守卫，失败优先）。末波清场但经验不足时先 `Game.grantMaxLevel` 补足满级再结算，避免无怪可打。`Game.gainXp` 每次只弹一次三选一（靠 `break` 退出升级循环），盈余经验留到下一次 `gainXp` 继续结算；若 `Game.rollTraits` 返回空数组则跳过升级界面直接继续升级，避免词条池被榨干后卡在无卡可选的三选一界面 —— 当前池子可选取次数远多于 14 次升级，但改动词条上限时要重新核算。当前各关经验缩放值已按「满级落在倒数两波内」逐关校准，通常会在最后一两波达到满级。
-- **关卡波次与解锁**：波次定义在 `config.levels[].waves`，`Game.reset` 存入 `S.session.waves`，逻辑与 HUD 只读它；解锁进度存 `localStorage`（`blockline.progress`）并带内存回退。**当前 11 个关卡全部 `unlocked: true`，没有前置解锁门槛**；`Game.isLevelUnlocked` 的判定（静态标记或前一关已通关）保留未动，把某一关改回 `unlocked: false` 就会重新要求通关前一关，`Game.start` 的守卫与渲染里「未解锁」行的样式也都在。首页「开始战斗」用 `Game.getContinueLevel`（最早一关未通关的关卡，全通后回落到最后一关），**不要再用 `getLatestUnlockedLevel` 之类的「最后一关」语义**，否则一点开始战斗就会进最后一关。每关缩放：`levels[].xpScale` 缩放获得经验，`levels[].hpScale` 缩放敌人生命（`Game.spawnEnemy` 按 `Math.round(info.hp * hpScale * waveHpScale)` 生成 `hp/maxHp`，只影响生命，不动伤害/速度/经验/回血；前两关为 1，第 3、4 关为 1.35，第 5 关为 1.6，第 6 关为 1.68，第 7 关为 1.75，第 8 关为 2，第 9 关为 2.1，第 10 关为 2.2，第 11 关为 2.35）。**单个波次还可再写 `hpScale`**，由 `Game.getWaveHpScale` 读出（缺省 1，测试场与无波次时回退 1）；各关阶梯：第 4 关 1.15/1.25/1.4/1.5/1.6（前五波与第 3 关逐项一致），第 5 关 1.2/1.3/1.45/1.55/1.7，第 6 关 1.2/1.35/1.5/1.6/1.75/1.9，第 7、8 关 1.2/1.35/1.5/1.65/1.8/1.95/2.1（12 波），第 9、10 关 1.2/1.35/1.5/1.65/1.8/1.95（11 波，首领波之后还有 4 波），第 11 关「高压电厂」与第 7、8 关同组（12 波，之后还有 5 波）。**远程僵尸直接写进 `mix` 即可**（`mix` 的元素就是 `config.enemies` 的类型键），第 5 关的 `"basketball"` 不需要任何额外代码。**关卡难度要看等效血量而不是投放数量**：第 6 关只由分裂/篮球/护甲这类高威胁单位组成，单只等效血量（含分裂幼体）是第 5 关的 1.66 倍，因此它的投放数量（380）低于第 5 关（459）；第 7 关把普通僵尸放回阵容后单只等效血量降到 168，于是数量可以回到 456 而等效血量只比第 6 关高 1.27 倍；**第 8 关「环城高架」是唯一有意低于该区间的一关**（0.96 倍）：它只用最廉价的三类小怪（16 / 24 / 40 血），单只等效血量 82 不到第 7 关的一半，难度靠数量（898 vs 456）与节奏（生成间隔 0.3 秒）表达，而且飞鸟免疫装甲车 / 旋风加农 / 燃油弹 —— 遇到「全员廉价 + 机制免疫」的阵容时允许降到 0.9 左右，但要在文档里写清理由。`tmp/check-hp-budget.js` 按「投放数量 × 单只等效血量 × 关卡与波次倍率」比较各关预算，并会打印**相对上一关**的倍数（第 2～11 关依次为 3.60 / 1.87 / 1.58 / 1.23 / 1.38 / 1.27 / 0.96 / 1.22 / 1.18 / 1.23），新增关卡时按这个列调，让比值落在 1.1～1.4 之间（上述例外除外）。关卡选择面板是**一整块列表**而不是一叠卡片：几何集中在 `config.levelSelect`（`panelX/Y/Width/Height`、`listX/listY/listWidth/rowHeight`、`backY/backHeight`），行矩形由 `Game.getLevelRowRect(index)` 唯一给出（它按 `backY` 夹住行高，关卡变多时行会先自动变矮而不是压住返回按钮），`drawLevelSelect` 与 `input.js` 的点击判定都调它 —— **不要再在任一侧重算 `listY + index × rowHeight`**，两边算出不一样的几何就是点击落空。每行只画「序号 + 名称 + `?` 简介钮 + 行尾状态（未解锁 / 已通关 / `›`）」，**副标题不再画进行里**（挪进简介面板），文字按行中心取位（序号 `cy + 7`、名称 `cy + 5`、问号圆心即行中心），序号补零到两位（`level.id < 10` 画「01」～「09」，第 10 关起直接用编号，不要再用 `"0" + level.id`）；只有面板标题、提示行与徽标的 y 坐标仍写死在 `drawLevelSelect` 里（当前 68/112/135）。当前 11 行、`rowHeight` 上限 66（实际被夹到 37.27）、末行底边 554 仍在返回按钮 566 之上，列表 300×410（144～554），面板 42～620。**关卡简介浮层**：`?` 的位置由 `Game.getLevelInfoRect(index)` 唯一给出（`config.levelSelect.infoX` 那一列、`infoSize` 见方、行内垂直居中、不压名称与行尾状态），点它把 id 写进 `S.levelPreview` 并弹出面板，点行内其它位置照旧开战；面板打开时点 `×`（`Game.getLevelBriefCloseRect`）或面板外任意位置都只收起面板，**被面板盖住的关卡行绝不能开战**。面板内容 = 「序号 + 名称、副标题、`levels[].brief`」+ **小怪 / 精英 / 首领三组单位**；阵容**不写死在配置里**，由 `Game.getLevelRoster(levelId)` 从 `mix` / `elite` / `elitePool` / `boss` 现场推导（按首次登场顺序去重，附首波与覆盖波次），改波次或接入新敌人后简介自动跟着变。面板几何与逐行 y 由 `Game.getLevelBriefPanel()`（高度按阵容行数收紧，`briefMinHeight` 兜底）与 `Game.getLevelBriefLayout()` 唯一给出。`S.levelPreview` 由 `Game.openLevelPreview` / `Game.closeLevelPreview` 读写，`Game.openLevelSelect`、`Game.backToMenu` 与 `Game.reset` 都会清空它；`brief` 是数据层字段，40 字以内（约每行 23 字、只留两行）。
+- **关卡波次与解锁**：波次定义在 `config.levels[].waves`，`Game.reset` 存入 `S.session.waves`，逻辑与 HUD 只读它；通关进度由 `Game.accounts` 提供（登录后存 SQLite，未登录时只是本次会话的内存记录），`Game.getProgress` / `Game.isLevelCompleted` / `Game.markLevelComplete` 是它的薄封装。**当前 11 个关卡全部 `unlocked: true`，没有前置解锁门槛**；`Game.isLevelUnlocked` 的判定（静态标记或前一关已通关）保留未动，把某一关改回 `unlocked: false` 就会重新要求通关前一关，`Game.start` 的守卫与渲染里「未解锁」行的样式也都在。首页「开始战斗」用 `Game.getContinueLevel`（最早一关未通关的关卡，全通后回落到最后一关），**不要再用 `getLatestUnlockedLevel` 之类的「最后一关」语义**，否则一点开始战斗就会进最后一关。每关缩放：`levels[].xpScale` 缩放获得经验，`levels[].hpScale` 缩放敌人生命（`Game.spawnEnemy` 按 `Math.round(info.hp * hpScale * waveHpScale)` 生成 `hp/maxHp`，只影响生命，不动伤害/速度/经验/回血；前两关为 1，第 3、4 关为 1.35，第 5 关为 1.6，第 6 关为 1.68，第 7 关为 1.75，第 8 关为 2，第 9 关为 2.1，第 10 关为 2.2，第 11 关为 2.35）。**单个波次还可再写 `hpScale`**，由 `Game.getWaveHpScale` 读出（缺省 1，测试场与无波次时回退 1）；各关阶梯：第 4 关 1.15/1.25/1.4/1.5/1.6（前五波与第 3 关逐项一致），第 5 关 1.2/1.3/1.45/1.55/1.7，第 6 关 1.2/1.35/1.5/1.6/1.75/1.9，第 7、8 关 1.2/1.35/1.5/1.65/1.8/1.95/2.1（12 波），第 9、10 关 1.2/1.35/1.5/1.65/1.8/1.95（11 波，首领波之后还有 4 波），第 11 关「高压电厂」与第 7、8 关同组（12 波，之后还有 5 波）。**远程僵尸直接写进 `mix` 即可**（`mix` 的元素就是 `config.enemies` 的类型键），第 5 关的 `"basketball"` 不需要任何额外代码。**关卡难度要看等效血量而不是投放数量**：第 6 关只由分裂/篮球/护甲这类高威胁单位组成，单只等效血量（含分裂幼体）是第 5 关的 1.66 倍，因此它的投放数量（380）低于第 5 关（459）；第 7 关把普通僵尸放回阵容后单只等效血量降到 168，于是数量可以回到 456 而等效血量只比第 6 关高 1.27 倍；**第 8 关「环城高架」是唯一有意低于该区间的一关**（0.96 倍）：它只用最廉价的三类小怪（16 / 24 / 40 血），单只等效血量 82 不到第 7 关的一半，难度靠数量（898 vs 456）与节奏（生成间隔 0.3 秒）表达，而且飞鸟免疫装甲车 / 旋风加农 / 燃油弹 —— 遇到「全员廉价 + 机制免疫」的阵容时允许降到 0.9 左右，但要在文档里写清理由。`tmp/check-hp-budget.js` 按「投放数量 × 单只等效血量 × 关卡与波次倍率」比较各关预算，并会打印**相对上一关**的倍数（第 2～11 关依次为 3.60 / 1.87 / 1.58 / 1.23 / 1.38 / 1.27 / 0.96 / 1.22 / 1.18 / 1.23），新增关卡时按这个列调，让比值落在 1.1～1.4 之间（上述例外除外）。关卡选择面板是**一整块列表**而不是一叠卡片：几何集中在 `config.levelSelect`（`panelX/Y/Width/Height`、`listX/listY/listWidth/rowHeight`、`backY/backHeight`），行矩形由 `Game.getLevelRowRect(index)` 唯一给出（它按 `backY` 夹住行高，关卡变多时行会先自动变矮而不是压住返回按钮），`drawLevelSelect` 与 `input.js` 的点击判定都调它 —— **不要再在任一侧重算 `listY + index × rowHeight`**，两边算出不一样的几何就是点击落空。每行只画「序号 + 名称 + `?` 简介钮 + 行尾状态（未解锁 / 已通关 / `›`）」，**副标题不再画进行里**（挪进简介面板），文字按行中心取位（序号 `cy + 7`、名称 `cy + 5`、问号圆心即行中心），序号补零到两位（`level.id < 10` 画「01」～「09」，第 10 关起直接用编号，不要再用 `"0" + level.id`）；只有面板标题、提示行与徽标的 y 坐标仍写死在 `drawLevelSelect` 里（当前 68/112/135）。当前 11 行、`rowHeight` 上限 66（实际被夹到 37.27）、末行底边 554 仍在返回按钮 566 之上，列表 300×410（144～554），面板 42～620。**关卡简介浮层**：`?` 的位置由 `Game.getLevelInfoRect(index)` 唯一给出（`config.levelSelect.infoX` 那一列、`infoSize` 见方、行内垂直居中、不压名称与行尾状态），点它把 id 写进 `S.levelPreview` 并弹出面板，点行内其它位置照旧开战；面板打开时点 `×`（`Game.getLevelBriefCloseRect`）或面板外任意位置都只收起面板，**被面板盖住的关卡行绝不能开战**。面板内容 = 「序号 + 名称、副标题、`levels[].brief`」+ **小怪 / 精英 / 首领三组单位**；阵容**不写死在配置里**，由 `Game.getLevelRoster(levelId)` 从 `mix` / `elite` / `elitePool` / `boss` 现场推导（按首次登场顺序去重，附首波与覆盖波次），改波次或接入新敌人后简介自动跟着变。面板几何与逐行 y 由 `Game.getLevelBriefPanel()`（高度按阵容行数收紧，`briefMinHeight` 兜底）与 `Game.getLevelBriefLayout()` 唯一给出。`S.levelPreview` 由 `Game.openLevelPreview` / `Game.closeLevelPreview` 读写，`Game.openLevelSelect`、`Game.backToMenu` 与 `Game.reset` 都会清空它；`brief` 是数据层字段，40 字以内（约每行 23 字、只留两行）。
 
 ## 常见扩展路径
 
@@ -117,6 +122,20 @@ git diff --check
 - 画布铺满浏览器高度由 `styles/main.css` 的 `#game-shell` 控制；改变战场长度会影响城墙/人物位置，它们由 `Game.layoutWorld` 依据 `C.height` 重排（城墙 `C.height-125`、人物 `C.height-58`），窗口缩放时会自动调用。
 - 顶部战斗 HUD 使用紧凑布局，关卡标题显示为“关卡数字 关卡名称”（如“3 封锁工厂”），位于 `drawHud`；改动 HUD 尺寸时同步更新 `input.js` 中暂停按钮等点击区。
 
+## 账户与数据层约定
+
+- **账户数据的唯一来源是 SQLite**（`data/blockline.db`，由后端持有）。前端**不得再直接读写 `localStorage` 存进度**；旧键 `blockline.progress` 只在「导入本机旧进度」时作为一次性读取来源，导入后不再写入。
+- **未登录 / 离线时的进度只存在于本次会话**：通关会写进 `Game.accounts.state.sessionProgress`，关卡列表照常显示「已通关」，但刷新页面即失效，顶栏与结算界面都明确提示「成绩未保存」。它只是展示层的会话缓存，**不得写进 `localStorage`**；一旦登录成功（`applyMe`）立即丢弃，不与账户进度混用。
+- **前端访问账户数据的唯一入口是 `Game.accounts`**（`src/accounts.js`）：它维护内存缓存（账户信息、关卡进度、资源）与 `loading / ready / guest / offline` 四态，对外提供**同步**的 `getProgress()` 与**异步**的 `login` / `register` / `logout` / `markLevelComplete` / `addResource` / `deleteAccount`。
+- **渲染层只读缓存**：`render.js` 继续通过 `Game.isLevelCompleted` / `Game.getProgress` 同步取数，不得直接发起请求，也不得写账户状态；`state.js` 保留这四个公开函数名作为薄封装，因此关卡列表、`Game.getContinueLevel` 与 `Game.winLevel` 的调用点不需要改动。
+- **后端结构固定为应用工厂 + 路由分层**：`create_app()` 统一装配，`server/app/routers/` 下按 `health` / `auth` / `me` 分文件；数据库访问只经 SQLAlchemy 会话，不散落裸 SQL 字符串。依赖固定写进 `server/requirements.txt`（`fastapi` / `uvicorn[standard]` / `sqlalchemy`），**不引入 passlib、bcrypt、JWT 等额外依赖** —— 密码用标准库 `hashlib.pbkdf2_hmac`，会话用数据库表 + HttpOnly Cookie。
+- **鉴权约定**：密码存 `pbkdf2_sha256$200000$<salt_hex>$<hash_hex>`，校验用 `hmac.compare_digest`；会话 token 由 `secrets.token_urlsafe(32)` 生成，**库里只存 `sha256(token)`**，以 `HttpOnly; SameSite=Strict; Path=/` Cookie 下发，默认 30 天、剩余不足 15 天时滑动续期，启动时清理过期会话。写接口只收 `POST` / `DELETE` 并校验同源，用户名唯一且 `COLLATE NOCASE`。
+- **只绑定 `127.0.0.1`**，不监听局域网；静态挂载只暴露 `index.html` 与 `src/`、`styles/`、`assets/`、`pictures/`，**`server/` 与 `data/` 绝不能通过 HTTP 访问**。
+- **校验规则有两份**：前端 `config.accounts`（用户名 / 密码的长度与字符集）只做即时提示，`server/app/config.py` 是权威校验 —— 改动其中一份必须同步另一份，并写进本次变更说明。
+- **断连行为**：`file://` 打开或 `/api/health` 失败时进入 `offline` 态 —— 顶栏提示「未连接数据库 · 本局进度不会保存」、账户界面禁用、战斗与测试场照常可玩但**不保存成绩**；未登录（`guest`）同样不保存。**任何情况下都不允许静默丢档**。
+- 完整设计（文件布局、数据表、接口清单、界面、验证方式、实施顺序）见 `DEVELOPMENT_PLAN.md` 第 12 节。
+
+
 ## 文档同步要求
 
 - 功能或规则变更后，必须同步更新 `README.md`（当前已实现、限制）和 `DEVELOPMENT_PLAN.md`（系统设计、验收记录）。
@@ -125,4 +144,6 @@ git diff --check
 ## 已知限制
 
 - 针对玩家本人的投掷攻击、音效、长期养成、联网等均未实现。
+- **资源板块尚未开发**：`resources` 表、`Game.accounts.addResource` 与账户中心的资源占位区已就绪，但资源目前恒为 0，产出与消耗规则待设计。
+- **账户是本地单机形态**：服务只监听 `127.0.0.1`，没有找回密码、邮箱验证与多设备同步，换机器需自行拷贝 `data/blockline.db`。
 - 人物与步枪使用 `assets/` PNG，敌人、装甲车、城墙、幻形仍为 Canvas 程序化绘制。

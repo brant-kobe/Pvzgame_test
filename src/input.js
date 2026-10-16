@@ -8,6 +8,10 @@
     return { x: (event.clientX - rect.left) * C.width / rect.width, y: (event.clientY - rect.top) * C.height / rect.height };
   };
 
+  function pointInRect(point, rect) {
+    return !!rect && point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
+  }
+
   function getSkillCodexGroup() {
     if (!S.selectedSkillCodexId) return null;
     return Game.getSkillGroups().find(function (group) { return group.id === S.selectedSkillCodexId; });
@@ -161,16 +165,117 @@
   bindTestButton("test-rifle-toggle", Game.toggleRifle);
   bindTestButton("test-exit", Game.exitTestArena);
 
+  var accountDialog = document.getElementById("account-dialog");
+  var accountDialogTitle = document.getElementById("account-dialog-title");
+  var accountDialogNote = document.getElementById("account-dialog-note");
+  var accountDialogUserRow = document.getElementById("account-dialog-user-row");
+  var accountDialogUser = document.getElementById("account-dialog-user");
+  var accountDialogPass = document.getElementById("account-dialog-pass");
+  var accountDialogError = document.getElementById("account-dialog-error");
+  var accountDialogSubmit = document.getElementById("account-dialog-submit");
+  var accountDialogCancel = document.getElementById("account-dialog-cancel");
+  var accountDialogMode = null;
+
+  function setDialogError(message) { if (accountDialogError) accountDialogError.textContent = message || ""; }
+
+  function closeAccountDialog() {
+    accountDialogMode = null;
+    if (!accountDialog) return;
+    accountDialog.hidden = true;
+    if (accountDialogPass) accountDialogPass.value = "";
+    setDialogError("");
+  }
+
+  Game.openAccountDialog = function (mode) {
+    if (!accountDialog) return;
+    var removing = mode === "delete", register = mode === "register";
+    accountDialogMode = removing ? "delete" : register ? "register" : "login";
+    if (accountDialogTitle) accountDialogTitle.textContent = removing ? "删除账户" : register ? "注册账户" : "登录账户";
+    if (accountDialogNote) {
+      accountDialogNote.textContent = removing
+        ? "删除后该账户的关卡进度与资源会一并清除，且不可恢复。请输入密码确认。"
+        : register ? "用户名 2–16 个中文 / 字母 / 数字 / 下划线，密码至少 6 位。" : "";
+    }
+    if (accountDialogUserRow) accountDialogUserRow.hidden = removing;
+    if (accountDialogUser) {
+      accountDialogUser.disabled = removing;
+      accountDialogUser.value = removing ? Game.accounts.getUsername() : "";
+    }
+    if (accountDialogPass) accountDialogPass.value = "";
+    setDialogError("");
+    accountDialog.hidden = false;
+    if (accountDialogPass) accountDialogPass.focus();
+  };
+
+  Game.syncAccountDialog = function () {
+    if (!accountDialog || accountDialog.hidden) return;
+    if (S.screen !== "login" && S.screen !== "account") closeAccountDialog();
+  };
+
+  function submitAccountDialog() {
+    var mode = accountDialogMode || S.accountMode || "login";
+    var limits = C.accounts || {};
+    var username = accountDialogUser ? accountDialogUser.value.replace(/^\s+|\s+$/g, "") : "";
+    var password = accountDialogPass ? accountDialogPass.value : "";
+    if (mode !== "delete" && (username.length < (limits.usernameMin || 2) || username.length > (limits.usernameMax || 16))) {
+      setDialogError("用户名需要 2 到 16 个字符");
+      return;
+    }
+    if (password.length < (limits.passwordMin || 6)) {
+      setDialogError("密码至少 6 位");
+      return;
+    }
+    setDialogError("");
+    if (accountDialogSubmit) accountDialogSubmit.disabled = true;
+    var task = mode === "delete"
+      ? Game.accounts.removeAccount(password)
+      : Game.accounts[mode === "register" ? "register" : "login"](username, password);
+    task.then(function (result) {
+      if (accountDialogSubmit) accountDialogSubmit.disabled = false;
+      if (result && result.ok) {
+        closeAccountDialog();
+        S.screen = mode === "delete" ? "menu" : "account";
+        return;
+      }
+      setDialogError((result && result.error) || "操作失败");
+    });
+  }
+
+  if (accountDialog) {
+    if (accountDialogSubmit) accountDialogSubmit.addEventListener("click", function (event) { event.preventDefault(); submitAccountDialog(); });
+    if (accountDialogCancel) accountDialogCancel.addEventListener("click", function (event) { event.preventDefault(); closeAccountDialog(); });
+    if (accountDialogUser) accountDialogUser.addEventListener("keydown", function (event) { if (event.key === "Enter") { event.preventDefault(); submitAccountDialog(); } });
+    if (accountDialogPass) accountDialogPass.addEventListener("keydown", function (event) { if (event.key === "Enter") { event.preventDefault(); submitAccountDialog(); } });
+    window.addEventListener("keydown", function (event) { if (event.key === "Escape" && !accountDialog.hidden) closeAccountDialog(); });
+  }
+
   canvas.addEventListener("pointerdown", function (event) {
     event.preventDefault();
     var point = Game.pointerPosition(event), center = C.width / 2;
 
     if (S.screen === "menu") {
-      if (point.x > center - 100 && point.x < center + 100 && point.y >= 245 && point.y <= 300) Game.start(Game.getContinueLevel());
-      else if (point.x > center - 100 && point.x < center + 100 && point.y >= 306 && point.y <= 356) Game.openLevelSelect();
-      else if (point.x >= 22 && point.x <= 172 && point.y >= 365 && point.y <= 409) Game.openZombieCodex();
-      else if (point.x >= 188 && point.x <= 338 && point.y >= 365 && point.y <= 409) Game.openSkillCodex();
-      else if (point.x > center - 100 && point.x < center + 100 && point.y >= 425 && point.y <= 467) Game.startTestArena();
+      var menuButtons = C.menu.buttons;
+      if (pointInRect(point, menuButtons.start)) Game.start(Game.getContinueLevel());
+      else if (pointInRect(point, menuButtons.levelSelect)) Game.openLevelSelect();
+      else if (pointInRect(point, menuButtons.zombieCodex)) Game.openZombieCodex();
+      else if (pointInRect(point, menuButtons.skillCodex)) Game.openSkillCodex();
+      else if (pointInRect(point, menuButtons.testArena)) Game.startTestArena();
+      else if (pointInRect(point, menuButtons.account)) Game.openAccount();
+      return;
+    }
+    if (S.screen === "login") {
+      var login = C.accountUI.login;
+      if (pointInRect(point, login.userName) || pointInRect(point, login.password) || pointInRect(point, login.submit)) Game.openAccountDialog(S.accountMode);
+      else if (pointInRect(point, login.switchMode)) Game.setAccountMode(S.accountMode === "register" ? "login" : "register");
+      else if (pointInRect(point, C.accountUI.back)) Game.backToMenu();
+      return;
+    }
+    if (S.screen === "account") {
+      var accountBox = C.accountUI.account;
+      if (pointInRect(point, accountBox.importButton)) Game.importLegacyProgress();
+      else if (pointInRect(point, accountBox.logoutButton)) Game.logoutAccount();
+      else if (pointInRect(point, accountBox.deleteButton)) Game.openAccountDialog("delete");
+      else if (pointInRect(point, C.accountUI.back)) Game.backToMenu();
       return;
     }
     if (S.screen === "zombieCodex" || S.screen === "skillCodex") { handleCodexPointer(point, S.screen); return; }

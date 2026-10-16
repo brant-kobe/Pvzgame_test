@@ -38,6 +38,8 @@
 
 - 针对玩家本人的投掷攻击、更复杂的敌人行为与地图互动。
 - 音效、长期养成、商店、广告、排行榜和联网功能。
+- 资源板块：`resources` 表、`Game.accounts.addResource` 与账户中心的资源占位区已就绪，但资源恒为 0，产出与消耗规则待设计。
+- 账户与数据层（FastAPI + SQLAlchemy + SQLite）**已按第 12 节实施完毕**。
 
 ### 单局循环
 
@@ -359,6 +361,11 @@
 - 已完成温压弹、干冰弹、装甲车、空投轰炸、电磁穿刺、高能射线、旋风加农、冰雹发生器、燃油弹、压缩气刃、无人机与跃迁电子及各自专属词条。
 - 验收：技能之间有互补性，且不完全取代步枪构筑。
 
+### M6：账户与数据层（已实现）
+
+- 把项目从纯前端扩展为全栈：Python 3.13 + FastAPI + SQLAlchemy + SQLite 的本地服务承载账户、登录会话、关卡进度与资源；前端保持零依赖原生 JS，账户数据只经 `Game.accounts` 访问。
+- 验收已通过：注册 / 登录 / 注销 / 删号全流程可用；通关与失败都会上报，每关最佳用时与击杀落库，关卡列表按当前账户显示「已通关」；未启动服务或未登录时明确提示「进度不会保存」（成绩只留在本次会话），且战斗照常可玩。实施记录见第 12 节末尾。
+
 ## 9. 关键界面
 
 - 战斗 HUD：顶部显示“关卡数字 关卡名称”（如“3 封锁工厂”）、暂停按钮、等级、经验条和波次；底部显示立体城墙、PNG 背影人物、左手步枪和右上方悬浮幻形。
@@ -370,7 +377,10 @@
 - 测试场：从首页进入自由战斗模式，桌面端调试面板位于战场画布右侧的独立区域，小屏设备上改为居中浮层；**僵尸选择器按小怪、精英、首领从上往下分成三行**，每行是一条**横向可拖动的列表**，把该分类下的全部僵尸（含 `codexHidden` 的派生单位）铺成不换行的一排并可左右拖动，点击即选中、当前选中项高亮，`←/→` 仍可逐个切换；可生成 1 只或按首关首波数量生成一波；可循环选择并单独解锁核心技能、应用所选技能专属词条，或清空所有技能与词条并恢复初始构筑；另支持清空敌人、恢复城墙/玩家状态和关闭/开启步枪。面板可收起，并支持 `H` 切换显示；测试场不推进正式波次、不写入关卡通关进度。
 - 升级界面：三张居中横向词条卡，背景减暗并暂停战斗。
 - Boss HUD：顶部的首领横幅（只画「BOSS · 尸潮领主」，没有阶段提示文案）；血条本身绘制在首领头顶，是一条血条配「×N」剩余条数计数。
-- 结算界面：胜利/失败、通关时间、击杀数、最终等级，以及胜利时的「已解锁：下一关名称」；**没有词条回顾**。
+- 结算界面：胜利/失败、通关时间、击杀数、最终等级，以及胜利时的「已解锁：下一关名称」；**没有词条回顾**。账户系统实施后另加一行成绩保存提示（未登录 / 未连接数据库时显示「成绩未保存」）。
+- 账户界面（已实施）：首页菜单底部的「账户：未登录 / 用户名」按钮进入，内容为用户名与注册时间、通关进度与每关最佳用时 / 击杀、资源占位区，以及「导入本机旧进度」「注销登录」「删除账户」（删除需再输密码）。
+- 登录界面（已实施）：在 Canvas 上绘制的登录 / 注册切换界面，表单值由 `#account-dialog` 输入浮层承载（用户名 + `type="password"` 密码框），风格与测试场 DOM 面板一致，不引入前端框架。
+- 顶部账户横幅（已实施）：**只在菜单、关卡选择与结算界面显示**，战斗中不画以免遮挡战场；未连接数据库时提示「未连接数据库 · 本局进度不会保存」，未登录时提示「未登录 · 进度不会保存」。结算界面另有一行状态：已登录显示「成绩已保存到账户 · 用户名」，否则显示「成绩未保存 · 未登录 / 未连接数据库」。
 
 ## 10. 验收标准
 
@@ -524,3 +534,166 @@
 - 已使用 `git diff --check` 检查补丁空白字符。
 - Windows Git 出现的 `LF will be replaced by CRLF` 仅为换行符转换提示，不影响运行。
 - 人物精灵可从 `player-man.png` / `player-body.png` / `man.png` 回退加载；步枪与幻形位置由 `config.js` 的 `sprites.playerRifle` 和 `skillRing` 控制。
+
+## 12. 账户与数据层（全栈 · 已实现）
+
+把项目从「纯前端单机」扩展为「前端零依赖 + Python 后端持有数据」的全栈形态：账户、登录会话、关卡进度与每关统计全部存进 SQLite，前端只通过同源 `/api` 访问。**12.1～12.10 是按此实现的设计（实施中的取舍与偏差见 12.11 实施记录）。**
+
+### 12.1 运行模型
+
+```powershell
+python -m venv .venv
+.venv\Scripts\pip install -r server\requirements.txt
+.venv\Scripts\python server\run.py        # → http://127.0.0.1:8787
+```
+
+- 服务由 uvicorn 驱动，**只绑定 `127.0.0.1`**（不监听局域网）；同一端口既托管静态资源又提供 `/api`，因此**不需要 CORS**。
+- 依赖固定在 `server/requirements.txt`，只有三项：`fastapi`、`uvicorn[standard]`、`sqlalchemy`。密码哈希用标准库 `hashlib.pbkdf2_hmac`（不引 passlib / bcrypt），会话用数据库表 + HttpOnly Cookie（不引 JWT 库）。
+- **前端保持零依赖**：游戏本体仍是按 `index.html` 固定顺序加载的原生 JS（ES5），不引入构建工具与前端框架。
+- **断连行为**：`file://` 打开或 `/api/health` 探测失败 → 进入 `offline` 态，顶部提示「未连接数据库 · 本局进度不会保存」，账户界面禁用，战斗、测试场与图鉴照常可玩但**不写库**；未登录（`guest`）同样不保存。`Game.winLevel` 在两种情况下都不发请求，结算界面追加一行「成绩未保存」。
+
+### 12.2 文件布局
+
+```text
+server/
+  run.py                  # 启动入口：uvicorn.run(create_app())
+  requirements.txt        # fastapi / uvicorn[standard] / sqlalchemy
+  app/
+    __init__.py           # create_app()：中间件、路由装配、静态挂载
+    config.py             # 数据库 URL、会话时长、用户名/密码规则、端口、允许的 Origin
+    database.py           # engine / SessionLocal / Base / get_db 依赖 / SQLite PRAGMA
+    models.py             # Account / Session / LevelProgress / Resource
+    schemas.py            # Pydantic 请求与响应模型
+    security.py           # pbkdf2 哈希与校验、会话签发、current_account 依赖
+    routers/
+      health.py           # GET /api/health
+      auth.py             # /api/auth/register|login|logout
+      me.py               # /api/me、/api/me/progress、/api/me/resources
+    web.py                # GET / → index.html；挂载 /src /styles /assets /pictures
+data/
+  blockline.db            # 运行时生成（已加入 .gitignore）
+.venv/                    # 虚拟环境（已加入 .gitignore）
+```
+
+静态挂载**只暴露** `index.html` 与 `src/`、`styles/`、`assets/`、`pictures/` 四个目录，`server/` 与 `data/` 无法通过 HTTP 访问。
+
+### 12.3 数据表
+
+| 表 | 字段 | 说明 |
+| --- | --- | --- |
+| `accounts` | `id`、`username`（唯一、`COLLATE NOCASE`）、`password_hash`、`created_at`、`last_login_at` | 用户名不区分大小写，中文不受影响 |
+| `sessions` | `token_hash`（主键）、`account_id`（级联删除）、`created_at`、`expires_at` | 登录态落库，服务重启不掉线 |
+| `level_progress` | `account_id` + `level_id`（联合主键）、`completed_at`、`best_time`、`best_kills`、`attempts`、`wins` | **通关 + 每关统计**，`best_*` 取更优、`attempts` / `wins` 累加 |
+| `resources` | `account_id` + `resource_id`（联合主键）、`amount` | 资源板块预留，目录来自 `config.resources` |
+| `schema_version` | `version` | 供以后手写迁移脚本判断版本 |
+
+- SQLAlchemy 2.0 类型化声明式模型；SQLite 连接统一设 `foreign_keys=ON`、`journal_mode=WAL`、`busy_timeout=5000`。
+- 建表用 `Base.metadata.create_all()` 配合 `schema_version` 记录版本；**暂不引入 Alembic**（本地单机、单库），将来真需要版本化迁移时再补。
+- 密码存储格式 `pbkdf2_sha256$200000$<salt_hex>$<hash_hex>`（16 字节随机盐），校验走 `hmac.compare_digest`。
+- 会话 token 由 `secrets.token_urlsafe(32)` 生成，**库里只存 `sha256(token)`**（库泄露也无法复用会话），默认 30 天有效期、剩余不足 15 天时滑动续期，启动时清理过期会话。
+
+### 12.4 接口
+
+全部挂在 `/api` 下，JSON 收发，鉴权走 HttpOnly Cookie：
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/health` | 连接探测（前端四态判定的依据），返回服务与数据库状态 |
+| POST | `/api/auth/register` | `{username, password}` → 建号并直接登录，下发会话 Cookie |
+| POST | `/api/auth/login` | 校验密码 → 新会话 |
+| POST | `/api/auth/logout` | 删除当前会话并清 Cookie |
+| GET | `/api/me` | 账户信息 + 全部关卡记录 + 资源（登录后启动拉一次） |
+| POST | `/api/me/progress` | `{levelId, time, kills, win}` → upsert，维护 `best_*` / `attempts` / `wins` |
+| GET / POST | `/api/me/resources` | 读取 / `{resourceId, delta}` 增减（资源板块预留） |
+| DELETE | `/api/me` | `{password}` 二次确认后删号（级联清进度与资源） |
+
+统一错误体 `{"error": {"code", "message"}}`：`401` 未登录、`403` 密码错误、`409` 用户名已存在、`422` 参数不合法。所有写接口只接受 `POST` / `DELETE`，并校验 `Origin` / `Referer` 同源，配合 `SameSite=Strict` 防止本地其它页面误触发。
+
+### 12.5 前端数据层
+
+新增 `src/accounts.js`（`Game.accounts`），在 `index.html` 中排在 `config` 之后、`state` 之前：
+
+| 成员 | 说明 |
+| --- | --- |
+| `status` | `loading` / `ready` / `guest` / `offline` 四态 |
+| `load()` | `GET /api/me`：200 → `ready`；401 → `guest`；网络失败或 `file://` → `offline` |
+| `login(u, p)` / `register(u, p)` / `logout()` | 成功后重拉 `/api/me`，失败返回错误码供界面显示 |
+| `getProgress()` | **同步**返回缓存的 `{completed}`，供 render 直接读 |
+| `markLevelComplete(levelId, stats)` | 乐观更新缓存 + 异步 `POST /api/me/progress` |
+| `getResources()` / `addResource(id, delta)` | 按 `config.resources` 补齐缺省 0，写入走异步 |
+| `deleteAccount(password)` | 删号成功后回到 `guest` |
+
+- `state.js` 里 `getProgress` / `markLevelComplete` / `isLevelCompleted` / `isLevelUnlocked` **四个公开函数名全部保留**（内部改为委托缓存），因此 `render.js` 的关卡列表、`Game.getContinueLevel`、`Game.winLevel` 的调用点零改动，Canvas 绘制仍是同步的。
+- `main.js` 启动时异步调用 `Game.accounts.load()`，不阻塞主循环；请求超时 4 秒（`AbortController`），失败重试由用户操作触发。
+- 语法继续守 ES5（`fetch` / `AbortController` 属浏览器 API，不受限）；前端**不再读写 `localStorage` 存进度**，登录态完全由 Cookie 承担，刷新不掉线。
+- **旧档导入**：账户界面提供「导入本机旧进度」按钮，把 `blockline.progress` 的 `completed` 逐关 POST（幂等，已通的跳过），**不自动猜账户**。
+
+### 12.6 界面
+
+- **菜单**：底部新增按钮「账户：未登录 / 用户名」，6 个按钮矩形统一收进 `config.menu`，`drawMenu` 与 `input.js` 同源读取，顺带消除现有两处硬编码。
+- **新 screen `login`**：登录 / 注册切换、错误提示与离线说明；表单值走 DOM 浮层。
+- **新 screen `account`**：用户名、注册时间、通关 X/11、每关最佳用时与击杀（有记录才显示）、**资源占位区**、「导入本机旧进度」「注销登录」「删除账户」（删除需再输密码）。
+- **DOM 输入浮层 `#account-dialog`**：用户名 + 密码（`type="password"`）+ 提交 / 取消 + 红字错误行，样式对齐现有 `#test-controls`；Enter 提交、Esc 取消，提交期间禁用按钮。表单值不落 `localStorage`。
+- **顶部账户横幅**：只在菜单、关卡选择与结算界面显示，战斗中不画以免遮挡战场。
+- `Game.reset` 不触碰账户缓存；账户界面几何集中在 `config.accountUI`，与 `drawAccount` / `input.js` 共用。
+
+### 12.7 配置项
+
+- `config.accounts`：`{ apiBase: "", healthPath: "/api/health", timeoutMs: 4000, usernameMin: 2, usernameMax: 16, usernamePattern: 中文/字母/数字/下划线, passwordMin: 6, passwordMax: 64 }`
+- `config.resources`：资源目录（占位三项，各带 `id` / `name` / `color`），**是资源目录的唯一来源**
+- `config.menu`：首页 6 个按钮的矩形
+- `config.accountUI`：登录与账户界面的几何
+- 服务端同名规则在 `server/app/config.py`，**是权威校验**；前端那份只做即时提示，两份必须同步。
+
+### 12.8 验证方式
+
+```powershell
+.venv\Scripts\python -m compileall server
+Get-ChildItem src -Filter *.js | ForEach-Object { node --check $_.FullName }
+git diff --check
+```
+
+- `tmp/check_db.py`：临时库跑建表幂等、密码哈希与校验、用户名唯一（含大小写）、进度 upsert（`best_*` 取更优 / `attempts`·`wins` 累加）、资源读写、级联删除、过期会话清理。
+- `tmp/check_api.py`：以后台任务启动 `python server/run.py --port 8790 --db <临时库路径>`，另一个进程用 `urllib` 跑全流程（注册 → 重复注册 409 → 登录 → 错密码 403 → 写进度 → 读回 → 注销 → 401 → 未登录写库被拒），跑完关闭后台任务。**刻意不用 `fastapi.testclient`**（它会引入 `httpx` 依赖，也违反项目「不引入测试框架」的约定），也不通过 subprocess 管道抓服务输出（沙箱禁止命名管道）。
+- 画面：沿用 `tmp/trace-draw.js` + `tmp/replay-draw.py` 出图核对菜单新按钮与登录 / 账户界面；DOM 浮层无法用无头浏览器截屏（本机沙箱限制），改为脚本断言元素存在、绑定与文案，并在浏览器里人工确认一次。
+
+### 12.9 实施顺序
+
+1. 后端骨架：`.venv` + `requirements.txt` + `run.py` + `create_app` + `config/database/models` + `/api/health`，起服务自测。
+2. 鉴权：`security.py` + `routers/auth.py` + `sessions` 表，跑通注册 / 登录 / 注销。
+3. 业务接口：`routers/me.py`（进度统计 + 资源）+ 删号。
+4. 前端数据层：`src/accounts.js` + `index.html` 装载 + `state.js` 委托改造 + `main.js` 探测，跑冒烟。
+5. 前端界面：`config.js`（`menu` / `accountUI` / `accounts` 规则 / `resources`）+ `render.js`（菜单按钮、登录、账户、横幅）+ `input.js` 点击判定。
+6. DOM 登录 / 注册浮层（`index.html` + `styles/main.css`）+ 旧档导入。
+7. `tmp` 冒烟脚本、trace 出图、`README.md` / `AGENTS.md` / `DEVELOPMENT_LOG.md` 同步。
+
+### 12.10 验收标准
+
+- 注册、登录、注销、删除账户全流程可用；重复用户名返回 409 并在浮层给出中文提示。
+- 通关后进度与统计**立即落库**：重新登录或换浏览器访问同一账户，关卡列表的「已通关」与统计一致。
+- 未启动后端（`file://`）或未登录时，顶栏提示明确、账户界面禁用、战斗照常可玩且**不会静默丢档**。
+- 关卡列表、`Game.getContinueLevel`、结算界面显示仍走同步缓存，**render 层无异步逻辑**。
+- 数据库中 `password_hash` 不含明文；`server/` 与 `data/` 无法通过 HTTP 访问；服务只监听 `127.0.0.1`。
+
+### 12.11 实施记录（2026-10-16）
+
+**落地情况**：12.1～12.10 的设计全部实现，实现中有一处主动调整、两处明确取舍：
+
+1. **未登录 / 离线的进度改为「会话内内存记录」**：原设计是「不保存、列表也不显示」，实现后改为写入 `Game.accounts.state.sessionProgress` —— 关卡列表在本次会话内照常显示「已通关」，但刷新即失效，顶栏与结算界面始终标注「成绩未保存」；会话记录与账户进度互不混用，登录成功后立即丢弃。这样不注册也能得到进度反馈，同时仍然如实提示「不会保存」。
+2. **密码规则前后端各一份**：前端 `config.accounts` 只做即时提示（用户名 2–16 个中文 / 字母 / 数字 / 下划线、密码 ≥ 6 位），服务端 `server/app/config.py` 是权威校验，非法输入一律返回中文错误体。
+3. **静态资源按目录挂载**：只暴露 `index.html` 与 `src/`、`styles/`、`assets/`、`pictures/`，`server/` 与 `data/` 一律 404（接口冒烟里有断言）。
+
+**改动文件**：新增 `server/run.py`、`server/requirements.txt`、`server/app/`（`config` / `database` / `models` / `schemas` / `serializers` / `security` / `errors` / `web` / `routers/{health,auth,me}`）与 `src/accounts.js`；改造 `index.html`（装载 `accounts.js` + 账户输入浮层）、`src/state.js`（进度委托账户层、`reportRun` / `loseLevel`、账户界面切换）、`src/update.js` 与 `src/combat.js`（失守统一走 `Game.loseLevel`）、`src/render.js`（菜单账户按钮、登录 / 账户中心 / 状态横幅、结算保存提示，几何来自 `config.menu` 与 `config.accountUI`）、`src/input.js`（菜单与账户界面点击、输入浮层绑定）、`src/config.js`（`menu` / `accountUI` / `accounts` / `resources`）、`src/main.js`（启动探测）、`styles/main.css`（浮层样式）、`.gitignore`（`data/`、`.venv/`、`__pycache__`）。
+
+**依赖**：`fastapi 0.143.3`、`uvicorn[standard] 0.54.0`、`sqlalchemy 2.1.4`（Python 3.13.16 的 `.venv`）。
+
+**验证结果**：
+
+- 数据层 `tmp/check_db.py`：**35 项**断言通过 —— 建表与 `schema_version`、密码哈希与校验（损坏哈希、每次加盐不同）、用户名大小写不敏感与唯一约束、进度 upsert（失败只累加 attempts、胜利刷新 best 与 wins、更差的一局不覆盖最佳）、资源不为负、过期会话清理、删号对进度 / 资源 / 会话的级联删除。
+- 接口 `tmp/check_api.py`：**45 项**断言通过 —— 注册 / 重复注册 409 / 登录 / 错密码 403 / 未登录 401 / 进度上报与最佳值维护 / 越界关卡 422 / 资源增减与未知资源 422 / 注销后 401 / 跨站 Origin 403 / 删号需密码 / 静态资源 200 而 `data/`、`server/` 404。
+- 前端 `tmp/check-accounts.js`：**111 项**断言通过 —— `file://` 离线与访客两条降级路径、会话内记录不写库、注册 / 登录 / 注销 / 删号、上报请求体、缓存乐观更新、资源补零、旧档导入幂等、测试场不写进度、网络失败降级为 offline 并可恢复、菜单与账户界面几何约束（按钮不越界、不压返回按钮）、五个新界面的绘制文案、输入浮层三种模式与离开界面自动收起。
+- 回归：`tmp/` 下 **34 个 `check-*.js` 全部通过**（含 11 个关卡脚本与 smoke 系列）；既有脚本的沙箱按 `index.html` 新顺序补上了 `accounts.js`，`tmp/check-unlock.js` 里「通关写进 localStorage」的断言改为「通关写入账户层且不再直接写 localStorage」。
+- 画面：`tmp/trace-draw.js account <menu|login|register|account|result>` + 捆绑 Python 的 `tmp/replay-draw.py` 出图核对（`tmp/account-*.png`），菜单账户按钮、登录 / 注册界面、账户中心（账户卡 / 资源占位 / 关卡记录 / 三个操作按钮 / 提示行）与结算保存提示都落在面板内且互不重叠。
+- 真实服务：`python server/run.py` 监听 `127.0.0.1:8787`，`/`、`/src/accounts.js`、`/styles/main.css`、`/api/health` 均为 200，`/data/blockline.db` 与 `/server/run.py` 均为 404；真实库的表结构与设计一致（5 张表、`schema_version = 1`、`journal_mode = wal`）。
+
+**当时未做**（都记在 `README.md` 的「当前限制与后续方向」）：资源产出与消耗规则；找回密码、邮箱验证与多设备同步（服务只监听本机）。

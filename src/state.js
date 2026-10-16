@@ -2,7 +2,7 @@
 (function (Game) {
   "use strict";
   var C = Game.config;
-  Game.state = { screen: "menu", selectedLevel: 1, player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null };
+  Game.state = { screen: "menu", selectedLevel: 1, accountMode: "login", player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null };
   Game.reset = function () {
     var s = Game.state;
     var level = C.levels.find(function (item) { return item.id === s.selectedLevel; });
@@ -87,25 +87,35 @@
     document.getElementById("start-hint").style.display = "none";
   };
   Game.exitToMenu = function () { Game.reset(); Game.state.testArena = null; Game.state.screen = "menu"; document.getElementById("start-hint").style.display = "block"; };
-  var progressKey = "blockline.progress", memoryProgress = {};
-  function readStoredProgress() {
-    try { return JSON.parse(window.localStorage.getItem(progressKey)) || {}; } catch (error) { return {}; }
-  }
-  Game.getProgress = function () {
-    var completed = {}, stored = readStoredProgress();
-    if (stored.completed) Object.keys(stored.completed).forEach(function (id) { completed[id] = true; });
-    Object.keys(memoryProgress).forEach(function (id) { completed[id] = true; });
-    return { completed: completed };
+  Game.getProgress = function () { return Game.accounts.getProgress(); };
+  Game.isLevelCompleted = function (levelId) { return Game.accounts.isCompleted(levelId); };
+  Game.markLevelComplete = function (levelId, stats) {
+    return Game.accounts.reportRun(levelId, { time: stats && stats.time, kills: stats && stats.kills, win: true });
   };
-  Game.isLevelCompleted = function (levelId) { return !!Game.getProgress().completed[levelId]; };
-  Game.markLevelComplete = function (levelId) {
-    memoryProgress[levelId] = true;
-    try {
-      var stored = readStoredProgress();
-      stored.completed = stored.completed || {};
-      stored.completed[levelId] = true;
-      window.localStorage.setItem(progressKey, JSON.stringify(stored));
-    } catch (error) {}
+  Game.reportRun = function (win) {
+    var session = Game.state.session;
+    if (!session || session.testArena || !session.level) return null;
+    return Game.accounts.reportRun(session.level, { time: session.elapsed, kills: session.kills, win: !!win });
+  };
+  Game.loseLevel = function (message) {
+    var s = Game.state;
+    if (s.screen !== "playing" || !s.session) return;
+    s.session.message = message || "城墙失守";
+    s.screen = "defeat";
+    Game.reportRun(false);
+  };
+  Game.openLogin = function () { Game.state.accountMode = "login"; Game.state.screen = "login"; };
+  Game.setAccountMode = function (mode) { Game.state.accountMode = mode === "register" ? "register" : "login"; };
+  Game.openAccount = function () {
+    if (Game.accounts.getStatus() === "ready") Game.state.screen = "account";
+    else Game.openLogin();
+  };
+  Game.logoutAccount = function () {
+    Game.accounts.logout().then(function () { Game.backToMenu(); });
+  };
+  Game.importLegacyProgress = function () {
+    if (Game.accounts.getStatus() !== "ready") { Game.accounts.state.notice = "登录后才能导入旧进度"; return; }
+    Game.accounts.importLegacy();
   };
   Game.isLevelUnlocked = function (levelId) {
     var level = C.levels.find(function (item) { return item.id === levelId; });
@@ -185,8 +195,8 @@
   Game.winLevel = function () {
     var s = Game.state;
     if (s.screen !== "playing" || !s.session) return;
-    Game.markLevelComplete(s.session.level);
     s.screen = "victory";
     s.session.message = "关卡通关";
+    Game.reportRun(true);
   };
 })(window.Game = window.Game || {});

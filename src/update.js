@@ -96,7 +96,7 @@
           else {
             wall.hp -= info.damage; current.attackTimer = current.type === "boss" ? .65 : (info.attackInterval || 1);
             Game.burst(current.x, wall.y, 4, C.colors.red); Game.addText(current.x, wall.y - 19, "-" + info.damage, C.colors.red);
-            if (wall.hp <= 0) { wall.hp = 0; session.message = "城墙失守"; S.screen = "defeat"; }
+            if (wall.hp <= 0) { wall.hp = 0; Game.loseLevel("城墙失守"); }
           }
         }
       } else {
