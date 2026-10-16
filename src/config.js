@@ -123,6 +123,20 @@
     { total: 138, interval: .33, mix: ["normal", "flame", "snowman", "normal", "flame"], hpScale: 1.8 },
     { total: 162, interval: .3, mix: ["flame", "snowman", "normal", "flame", "snowman"], hpScale: 1.95 }
   ];
+  var levelElevenWaves = [
+    { total: 12, interval: 1.5, mix: ["flame"] },
+    { total: 14, interval: 1.35, mix: ["flame", "snowman"] },
+    { total: 18, interval: 1.2, mix: ["flame", "snowman", "thunder"] },
+    { total: 24, interval: .55, mix: ["flame", "snowman", "thunder", "flame"], elite: "thunderElite" },
+    { total: 30, interval: .5, mix: ["snowman", "flame", "thunder", "flame"] },
+    { total: 42, interval: .45, mix: ["flame", "thunder", "snowman", "flame"], hpScale: 1.2 },
+    { total: 54, interval: .42, mix: ["thunder", "snowman", "flame", "thunder"], boss: true, hpScale: 1.35 },
+    { total: 66, interval: .4, mix: ["flame", "snowman", "thunder", "flame", "snowman"], hpScale: 1.5 },
+    { total: 82, interval: .38, mix: ["snowman", "thunder", "flame", "snowman", "thunder"], hpScale: 1.65 },
+    { total: 98, interval: .36, mix: ["flame", "snowman", "thunder", "flame", "snowman"], hpScale: 1.8 },
+    { total: 114, interval: .33, mix: ["thunder", "flame", "snowman", "thunder", "flame"], hpScale: 1.95 },
+    { total: 132, interval: .3, mix: ["snowman", "thunder", "flame", "snowman", "thunder"], hpScale: 2.1 }
+  ];
   Game.config = {
     width: 360, height: 640, maxLevel: 15, maxSkillSlots: 4, wallMaxHp: 1000, armorBlockWindow: .12, xpBase: 15, xpMultiplier: 1.13, xpBonus: 6, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12, flyingHover: 16,
     sprites: {
@@ -324,7 +338,8 @@
       { id: 7, name: "装甲坟场", subtitle: "护甲僵尸成群推进，装甲精英坐镇", brief: "不投放快跑与远程单位，压力全部来自推进缓慢但极难啃的护甲群体。", unlocked: true, hpScale: 1.75, xpScale: .26, waves: levelSevenWaves },
       { id: 8, name: "环城高架", subtitle: "飞鸟与快跑压境，贴地技能失效", brief: "飞鸟全程停在半空，装甲车、龙卷风与燃油弹都打不到，改用对空手段。", unlocked: true, hpScale: 2, xpScale: .165, waves: levelEightWaves },
       { id: 9, name: "焦土防线", subtitle: "护甲与烈焰混编，后期节奏收紧", brief: "火焰僵尸免疫燃烧与冻结、火系伤害减半，前期放慢、后期明显加快。", unlocked: true, hpScale: 2.1, xpScale: .21, waves: levelNineWaves },
-      { id: 10, name: "冰火交界", subtitle: "元素互克，控制手段大打折扣", brief: "火焰与雪人的抗性互补，只堆单一元素或只堆冰冻控制都会被卡住一半。", unlocked: true, hpScale: 2.2, xpScale: .22, waves: levelTenWaves }
+      { id: 10, name: "冰火交界", subtitle: "元素互克，控制手段大打折扣", brief: "火焰与雪人的抗性互补，只堆单一元素或只堆冰冻控制都会被卡住一半。", unlocked: true, hpScale: 2.2, xpScale: .22, waves: levelTenWaves },
+      { id: 11, name: "高压电厂", subtitle: "电系受制，冰火再度交锋", brief: "雷电僵尸让电系技能减半、精英完全免疫，冰火互克仍需两手准备。", unlocked: true, hpScale: 2.35, xpScale: .2, waves: levelElevenWaves }
     ],
     waves: levelOneWaves
   };
