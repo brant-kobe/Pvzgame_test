@@ -148,14 +148,15 @@
     levelSelect: { panelX: 16, panelY: 42, panelWidth: 328, panelHeight: 578, listX: 30, listY: 144, listWidth: 300, rowHeight: 66, backY: 566, backHeight: 40, infoX: 150, infoSize: 20, briefX: 22, briefY: 72, briefWidth: 316, briefTop: 190, briefHeadingStep: 20, briefRowStep: 22, briefGroupGap: 6, briefBottom: 20, briefMinHeight: 340, briefCloseSize: 28 },
     menu: {
       panelX: 28, panelY: 80, panelWidth: 304, panelHeight: 474,
-      bannerY: 14, bannerHeight: 22,
+      bannerY: 14, bannerHeight: 22, bannerLeft: 80,
+      accountCircle: { x: 44, y: 42, r: 22 },
       buttons: {
-        start: { x: 98, y: 249, w: 164, h: 46 },
-        levelSelect: { x: 98, y: 309, w: 164, h: 42 },
-        zombieCodex: { x: 22, y: 365, w: 150, h: 44 },
-        skillCodex: { x: 188, y: 365, w: 150, h: 44 },
-        testArena: { x: 98, y: 425, w: 164, h: 42 },
-        account: { x: 98, y: 481, w: 164, h: 42 }
+        start: { x: 98, y: 250, w: 164, h: 46 },
+        levelSelect: { x: 98, y: 306, w: 164, h: 42 },
+        testArena: { x: 98, y: 362, w: 164, h: 42 },
+        attributes: { x: 34, y: 480, w: 92, h: 44 },
+        skillCodex: { x: 132, y: 480, w: 92, h: 44 },
+        zombieCodex: { x: 230, y: 480, w: 92, h: 44 }
       }
     },
     accountUI: {
@@ -173,6 +174,15 @@
         logoutButton: { x: 188, y: 424, w: 128, h: 34 },
         deleteButton: { x: 44, y: 466, w: 272, h: 34 }
       }
+    },
+    attributesUI: {
+      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
+      titleY: 118, subtitleY: 144,
+      statX: [44, 188], statY: [192, 236, 280],
+      elementTitleY: 326,
+      elementX: [56, 160, 264], elementY: [360, 392], elementOrder: ["physical", "fire", "ice", "electric", "wind", "energy"],
+      noteY: 444,
+      back: { x: 98, y: 514, w: 164, h: 36 }
     },
     accounts: { apiBase: "", healthPath: "/api/health", timeoutMs: 4000, usernameMin: 2, usernameMax: 16, passwordMin: 6, passwordMax: 64, legacyKey: "blockline.progress", maxRecords: 5, maxStatusNote: 26 },
     resources: [
@@ -193,6 +203,18 @@
       ice: { name: "冰", color: "#58aaff", detail: "低温与冻结伤害。" },
       fire: { name: "火", color: "#ff9b52", detail: "高温与燃烧伤害。" },
       wind: { name: "风", color: "#63e6a0", detail: "气流与切割伤害。" }
+    },
+    attributes: {
+      base: {
+        attack: 100,
+        elementAttack: { physical: 100, energy: 100, electric: 100, ice: 100, fire: 100, wind: 100 },
+        cooldownReduction: 0,
+        wallHpBonus: 0,
+        critRate: .08,
+        critDamage: 1.5,
+        statusDurationMultiplier: 1
+      },
+      caps: { cooldownReduction: .5, critRate: .95, critDamage: 5, statusDurationMultiplier: 2 }
     },
     statusCategories: {
       damage: { name: "伤害", detail: "持续掉血的负面状态，不限制行动。" },

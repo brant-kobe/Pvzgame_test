@@ -16,9 +16,10 @@
       skills[id].burstTimer = 0;
       skills[id].burstAngle = -Math.PI / 2;
     });
-    s.player = { x: C.width / 2, y: C.height - 58, aimAngle: -Math.PI / 2, manualAimTimer: 0, maxHp: 100, hp: 100, damage: 28, fireInterval: .52, fireTimer: .05, magazineSize: C.magazineCapacity, ammo: C.magazineCapacity, reloadDuration: C.reloadDuration, reloadTimer: 0, rifleEnabled: true, burst: 0, burstShotsRemaining: 0, burstTimer: 0, burstAngle: -Math.PI / 2, spread: 0, pierce: 0, bulletRadius: 4, crit: .08, critDamage: 1.5, burn: 0, freeze: 0, bulletType: "normal", skills: skills, skillOrder: [], level: 1, xp: 0, nextXp: C.xpBase, traits: {} };
+    s.player = { x: C.width / 2, y: C.height - 58, aimAngle: -Math.PI / 2, manualAimTimer: 0, maxHp: 100, hp: 100, damage: 28, fireInterval: .52, fireTimer: .05, magazineSize: C.magazineCapacity, ammo: C.magazineCapacity, reloadDuration: C.reloadDuration, reloadTimer: 0, rifleEnabled: true, burst: 0, burstShotsRemaining: 0, burstTimer: 0, burstAngle: -Math.PI / 2, spread: 0, pierce: 0, bulletRadius: 4, crit: C.attributes.base.critRate, critDamage: C.attributes.base.critDamage, burn: 0, freeze: 0, bulletType: "normal", skills: skills, skillOrder: [], level: 1, xp: 0, nextXp: C.xpBase, traits: {} };
     s.bullets = []; s.skillProjectiles = []; s.armoredCars = []; s.bombDrops = []; s.bombZones = []; s.electromagneticZones = []; s.tornadoes = []; s.drones = []; s.hailStorms = []; s.fuelShells = []; s.fuelPools = []; s.enemyShots = []; s.explosions = []; s.enemies = []; s.pendingSpawns = []; s.particles = []; s.texts = []; s.upgradeCards = []; s.skillRangePreview = null; s.levelPreview = null;
     s.wall = { x: C.width / 2, y: C.height - 125, width: C.width - 30, height: 30, maxHp: C.wallMaxHp, hp: C.wallMaxHp };
+    if (Game.attributes) { Game.attributes.applyPlayer(s.player); Game.attributes.applyWall(s.wall); }
     s.session = { level: s.selectedLevel, waves: waves, xpScale: (level && level.xpScale) || 1, hpScale: (level && level.hpScale) || 1, elapsed: 0, wave: 1, spawnCount: 0, spawnTimer: .25, eliteSpawned: false, bossSpawned: false, kills: 0, message: "", messageTimer: 0 };
   };
   Game.layoutWorld = function () {
@@ -36,6 +37,7 @@
   Game.closeLevelPreview = function () { Game.state.levelPreview = null; };
   Game.openZombieCodex = function () { Game.state.zombieCodexCategory = "minion"; Game.state.selectedZombieCodexId = null; Game.state.codexPage = 0; Game.state.screen = "zombieCodex"; };
   Game.openSkillCodex = function () { Game.state.selectedSkillCodexId = null; Game.state.codexPage = 0; Game.state.screen = "skillCodex"; };
+  Game.openAttributes = function () { Game.state.screen = "attributes"; };
   Game.backToMenu = function () { Game.state.levelPreview = null; Game.state.screen = "menu"; };
   Game.getTestEnemyIds = function () { return Object.keys(C.enemies); };
   Game.startTestArena = function () {

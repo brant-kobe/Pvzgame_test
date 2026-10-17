@@ -12,6 +12,12 @@
     return !!rect && point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
   }
 
+  function pointInCircle(point, circle) {
+    if (!circle) return false;
+    var dx = point.x - circle.x, dy = point.y - circle.y;
+    return dx * dx + dy * dy <= circle.r * circle.r;
+  }
+
   function getSkillCodexGroup() {
     if (!S.selectedSkillCodexId) return null;
     return Game.getSkillGroups().find(function (group) { return group.id === S.selectedSkillCodexId; });
@@ -255,12 +261,17 @@
 
     if (S.screen === "menu") {
       var menuButtons = C.menu.buttons;
-      if (pointInRect(point, menuButtons.start)) Game.start(Game.getContinueLevel());
+      if (pointInCircle(point, C.menu.accountCircle)) Game.openAccount();
+      else if (pointInRect(point, menuButtons.start)) Game.start(Game.getContinueLevel());
       else if (pointInRect(point, menuButtons.levelSelect)) Game.openLevelSelect();
-      else if (pointInRect(point, menuButtons.zombieCodex)) Game.openZombieCodex();
-      else if (pointInRect(point, menuButtons.skillCodex)) Game.openSkillCodex();
       else if (pointInRect(point, menuButtons.testArena)) Game.startTestArena();
-      else if (pointInRect(point, menuButtons.account)) Game.openAccount();
+      else if (pointInRect(point, menuButtons.attributes)) Game.openAttributes();
+      else if (pointInRect(point, menuButtons.skillCodex)) Game.openSkillCodex();
+      else if (pointInRect(point, menuButtons.zombieCodex)) Game.openZombieCodex();
+      return;
+    }
+    if (S.screen === "attributes") {
+      if (pointInRect(point, C.attributesUI.back)) Game.backToMenu();
       return;
     }
     if (S.screen === "login") {

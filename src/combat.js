@@ -102,8 +102,9 @@
       skills[id].burstTimer = 0;
       skills[id].burstAngle = -Math.PI / 2;
     });
-    p.damage = 28; p.fireInterval = .52; p.burst = 0; p.spread = 0; p.pierce = 0; p.bulletRadius = 4; p.crit = .08; p.critDamage = 1.5; p.burn = 0; p.freeze = 0; p.bulletType = "normal"; p.skills = skills; p.traits = {}; p.skillOrder = [];
+    p.damage = 28; p.fireInterval = .52; p.burst = 0; p.spread = 0; p.pierce = 0; p.bulletRadius = 4; p.crit = C.attributes.base.critRate; p.critDamage = C.attributes.base.critDamage; p.burn = 0; p.freeze = 0; p.bulletType = "normal"; p.skills = skills; p.traits = {}; p.skillOrder = [];
     p.ammo = p.magazineSize; p.reloadTimer = 0; p.rifleEnabled = true; p.fireTimer = 0; p.burstShotsRemaining = 0; p.burstTimer = 0;
+    if (Game.attributes) Game.attributes.applyPlayer(p);
     S.bullets = []; S.skillProjectiles = []; S.armoredCars = []; S.bombDrops = []; S.bombZones = []; S.electromagneticZones = []; S.tornadoes = []; S.drones = []; S.hailStorms = []; S.fuelShells = []; S.fuelPools = []; S.explosions = [];
     S.session.message = "技能和词条已清空";
     S.session.messageTimer = 1.5;
@@ -261,7 +262,7 @@
     // 齐射以等角度展开弹道；整轮弹药由 Game.fire 统一扣除。
     for (var lane = 0; lane < lanes; lane++) {
       var spreadOffset = lane - (lanes - 1) / 2, bulletAngle = shotAngle + spreadOffset * C.spreadAngle;
-      var laneMuzzle = Game.getWeaponMuzzle(p, C.muzzleDistance, bulletAngle), critical = Math.random() < p.crit;
+      var laneMuzzle = Game.getWeaponMuzzle(p, C.muzzleDistance, bulletAngle), critical = Math.random() < U.clamp(p.crit || 0, 0, 1);
       S.bullets.push({ x: laneMuzzle.x, y: laneMuzzle.y, vx: Math.cos(bulletAngle) * 300, vy: Math.sin(bulletAngle) * 300, damage: p.damage * (critical ? p.critDamage : 1), critical: critical, radius: p.bulletRadius, pierce: p.pierce, color: bulletColor, element: Game.getRifleElement(p), hitEnemies: [] });
     }
     for (var i = 0; i < 3; i++) S.particles.push({ x: muzzle.x + U.rand(-3, 3), y: muzzle.y + U.rand(-3, 3), vx: U.rand(-20, 20), vy: U.rand(-65, -25), life: .18, maxLife: .18, color: bulletColor, size: U.rand(2, 4) });
@@ -421,28 +422,32 @@
       S.armoredCars.push({ x: U.clamp(x, minX, maxX), y: startY, speed: skill.speed, width: skill.carWidth * scale, length: skill.carLength * scale, damage: skill.damage, hitInterval: skill.hitInterval, slowFactor: skill.slowFactor, slowDuration: skill.slowDuration, stunChance: skill.stunChance, stunDuration: skill.stunDuration, groundOnly: !!skill.groundOnly, element: Game.getSkillElement("armoredCar"), contacts: [], impactFlash: 0 });
     }
   };
+  Game.tickSkillCooldown = function (skill, dt) {
+    var p = S.player, rate = (p && p.cooldownRate) || 1;
+    skill.fireTimer = Math.max(0, skill.fireTimer - dt * rate);
+  };
   Game.updateSkills = function (dt) {
     var p = S.player;
     Object.keys(p.skills).forEach(function (type) {
       var skill = p.skills[type];
       if (!skill.unlocked) return;
       if (type === "armoredCar") {
-        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        Game.tickSkillCooldown(skill, dt);
         if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) { Game.launchArmoredCars(skill); skill.fireTimer = skill.fireInterval; }
         return;
       }
       if (type === "bombardment") {
-        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        Game.tickSkillCooldown(skill, dt);
         if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) Game.launchBombardment();
         return;
       }
       if (type === "electromagnetic") {
-        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        Game.tickSkillCooldown(skill, dt);
         if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) Game.launchElectromagnetic();
         return;
       }
       if (type === "chainLightning") {
-        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        Game.tickSkillCooldown(skill, dt);
         if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) Game.launchChainLightning();
         return;
       }
@@ -455,7 +460,7 @@
           }
           if (skill.activeElapsed >= skill.duration) { skill.active = false; skill.fireTimer = skill.fireInterval; }
         } else {
-          skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+          Game.tickSkillCooldown(skill, dt);
           if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) Game.launchHighEnergyBeam(skill);
         }
         return;
@@ -466,7 +471,7 @@
           if (skill.activeElapsed >= skill.duration) { skill.active = false; skill.fireTimer = skill.fireInterval; }
           return;
         }
-        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        Game.tickSkillCooldown(skill, dt);
         if (skill.fireTimer <= 0 && Game.isSkillRangeEngaged(type)) Game.launchWhirlwindCannon();
         return;
       }
@@ -475,7 +480,7 @@
           skill.activeElapsed = Math.min(skill.duration, skill.activeElapsed + dt);
           if (skill.activeElapsed >= skill.duration) skill.active = false;
         }
-        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        Game.tickSkillCooldown(skill, dt);
         if (skill.fireTimer <= 0 && !skill.active && Game.isSkillRangeEngaged(type)) Game.launchHailGenerator();
         return;
       }
@@ -484,7 +489,7 @@
           skill.activeElapsed = Math.min(skill.duration, skill.activeElapsed + dt);
           if (skill.activeElapsed >= skill.duration) skill.active = false;
         }
-        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        Game.tickSkillCooldown(skill, dt);
         if (skill.fireTimer <= 0 && !skill.active && Game.isSkillRangeEngaged(type)) Game.launchDrone();
         return;
       }
@@ -494,7 +499,7 @@
           skill.activeElapsed = Math.min(fuelWindow, skill.activeElapsed + dt);
           if (skill.activeElapsed >= fuelWindow) skill.active = false;
         }
-        skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+        Game.tickSkillCooldown(skill, dt);
         if (skill.fireTimer <= 0 && !skill.active && Game.isSkillRangeEngaged(type)) Game.launchFuelBomb();
         return;
       }
@@ -512,7 +517,7 @@
         }
         return;
       }
-      skill.fireTimer = Math.max(0, skill.fireTimer - dt);
+      Game.tickSkillCooldown(skill, dt);
       if (skill.fireTimer > 0 || !Game.isSkillRangeEngaged(type)) return;
       var origin = Game.getSkillMuzzle(), angle = Game.getSkillTargetAngle(type, origin);
       if (angle === null) return;
@@ -558,10 +563,10 @@
   Game.isHardControlled = function (enemy) { return !!enemy && (enemy.control || 0) > 0; };
   Game.applyHardControl = function (enemy, type, duration) {
     if (!duration || duration <= 0) return false;
-    var scale = Game.getStatusScale(enemy, type);
+    var scale = Game.getStatusScale(enemy, type), status = (S.player && S.player.statusDurationMultiplier) || 1;
     if (scale <= 0) return false;
     if (Game.blockWithArmor(enemy)) return false;
-    var time = duration * scale;
+    var time = duration * scale * status;
     if (time >= (enemy.control || 0)) { enemy.control = time; enemy.controlType = type; }
     return true;
   };
@@ -569,28 +574,31 @@
   Game.applyFreeze = function (enemy, duration) { return Game.applyHardControl(enemy, "freeze", duration); };
   Game.applyParalysis = function (enemy, duration) { return Game.applyHardControl(enemy, "paralysis", duration); };
   Game.applySlow = function (enemy, duration, factor) {
-    var scale = Game.getStatusScale(enemy, "slow");
+    var scale = Game.getStatusScale(enemy, "slow"), status = (S.player && S.player.statusDurationMultiplier) || 1;
     if (scale <= 0) return false;
     if (Game.blockWithArmor(enemy)) return false;
-    enemy.slow = Math.max(enemy.slow || 0, duration * scale);
+    enemy.slow = Math.max(enemy.slow || 0, duration * scale * status);
     enemy.slowFactor = Math.min(enemy.slowFactor || .58, factor);
     return true;
   };
   Game.applyBurn = function (enemy, dps, duration) {
-    var scale = Game.getStatusScale(enemy, "burn");
+    var p = S.player || {}, scale = Game.getStatusScale(enemy, "burn");
+    var attack = p.attackMultiplier === undefined ? 1 : p.attackMultiplier, fire = p.elementMultipliers && p.elementMultipliers.fire !== undefined ? p.elementMultipliers.fire : 1;
+    var status = p.statusDurationMultiplier || 1;
     if (scale <= 0) return false;
     if (Game.blockWithArmor(enemy)) return false;
-    enemy.burn = Math.max(enemy.burn || 0, duration * scale);
-    enemy.burnDps = Math.max(enemy.burnDps || 0, dps);
+    enemy.burn = Math.max(enemy.burn || 0, duration * scale * status);
+    enemy.burnDps = Math.max(enemy.burnDps || 0, dps * attack * fire);
     return true;
   };
   Game.applyFrostbite = function (enemy, source, dps, duration, maxStacks) {
     if (!enemy || !source || !(dps > 0) || !(duration > 0) || !(maxStacks > 0)) return false;
-    var scale = Game.getStatusScale(enemy, "frostbite");
+    var scale = Game.getStatusScale(enemy, "frostbite"), p = S.player || {};
+    var status = p.statusDurationMultiplier || 1, attack = p.attackMultiplier === undefined ? 1 : p.attackMultiplier, ice = p.elementMultipliers && p.elementMultipliers.ice !== undefined ? p.elementMultipliers.ice : 1;
     if (scale <= 0) return false;
     if (Game.blockWithArmor(enemy)) return false;
     var stacks = enemy.frostbiteStacks || (enemy.frostbiteStacks = {}), list = stacks[source] || (stacks[source] = []);
-    var time = duration * scale;
+    var time = duration * scale * status;
     if (list.length < maxStacks) list.push(time);
     else {
       var weakest = 0;
@@ -598,7 +606,7 @@
       if (time > list[weakest]) list[weakest] = time;
     }
     enemy.frostbiteDps = enemy.frostbiteDps || {};
-    enemy.frostbiteDps[source] = Math.max(enemy.frostbiteDps[source] || 0, dps);
+    enemy.frostbiteDps[source] = Math.max(enemy.frostbiteDps[source] || 0, dps * attack * ice);
     return true;
   };
   Game.getFrostbiteStacks = function (enemy, source) {
@@ -631,15 +639,15 @@
   Game.applyWound = function (enemy, duration, factor, extraDuration, extraFactor) {
     var base = duration > 0, extra = extraDuration > 0;
     if (!base && !extra) return false;
-    var scale = Game.getStatusScale(enemy, "wound");
+    var scale = Game.getStatusScale(enemy, "wound"), status = (S.player && S.player.statusDurationMultiplier) || 1;
     if (scale <= 0) return false;
     if (Game.blockWithArmor(enemy)) return false;
     if (base) {
-      enemy.wound = Math.max(enemy.wound || 0, duration * scale);
+      enemy.wound = Math.max(enemy.wound || 0, duration * scale * status);
       enemy.woundFactor = Math.max(enemy.woundFactor || 0, factor || 0);
     }
     if (extra) {
-      enemy.woundExtra = Math.max(enemy.woundExtra || 0, extraDuration * scale);
+      enemy.woundExtra = Math.max(enemy.woundExtra || 0, extraDuration * scale * status);
       enemy.woundExtraFactor = Math.max(enemy.woundExtraFactor || 0, extraFactor || 0);
     }
     return true;
@@ -1510,7 +1518,9 @@
     if (Game.blockWithArmor(enemy)) { enemy.hitFlash = .08; Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, "格挡", C.colors.cyan); return; }
     var element = Game.getDamageElement(bullet);
     enemy.lastHitElement = element;
-    var actualDamage = amount * Game.getElementDamageScale(enemy, element) * (enemy.damageTakenTimer > 0 ? enemy.damageTakenMultiplier || 1 : 1); enemy.hp -= actualDamage; enemy.hitFlash = .08; if (!bullet.noWeaponEffects && S.player.burn) Game.applyBurn(enemy, 10 + S.player.burn * 3, 1.5 + S.player.burn * .4); if (!bullet.noWeaponEffects && S.player.freeze && element === "ice") { Game.applySlow(enemy, 1.2 + S.player.freeze * .25, .58); Game.applyFreeze(enemy, C.rifleFreezeDuration); } if (!bullet.silentText) Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, bullet.critical ? Math.ceil(actualDamage) + " 暴击" : String(Math.ceil(actualDamage)), bullet.critical ? C.colors.yellow : C.colors.text);
+    var p = S.player || {}, attack = p.attackMultiplier === undefined ? 1 : p.attackMultiplier;
+    var elementAttack = p.elementMultipliers && p.elementMultipliers[element] !== undefined ? p.elementMultipliers[element] : 1;
+    var actualDamage = amount * attack * elementAttack * Game.getElementDamageScale(enemy, element) * (enemy.damageTakenTimer > 0 ? enemy.damageTakenMultiplier || 1 : 1); enemy.hp -= actualDamage; enemy.hitFlash = .08; if (!bullet.noWeaponEffects && S.player.burn) Game.applyBurn(enemy, 10 + S.player.burn * 3, 1.5 + S.player.burn * .4); if (!bullet.noWeaponEffects && S.player.freeze && element === "ice") { Game.applySlow(enemy, 1.2 + S.player.freeze * .25, .58); Game.applyFreeze(enemy, C.rifleFreezeDuration); } if (!bullet.silentText) Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, bullet.critical ? Math.ceil(actualDamage) + " 暴击" : String(Math.ceil(actualDamage)), bullet.critical ? C.colors.yellow : C.colors.text);
   };
   Game.throwEnemyShot = function (enemy) {
     var info = C.enemies[enemy.type], ranged = info.ranged;

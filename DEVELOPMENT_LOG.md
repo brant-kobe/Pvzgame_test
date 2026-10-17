@@ -421,3 +421,14 @@ git diff --check
 - 界面：菜单底部新增「账户：未登录 / 用户名」按钮（菜单几何收进 `config.menu`）；新增登录 / 注册界面与账户中心（用户名、注册时间、通关进度、最近 5 关最佳用时与击杀、资源占位、导入旧进度 / 注销 / 删除账户），表单由 `#account-dialog` DOM 浮层承载；菜单、关卡选择与结算界面显示状态横幅，结算界面标注成绩是否已保存。
 - 进度写入从 localStorage 改为账户层：`Game.winLevel` 与失守统一走 `Game.reportRun` / `Game.loseLevel`，通关与失败都会上报（失败只累加尝试次数）；未登录 / 离线时成绩只存在于本次会话、刷新即失效，旧键 `blockline.progress` 仅作为「导入旧进度」的一次性来源。
 - 验证：数据层 35 项、接口 45 项、前端账户层 111 项断言全部通过；`tmp/` 下 34 个回归脚本全部通过；画面用 `tmp/trace-draw.js account <界面>` + `tmp/replay-draw.py` 出图核对；真实服务在 `127.0.0.1:8787` 起服后 `/api/health` 为 200，而 `data/` 与 `server/` 下的文件返回 404。
+
+---
+
+## 2026-10-17 · 角色属性系统（第一阶段）
+
+- 新增 `src/attributes.js`（`Game.attributes`）：基础值 + 外部修正，`setModifiers` / `clearModifiers` / `applyPlayer` / `applyWall` / `get` 等接口；`Game.reset` 开局应用，测试场 9999 城墙不被覆盖，测试场「清空构筑」保留属性加成。
+- 属性改为：攻击力 100（数值、无上限）、六系攻击力各 100（数值、无上限）、防线血量 1000、暴击率 8%、暴击伤害 150%、冷却缩减 0%（上限 50%）、负面时间 100%（上限 200%）；后续装备直接加数字。
+- 伤害结算：护甲格挡 → 攻击倍率 → 元素倍率 → 敌人属性抗性 → 致残易伤；燃烧/冻伤按攻击力与火/冰倍率缩放 DPS，时长乘负面时间；三种硬控、减速与重伤同样吃负面时间。冷却缩减只作用于技能冷却，暴击仍只作用于步枪。
+- 首页重排：左上角圆形账户按钮；中间从上到下为标题、开始战斗、选择关卡、进入测试场；底部从左到右为属性面板、技能图鉴、僵尸图鉴；账户横幅移到圆钮右侧并限制宽度。新增只读属性面板，攻击力与六系显示纯数字。
+- 验证：新增 `tmp/check-attributes.js` **109 项**断言通过；`tmp/check-accounts.js` 修复回退遗留引用后 **117 项**通过；35 个 `check-*.js`、`tmp/smoke-whirlwind.js`、`node --check`、`git diff --check` 全部通过；数据层 `check_db.py` **36 项**、接口 `check_api.py` **46 项**也按当前 schema 重新通过；画面用 `tmp/trace-draw.js account menu|attributes` + `tmp/replay-draw.py` 出图核对（`tmp/menu-attributes.png`、`tmp/attributes-screen.png`）。
+- 本轮不修改 `server/`、数据库 schema、资源产出与账号存档；装备与属性持久化留给下一阶段。

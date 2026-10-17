@@ -97,6 +97,7 @@
     if (S.screen === "skillCodex") Game.drawSkillCodex();
     if (S.screen === "login") Game.drawLogin();
     if (S.screen === "account") Game.drawAccount();
+    if (S.screen === "attributes") Game.drawAttributes();
     if (S.screen === "upgrade") Game.drawUpgrade();
     if (S.screen === "paused") Game.drawPause();
     if (S.screen === "victory" || S.screen === "defeat") Game.drawResult();
@@ -1311,7 +1312,7 @@
 
   Game.drawHud = function () {
     var p = S.player, session = S.session;
-    if (!p || S.screen === "menu" || S.screen === "zombieCodex" || S.screen === "skillCodex") return;
+    if (!p || S.screen === "menu" || S.screen === "zombieCodex" || S.screen === "skillCodex" || S.screen === "attributes") return;
     var level = C.levels.find(function (item) { return item.id === session.level; });
     Game.drawPauseButton(14, 15, 28, 28);
     ctx.save();
@@ -1421,16 +1422,6 @@
   Game.button = function (x, y, w, h, label, color) { var gradient = ctx.createLinearGradient(x, y, x, y + h); gradient.addColorStop(0, color); gradient.addColorStop(1, "#2c9d91"); ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 16; U.roundedRect(ctx, x, y, w, h, 13, gradient); ctx.restore(); text(label, x + w / 2, y + h / 2 + 5, "bold 15px Segoe UI, Microsoft YaHei", "#071217", "center"); };
   function pad2(value) { return value < 10 ? "0" + value : "" + value; }
 
-  function accountButtonLabel() {
-    var status = Game.accounts.getStatus();
-    if (status === "ready") {
-      var name = Game.accounts.getUsername();
-      return "账户：" + (name.length > 8 ? name.slice(0, 8) + "…" : name);
-    }
-    if (status === "offline") return "账户：离线";
-    return "账户：未登录";
-  }
-
   function recordSummary(row) {
     var parts = [];
     if (row.completed) parts.push("已通关");
@@ -1440,20 +1431,38 @@
     return parts.join(" · ");
   }
 
+  function drawMenuAccount() {
+    var circle = C.menu.accountCircle, status = Game.accounts.getStatus();
+    var color = status === "ready" ? C.colors.green : status === "offline" ? C.colors.red : C.colors.cyan;
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(circle.x, circle.y, circle.r, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(13, 34, 46, .94)";
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+    ctx.restore();
+    text("账户", circle.x, circle.y + 4, "bold 10px Segoe UI, Microsoft YaHei", C.colors.text, "center");
+  }
+
   Game.drawMenu = function () {
     var menu = C.menu, buttons = menu.buttons;
     Game.overlay();
+    drawMenuAccount();
     panel(menu.panelX, menu.panelY, menu.panelWidth, menu.panelHeight, "rgba(10, 35, 49, .78)", "rgba(153, 205, 218, .18)", 20);
     badge("SURVIVAL  PROTOCOL", 102, 104, 156, C.colors.cyan);
     text("街区警戒线", C.width / 2, 164, "bold 31px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
     text("竖屏僵尸生存射击", C.width / 2, 194, "15px Segoe UI, Microsoft YaHei", C.colors.text, "center");
-    text("步枪自动锁定目标 · 点击画面调整方向", C.width / 2, 229, "12px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text("步枪自动锁定目标 · 点击画面调整方向", C.width / 2, 226, "12px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     Game.button(buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h, "开始战斗", C.colors.green);
     Game.button(buttons.levelSelect.x, buttons.levelSelect.y, buttons.levelSelect.w, buttons.levelSelect.h, "选择关卡", C.colors.cyan);
-    Game.button(buttons.zombieCodex.x, buttons.zombieCodex.y, buttons.zombieCodex.w, buttons.zombieCodex.h, "僵尸图鉴", "#58aaff");
-    Game.button(buttons.skillCodex.x, buttons.skillCodex.y, buttons.skillCodex.w, buttons.skillCodex.h, "技能图鉴", C.colors.purple);
     Game.button(buttons.testArena.x, buttons.testArena.y, buttons.testArena.w, buttons.testArena.h, "进入测试场", C.colors.yellow);
-    Game.button(buttons.account.x, buttons.account.y, buttons.account.w, buttons.account.h, accountButtonLabel(), "#4b7180");
+    Game.button(buttons.attributes.x, buttons.attributes.y, buttons.attributes.w, buttons.attributes.h, "属性面板", "#68d8ff");
+    Game.button(buttons.skillCodex.x, buttons.skillCodex.y, buttons.skillCodex.w, buttons.skillCodex.h, "技能图鉴", C.colors.purple);
+    Game.button(buttons.zombieCodex.x, buttons.zombieCodex.y, buttons.zombieCodex.w, buttons.zombieCodex.h, "僵尸图鉴", "#58aaff");
   };
 
   Game.drawAccountBanner = function () {
@@ -1461,9 +1470,11 @@
     if (!note) return;
     var offline = Game.accounts.getStatus() === "offline";
     var color = offline ? C.colors.red : C.colors.yellow;
-    var width = U.clamp(note.length * 12 + 26, 160, C.width - 24);
-    U.roundedRect(ctx, (C.width - width) / 2, C.menu.bannerY, width, C.menu.bannerHeight, 11, "rgba(5, 16, 23, .86)", color);
-    text(note, C.width / 2, C.menu.bannerY + 15, "bold 10px Segoe UI, Microsoft YaHei", color, "center");
+    var left = S.screen === "menu" ? (C.menu.bannerLeft || 0) : 0;
+    var width = U.clamp(note.length * 12 + 26, 160, Math.min(260, C.width - left - 12));
+    var x = left + (C.width - left - 12 - width) / 2;
+    U.roundedRect(ctx, x, C.menu.bannerY, width, C.menu.bannerHeight, 11, "rgba(5, 16, 23, .86)", color);
+    text(note, x + width / 2, C.menu.bannerY + 15, "bold 10px Segoe UI, Microsoft YaHei", color, "center");
   };
 
   function drawFakeField(rect, label, value, placeholder) {
@@ -1523,6 +1534,45 @@
     Game.button(box.importButton.x, box.importButton.y, box.importButton.w, box.importButton.h, "导入旧进度", "#4b7180");
     Game.button(box.logoutButton.x, box.logoutButton.y, box.logoutButton.w, box.logoutButton.h, "注销登录", "#4b7180");
     Game.button(box.deleteButton.x, box.deleteButton.y, box.deleteButton.w, box.deleteButton.h, "删除账户", C.colors.red);
+    Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回首页", "#4b7180");
+  };
+  function attributePercent(value) {
+    var n = Math.round(value * 1000) / 10;
+    return (n % 1 === 0 ? n.toFixed(0) : n.toFixed(1)) + "%";
+  }
+  Game.drawAttributes = function () {
+    var ui = C.attributesUI, a = Game.attributes.get(), center = C.width / 2;
+    var stats = [
+      { label: "攻击力", value: String(Math.round(a.attack)), color: C.colors.cyan },
+      { label: "冷却缩减", value: attributePercent(a.cooldownReduction), color: C.colors.cyan },
+      { label: "防线血量", value: String(a.wallMaxHp), color: C.colors.green },
+      { label: "暴击率", value: attributePercent(a.critRate), color: C.colors.yellow },
+      { label: "暴击伤害", value: attributePercent(a.critDamage), color: C.colors.yellow },
+      { label: "负面时间", value: attributePercent(a.statusDurationMultiplier), color: C.colors.purple }
+    ];
+    Game.overlay();
+    panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .96)", "rgba(153, 205, 218, .22)", 20);
+    badge("SURVIVOR  ATTRIBUTES", 102, 70, 156, C.colors.cyan);
+    text("角色属性", center, ui.titleY, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    text("基础属性 · 攻击力与元素攻击力为数值", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    for (var row = 0; row < 3; row++) {
+      [0, 1].forEach(function (column) {
+        var item = stats[row + column * 3], x = ui.statX[column], y = ui.statY[row];
+        text(item.label, x, y, "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+        text(item.value, x, y + 20, "bold 18px Segoe UI, Microsoft YaHei", item.color);
+      });
+    }
+    text("元素攻击力", 44, ui.elementTitleY, "bold 12px Segoe UI, Microsoft YaHei", C.colors.cyan);
+    var elementIds = (ui.elementOrder || Object.keys(C.elements)).filter(function (id) { return !!C.elements[id]; });
+    elementIds.forEach(function (id, index) {
+      var column = index % 3, line = Math.floor(index / 3), x = ui.elementX[column], y = ui.elementY[line], info = C.elements[id];
+      dot(x, y + 4, 4, info.color, "rgba(255, 255, 255, .24)");
+      text(info.name + "系", x + 10, y + 8, "10px Segoe UI, Microsoft YaHei", C.colors.text);
+      text(String(Math.round(a.elementAttack[id])), x + 10, y + 24, "bold 15px Segoe UI, Microsoft YaHei", info.color);
+    });
+    text("攻击与元素加成对直接命中与持续伤害生效", center, ui.noteY, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text("攻击 / 元素无上限 · 装备加成直接加数字", center, ui.noteY + 16, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text("暴击仅作用于步枪", center, ui.noteY + 32, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回首页", "#4b7180");
   };
   function dot(x, y, radius, fill, stroke) {
