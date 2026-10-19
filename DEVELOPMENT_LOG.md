@@ -453,3 +453,15 @@ git diff --check
 - 属性面板底部改为「装备 / 城墙 / 返回」三按钮；新增城墙界面（等级、血量、下一突破节点进度、单一动作卡、材料数量与状态提示）；账户中心资源区扩为 4 列 × 3 行、11 项资源。本轮钢材 / 稀土产出仍未接入，界面标注「产出待接入」。
 - 城墙界面加入材料图标：钢材为灰白色长方体、稀土为金色圆锥，顶部资源行、动作卡与按钮统一复用；普通等级只显示「强化」，到达突破节点时同一张动作卡切换为「突破」，不再常驻不可用的突破按钮。
 - 验证：`tmp/check_db.py` 62 项、`tmp/check_api.py` 88 项、`tmp/check-wall.js` 62 项、`tmp/check-accounts.js` 139 项、`tmp/check-equipment.js` 76 项全部通过；`check-attributes.js`、`check-wall-hp.js`、`smoke-whirlwind.js` 与既有脚本通过；`node --check`、`git diff --check`、`compileall` 通过；截图 `tmp/wall-screen.png`、`tmp/wall-normal-screen.png`、`tmp/account-screen.png`。
+
+---
+
+## 2026-10-19 · 装备宝石系统（6 部位 × 6 槽位）
+
+- 新增 `gems` 表与 `server/app/gems.py`：`id` / `account_id` / `part_id` / `quality`（0～4）/ `affix_id` / `slot_index`（0～5 或 `NULL`），唯一约束 `(account_id, part_id, slot_index)`；`schema_version` 升到 **4**，旧库由 `create_all()` 自动补表，旧账户宝石为空。
+- 六件装备各 6 槽，宝石按部位绑定；只有已镶嵌宝石提供属性。品质灰 / 绿 / 蓝 / 紫 / 红，每颗 1 条随机词条；攻击与元素 +10/+20/+30/+40/+50，冷却与暴击 +1%/+2%/+3%/+4%/+5%，暴伤与负面时间 +10%/+20%/+30%/+40%/+50%，防线血量 +200/+400/+600/+800/+1000。
+- 新增 `/api/me/gems/socket`、`/unsocket`、`/synthesize` 与调试用 `/grant`；同部位同品质 5 颗**未镶嵌**宝石自动合成 1 颗高一档同部位宝石，词条重新随机，红色封顶；已镶嵌宝石不参与合成。
+- 新增 `src/gems.js`（`Game.gems`）与 `src/attributes.js` 的独立 `setGemModifiers` / `clearGemModifiers`；宝石加成不能写进装备或城墙修正。`src/accounts.js` 增加宝石缓存与 socket / unsocket / synthesize，登出 / 401 清空。
+- 属性面板底部改为「装备 / 宝石 / 城墙 / 返回」四按钮；新增宝石界面：六部位页签、六槽位、分页背包、品质切换合成栏、六边形宝石图标与状态提示。账户资源 `gem` 的显示名改为「钻石」，与新宝石系统区分。
+- 本轮不做宝石正式产出；新账户宝石背包为空，只能用 `/api/me/gems/grant` 调试注入。
+- 验证：`tmp/check_db.py` **88 项**、`tmp/check_api.py` **115 项**、`tmp/check-gems.js` **122 项**、`tmp/check-wall.js` **63 项**、`tmp/check-accounts.js` **147 项**、`tmp/check-equipment.js` **76 项**全部通过；38 个 `check-*.js` 全部通过；`node --check`、`git diff --check`、`compileall` 通过；截图 `tmp/gems-screen.png`。

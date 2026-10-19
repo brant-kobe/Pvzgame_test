@@ -100,6 +100,7 @@
     if (S.screen === "attributes") Game.drawAttributes();
     if (S.screen === "equipment") Game.drawEquipment();
     if (S.screen === "wall") Game.drawWallPanel();
+    if (S.screen === "gems") Game.drawGemsPanel();
     if (S.screen === "upgrade") Game.drawUpgrade();
     if (S.screen === "paused") Game.drawPause();
     if (S.screen === "victory" || S.screen === "defeat") Game.drawResult();
@@ -1314,7 +1315,7 @@
 
   Game.drawHud = function () {
     var p = S.player, session = S.session;
-    if (!p || S.screen === "menu" || S.screen === "zombieCodex" || S.screen === "skillCodex" || S.screen === "attributes" || S.screen === "equipment" || S.screen === "wall") return;
+    if (!p || S.screen === "menu" || S.screen === "zombieCodex" || S.screen === "skillCodex" || S.screen === "attributes" || S.screen === "equipment" || S.screen === "wall" || S.screen === "gems") return;
     var level = C.levels.find(function (item) { return item.id === session.level; });
     Game.drawPauseButton(14, 15, 28, 28);
     ctx.save();
@@ -1556,7 +1557,7 @@
     panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .96)", "rgba(153, 205, 218, .22)", 20);
     badge("SURVIVOR  ATTRIBUTES", 102, 70, 156, C.colors.cyan);
     text("角色属性", center, ui.titleY, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
-    text("基础属性 + 装备 / 城墙加成 · 攻击力与元素攻击力为数值", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text("基础属性 + 装备 / 城墙 / 宝石加成 · 攻击力与元素攻击力为数值", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     for (var row = 0; row < 3; row++) {
       [0, 1].forEach(function (column) {
         var item = stats[row + column * 3], x = ui.statX[column], y = ui.statY[row];
@@ -1573,9 +1574,10 @@
       text(String(Math.round(a.elementAttack[id])), x + 10, y + 24, "bold 15px Segoe UI, Microsoft YaHei", info.color);
     });
     text("攻击与元素加成对直接命中与持续伤害生效", center, ui.noteY, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
-    text("攻击 / 元素无上限 · 装备与城墙加成生效", center, ui.noteY + 16, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text("攻击 / 元素无上限 · 装备、城墙与宝石加成生效", center, ui.noteY + 16, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     text("暴击仅作用于步枪", center, ui.noteY + 32, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     Game.button(ui.equipment.x, ui.equipment.y, ui.equipment.w, ui.equipment.h, "装备", C.colors.yellow);
+    Game.button(ui.gems.x, ui.gems.y, ui.gems.w, ui.gems.h, "宝石", C.colors.green);
     Game.button(ui.wall.x, ui.wall.y, ui.wall.w, ui.wall.h, "城墙", C.colors.cyan);
     Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回", "#4b7180");
   };
@@ -1736,6 +1738,110 @@
     text(String(message).slice(0, 34), center, ui.noteY, "9px Segoe UI, Microsoft YaHei", state.wallError ? C.colors.red : (state.wallNotice ? C.colors.green : C.colors.muted), "center");
     Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回属性", "#4b7180");
   };
+  function drawGemIcon(cx, cy, size, color) {
+    var s = size / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - s); ctx.lineTo(cx + s * .72, cy - s * .35); ctx.lineTo(cx + s * .50, cy + s * .55);
+    ctx.lineTo(cx, cy + s); ctx.lineTo(cx - s * .50, cy + s * .55); ctx.lineTo(cx - s * .72, cy - s * .35);
+    ctx.closePath();
+    ctx.fillStyle = color; ctx.fill();
+    ctx.lineWidth = Math.max(1, size * .05); ctx.strokeStyle = "rgba(255, 255, 255, .58)"; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - s); ctx.lineTo(cx + s * .72, cy - s * .35); ctx.lineTo(cx - s * .72, cy - s * .35); ctx.closePath();
+    ctx.fillStyle = "rgba(255, 255, 255, .38)"; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx - s * .72, cy - s * .35); ctx.lineTo(cx - s * .50, cy + s * .55); ctx.lineTo(cx, cy + s); ctx.lineTo(cx, cy); ctx.closePath();
+    ctx.fillStyle = "rgba(255, 255, 255, .12)"; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx + s * .72, cy - s * .35); ctx.lineTo(cx + s * .50, cy + s * .55); ctx.lineTo(cx, cy + s); ctx.lineTo(cx, cy); ctx.closePath();
+    ctx.fillStyle = "rgba(0, 0, 0, .22)"; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx, cy - s * .88); ctx.lineTo(cx - s * .12, cy - s * .10);
+    ctx.strokeStyle = "rgba(255, 255, 255, .48)"; ctx.lineWidth = Math.max(1, size * .045); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawGemPager(rect, label, enabled, color) {
+    U.roundedRect(ctx, rect.x, rect.y, rect.w, rect.h, 6, enabled ? "rgba(26, 57, 70, .96)" : "rgba(24, 40, 48, .7)", enabled ? "rgba(153, 205, 218, .32)" : "rgba(153, 205, 218, .12)");
+    text(label, rect.x + rect.w / 2, rect.y + rect.h / 2 + 4, "bold 12px Segoe UI, Microsoft YaHei", enabled ? color : C.colors.muted, "center");
+  }
+
+  Game.drawGemsPanel = function () {
+    var ui = C.gemUI, center = C.width / 2, state = Game.accounts.state;
+    var ready = Game.accounts.getStatus() === "ready";
+    var part = Game.gems.getPart(S.gemPart || "arm"), equip = Game.equipment.getSlot(part.partId);
+    var page = Game.getGemPage(part.partId), pages = Game.getGemPageCount(part.partId);
+    var quality = Math.max(0, Math.min(C.gems.maxQuality, Math.round(S.gemSynthQuality || 0)));
+    var qualityInfo = C.gems.qualities[quality], count = part.counts[quality] || 0;
+    var maxed = quality >= C.gems.maxQuality, busy = state.gemBusy;
+    var canSynthesize = ready && !busy && !maxed && count >= C.gems.synthesisCost;
+    Game.overlay();
+    panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .96)", "rgba(153, 205, 218, .22)", 20);
+    badge("LOADOUT  ·  GEMS", 103, 70, 154, C.colors.green);
+    text("宝石镶嵌", center, ui.titleY, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    text("六部位 × 六槽位 · 同部位 5 颗同品质合成", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+
+    C.equipment.slots.forEach(function (slot, index) {
+      var rect = Game.getGemPartTabRect(index), active = slot.id === part.partId;
+      var tabPart = Game.gems.getPart(slot.id);
+      U.roundedRect(ctx, rect.x, rect.y, rect.w, rect.h, 8, active ? slot.color : "rgba(13, 34, 46, .94)", active ? "rgba(255, 255, 255, .24)" : "rgba(153, 205, 218, .18)");
+      text(slot.short + " " + tabPart.socketedCount, rect.x + rect.w / 2, rect.y + 18, "bold 10px Segoe UI, Microsoft YaHei", active ? "#071217" : C.colors.muted, "center");
+    });
+
+    if (ready) {
+      text(part.name + " · Lv." + (equip ? equip.level : 0) + (equip && equip.elementName ? " · " + equip.elementName : ""), 44, ui.summaryY, "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+      text("宝石 " + part.socketedCount + " / " + part.capacity, 316, ui.summaryY, "bold 10px Segoe UI, Microsoft YaHei", part.socketedCount ? C.colors.green : C.colors.muted, "right");
+    } else {
+      text("登录后可管理宝石", 44, ui.summaryY, "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+      text("0 / 6", 316, ui.summaryY, "bold 10px Segoe UI, Microsoft YaHei", C.colors.muted, "right");
+    }
+
+    for (var socket = 0; socket < C.gems.socketsPerPart; socket++) {
+      var socketRect = Game.getGemSocketRect(socket), gem = part.sockets[socket];
+      if (gem) {
+        U.roundedRect(ctx, socketRect.x, socketRect.y, socketRect.w, socketRect.h, 10, "rgba(13, 34, 46, .96)", gem.color);
+        drawGemIcon(socketRect.x + 18, socketRect.y + 17, 18, gem.color);
+        text(gem.qualityShort, socketRect.x + 32, socketRect.y + 21, "bold 9px Segoe UI, Microsoft YaHei", gem.color);
+        text(String(gem.affix.text).slice(0, 12), socketRect.x + 8, socketRect.y + 40, "8px Segoe UI, Microsoft YaHei", C.colors.text);
+      } else {
+        U.roundedRect(ctx, socketRect.x, socketRect.y, socketRect.w, socketRect.h, 10, "rgba(7, 20, 28, .62)", "rgba(153, 205, 218, .18)");
+        text("+", socketRect.x + 17, socketRect.y + 24, "bold 17px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+        text("空槽", socketRect.x + 8, socketRect.y + 40, "8px Segoe UI, Microsoft YaHei", C.colors.muted);
+      }
+    }
+
+    text("宝石背包", 34, ui.inventoryTitleY, "bold 12px Segoe UI, Microsoft YaHei", C.colors.cyan);
+    text((page + 1) + " / " + pages, 246, ui.inventoryTitleY, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "right");
+    drawGemPager(Game.getGemInventoryPrevRect(), "‹", page > 0, C.colors.cyan);
+    drawGemPager(Game.getGemInventoryNextRect(), "›", page < pages - 1, C.colors.cyan);
+
+    var rows = ui.inventory.rows, start = page * rows;
+    for (var row = 0; row < rows; row++) {
+      var rowRect = Game.getGemInventoryRowRect(row), item = part.inventory[start + row];
+      U.roundedRect(ctx, rowRect.x, rowRect.y, rowRect.w, rowRect.h - 2, 7, "rgba(13, 34, 46, .86)", item ? item.color : "rgba(153, 205, 218, .10)");
+      if (item) {
+        drawGemIcon(rowRect.x + 14, rowRect.y + 13, 12, item.color);
+        text(item.qualityName + " · " + item.affix.text, rowRect.x + 26, rowRect.y + 18, "9px Segoe UI, Microsoft YaHei", C.colors.text);
+        var action = !ready ? "未登录" : (!part.canSocket ? "已满" : (busy ? "处理中" : "镶嵌 ›"));
+        text(action, rowRect.x + rowRect.w - 10, rowRect.y + 18, "bold 9px Segoe UI, Microsoft YaHei", part.canSocket && ready ? item.color : C.colors.muted, "right");
+      } else if (row === 0 && part.inventory.length === 0) {
+        text(ready ? "暂无未镶嵌宝石" : "登录后显示宝石背包", rowRect.x + 16, rowRect.y + 18, "9px Segoe UI, Microsoft YaHei", C.colors.muted);
+      }
+    }
+
+    var synth = ui.synthesis;
+    panel(synth.x, synth.y, synth.w, synth.h, "rgba(13, 34, 46, .94)", "rgba(201, 161, 255, .22)", 12);
+    text("合成 · 仅消耗未镶嵌", synth.x + 14, synth.y + 16, "bold 10px Segoe UI, Microsoft YaHei", C.colors.text);
+    drawGemPager(Game.getGemSynthesisPrevRect(), "‹", !busy, C.colors.cyan);
+    drawGemPager(Game.getGemSynthesisNextRect(), "›", !busy, C.colors.cyan);
+    text(qualityInfo.name + " " + count + " / " + C.gems.synthesisCost, 140, synth.y + 50, "bold 11px Segoe UI, Microsoft YaHei", qualityInfo.color, "center");
+    var synthLabel = !ready ? "未登录" : (maxed ? "已最高" : (count < C.gems.synthesisCost ? "不足 5 颗" : (busy && state.gemAction === "synthesize" ? "合成中…" : "合成")));
+    var button = Game.getGemSynthesisButtonRect();
+    U.roundedRect(ctx, button.x, button.y, button.w, button.h, 7, canSynthesize ? C.colors.green : "rgba(38, 56, 66, .9)", canSynthesize ? "rgba(255, 255, 255, .28)" : "rgba(153, 205, 218, .16)");
+    text(synthLabel, button.x + button.w / 2, button.y + 19, "bold 10px Segoe UI, Microsoft YaHei", canSynthesize ? "#071217" : C.colors.muted, "center");
+
+    var message = state.gemError || state.gemNotice || "同部位 5 颗同品质合成 · 红色为最高品质";
+    text(String(message).slice(0, 34), center, ui.noteY, "9px Segoe UI, Microsoft YaHei", state.gemError ? C.colors.red : (state.gemNotice ? C.colors.green : C.colors.muted), "center");
+    Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回属性", "#4b7180");
+  };
+
   function dot(x, y, radius, fill, stroke) {
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);

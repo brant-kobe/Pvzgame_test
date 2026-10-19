@@ -1,9 +1,9 @@
-"""数据表模型：账户、登录会话、关卡进度与资源。"""
+"""数据表模型：账户、登录会话、关卡进度、资源、装备、城墙与宝石。"""
 from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from . import times
@@ -66,6 +66,18 @@ class WallState(Base):
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), primary_key=True)
     level: Mapped[int] = mapped_column(Integer, default=1)
     breakthroughs: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class Gem(Base):
+    __tablename__ = "gems"
+    __table_args__ = (UniqueConstraint("account_id", "part_id", "slot_index", name="uq_gem_socket"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    part_id: Mapped[str] = mapped_column(String(16))
+    quality: Mapped[int] = mapped_column(Integer, default=0)
+    affix_id: Mapped[str] = mapped_column(String(32))
+    slot_index: Mapped[int | None] = mapped_column(Integer, default=None, nullable=True)
 
 
 class SchemaVersion(Base):

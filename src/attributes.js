@@ -4,24 +4,26 @@
   var C = Game.config;
 
   var modifiers = {};
+  var gemModifiers = {};
   var wallHpExtra = 0;
 
   function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
   function finite(value) { return typeof value === "number" && isFinite(value) ? value : 0; }
 
   function compute() {
-    var base = C.attributes.base, caps = C.attributes.caps, mod = modifiers || {};
-    var attack = Math.max(0, base.attack + finite(mod.attack));
+    var base = C.attributes.base, caps = C.attributes.caps, mod = modifiers || {}, gem = gemModifiers || {};
+    var attack = Math.max(0, base.attack + finite(mod.attack) + finite(gem.attack));
     var elements = {};
     Object.keys(base.elementAttack).forEach(function (id) {
       var extra = mod.elementAttack ? finite(mod.elementAttack[id]) : 0;
-      elements[id] = Math.max(0, base.elementAttack[id] + extra);
+      var gemExtra = gem.elementAttack ? finite(gem.elementAttack[id]) : 0;
+      elements[id] = Math.max(0, base.elementAttack[id] + extra + gemExtra);
     });
-    var cooldown = clamp(base.cooldownReduction + finite(mod.cooldownReduction), 0, caps.cooldownReduction);
-    var wallBonus = Math.max(0, base.wallHpBonus + finite(mod.wallHpBonus) + finite(wallHpExtra));
-    var crit = clamp(base.critRate + finite(mod.critRate), 0, caps.critRate);
-    var critDamage = clamp(base.critDamage + finite(mod.critDamage), 1, caps.critDamage);
-    var status = clamp(base.statusDurationMultiplier + finite(mod.statusDurationMultiplier), 1, caps.statusDurationMultiplier);
+    var cooldown = clamp(base.cooldownReduction + finite(mod.cooldownReduction) + finite(gem.cooldownReduction), 0, caps.cooldownReduction);
+    var wallBonus = Math.max(0, base.wallHpBonus + finite(mod.wallHpBonus) + finite(gem.wallHpBonus) + finite(wallHpExtra));
+    var crit = clamp(base.critRate + finite(mod.critRate) + finite(gem.critRate), 0, caps.critRate);
+    var critDamage = clamp(base.critDamage + finite(mod.critDamage) + finite(gem.critDamage), 1, caps.critDamage);
+    var status = clamp(base.statusDurationMultiplier + finite(mod.statusDurationMultiplier) + finite(gem.statusDurationMultiplier), 1, caps.statusDurationMultiplier);
     return {
       attack: attack,
       elementAttack: elements,
@@ -52,6 +54,14 @@
     },
     clearModifiers: function () {
       modifiers = {};
+      current = compute();
+    },
+    setGemModifiers: function (mods) {
+      gemModifiers = mods && typeof mods === "object" ? mods : {};
+      current = compute();
+    },
+    clearGemModifiers: function () {
+      gemModifiers = {};
       current = compute();
     },
     setWallHpBonus: function (value) {

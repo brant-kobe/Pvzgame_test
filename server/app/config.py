@@ -24,7 +24,7 @@ PBKDF2_ALGORITHM = "sha256"
 PBKDF2_ITERATIONS = 200000
 PBKDF2_PREFIX = "pbkdf2_sha256"
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 RESOURCE_IDS = (
     "coin",
@@ -67,6 +67,29 @@ EQUIPMENT_BLUEPRINTS = {
     "shoes": "blueprintShoes",
     "gloves": "blueprintGloves",
 }
+
+GEM_SOCKETS = 6
+GEM_MAX_QUALITY = 4
+GEM_SYNTHESIS_COST = 5
+GEM_MAX_GRANT = 100
+
+GEM_QUALITIES = ("灰色", "绿色", "蓝色", "紫色", "红色")
+
+GEM_AFFIXES = {
+    "attack": {"kind": "attack", "name": "攻击力", "values": (10, 20, 30, 40, 50)},
+    "elementPhysical": {"kind": "elementAttack", "element": "physical", "name": "物理攻击", "values": (10, 20, 30, 40, 50)},
+    "elementFire": {"kind": "elementAttack", "element": "fire", "name": "火系攻击", "values": (10, 20, 30, 40, 50)},
+    "elementIce": {"kind": "elementAttack", "element": "ice", "name": "冰系攻击", "values": (10, 20, 30, 40, 50)},
+    "elementElectric": {"kind": "elementAttack", "element": "electric", "name": "电系攻击", "values": (10, 20, 30, 40, 50)},
+    "elementWind": {"kind": "elementAttack", "element": "wind", "name": "风系攻击", "values": (10, 20, 30, 40, 50)},
+    "elementEnergy": {"kind": "elementAttack", "element": "energy", "name": "能量攻击", "values": (10, 20, 30, 40, 50)},
+    "cooldownReduction": {"kind": "cooldownReduction", "name": "冷却缩减", "values": (.01, .02, .03, .04, .05), "percent": True},
+    "wallHpBonus": {"kind": "wallHpBonus", "name": "防线血量", "values": (200, 400, 600, 800, 1000)},
+    "critRate": {"kind": "critRate", "name": "暴击率", "values": (.01, .02, .03, .04, .05), "percent": True},
+    "critDamage": {"kind": "critDamage", "name": "暴击伤害", "values": (.10, .20, .30, .40, .50), "percent": True},
+    "statusDurationMultiplier": {"kind": "statusDurationMultiplier", "name": "负面时间", "values": (.10, .20, .30, .40, .50), "percent": True},
+}
+GEM_AFFIX_IDS = tuple(GEM_AFFIXES)
 
 STATIC_DIRS = ("src", "styles", "assets", "pictures")
 LOCAL_ORIGIN_HOSTS = ("127.0.0.1", "localhost", "[::1]")

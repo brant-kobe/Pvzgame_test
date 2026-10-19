@@ -2,7 +2,7 @@
 (function (Game) {
   "use strict";
   var C = Game.config;
-  Game.state = { screen: "menu", selectedLevel: 1, accountMode: "login", player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null };
+  Game.state = { screen: "menu", selectedLevel: 1, accountMode: "login", player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null, gemPart: "arm", gemPage: 0, gemSynthQuality: 0 };
   Game.reset = function () {
     var s = Game.state;
     var level = C.levels.find(function (item) { return item.id === s.selectedLevel; });
@@ -18,6 +18,7 @@
     });
     s.player = { x: C.width / 2, y: C.height - 58, aimAngle: -Math.PI / 2, manualAimTimer: 0, maxHp: 100, hp: 100, damage: 28, fireInterval: .52, fireTimer: .05, magazineSize: C.magazineCapacity, ammo: C.magazineCapacity, reloadDuration: C.reloadDuration, reloadTimer: 0, rifleEnabled: true, burst: 0, burstShotsRemaining: 0, burstTimer: 0, burstAngle: -Math.PI / 2, spread: 0, pierce: 0, bulletRadius: 4, crit: C.attributes.base.critRate, critDamage: C.attributes.base.critDamage, burn: 0, freeze: 0, bulletType: "normal", skills: skills, skillOrder: [], level: 1, xp: 0, nextXp: C.xpBase, traits: {} };
     s.bullets = []; s.skillProjectiles = []; s.armoredCars = []; s.bombDrops = []; s.bombZones = []; s.electromagneticZones = []; s.tornadoes = []; s.drones = []; s.hailStorms = []; s.fuelShells = []; s.fuelPools = []; s.enemyShots = []; s.explosions = []; s.enemies = []; s.pendingSpawns = []; s.particles = []; s.texts = []; s.upgradeCards = []; s.skillRangePreview = null; s.levelPreview = null;
+    s.gemPage = 0; s.gemSynthQuality = 0;
     s.wall = { x: C.width / 2, y: C.height - 125, width: C.width - 30, height: 30, maxHp: C.wallMaxHp, hp: C.wallMaxHp };
     if (Game.attributes) { Game.attributes.applyPlayer(s.player); Game.attributes.applyWall(s.wall); }
     s.session = { level: s.selectedLevel, waves: waves, xpScale: (level && level.xpScale) || 1, hpScale: (level && level.hpScale) || 1, elapsed: 0, wave: 1, spawnCount: 0, spawnTimer: .25, eliteSpawned: false, bossSpawned: false, kills: 0, message: "", messageTimer: 0 };
@@ -47,6 +48,19 @@
     Game.accounts.state.wallError = "";
     Game.accounts.state.wallNotice = "";
     Game.state.screen = "wall";
+  };
+  Game.selectGemPart = function (partId) {
+    var valid = (C.equipment.slots || []).some(function (slot) { return slot.id === partId; });
+    if (!valid) partId = (C.equipment.slots && C.equipment.slots[0] ? C.equipment.slots[0].id : "arm");
+    Game.state.gemPart = partId;
+    Game.state.gemPage = 0;
+    Game.state.gemSynthQuality = Game.gems ? Game.gems.getDefaultSynthesisQuality(partId) : 0;
+  };
+  Game.openGems = function (partId) {
+    Game.accounts.state.gemError = "";
+    Game.accounts.state.gemNotice = "";
+    Game.selectGemPart(partId || Game.state.gemPart);
+    Game.state.screen = "gems";
   };
   Game.backToAttributes = function () { Game.state.screen = "attributes"; };
   Game.backToMenu = function () { Game.state.levelPreview = null; Game.state.screen = "menu"; };
@@ -138,6 +152,33 @@
     if (Game.state.screen !== "wall") return Promise.resolve({ ok: false });
     return Game.accounts.upgradeWall(action);
   };
+  Game.getGemPageCount = function (partId) {
+    if (!Game.gems) return 1;
+    var count = Game.gems.getPart(partId || Game.state.gemPart).inventory.length;
+    return Math.max(1, Math.ceil(count / C.gemUI.inventory.rows));
+  };
+  Game.getGemPage = function (partId) {
+    return Math.max(0, Math.min(Game.state.gemPage, Game.getGemPageCount(partId) - 1));
+  };
+  Game.setGemPage = function (delta) {
+    Game.state.gemPage = Math.max(0, Math.min(Game.state.gemPage + delta, Game.getGemPageCount(Game.state.gemPart) - 1));
+  };
+  Game.cycleGemSynthesisQuality = function (delta) {
+    var max = C.gems.maxQuality;
+    Game.state.gemSynthQuality = ((Game.state.gemSynthQuality + delta) % (max + 1) + (max + 1)) % (max + 1);
+  };
+  Game.socketGem = function (gemId) {
+    if (Game.state.screen !== "gems") return Promise.resolve({ ok: false });
+    return Game.accounts.socketGem(gemId);
+  };
+  Game.unsocketGem = function (gemId) {
+    if (Game.state.screen !== "gems") return Promise.resolve({ ok: false });
+    return Game.accounts.unsocketGem(gemId);
+  };
+  Game.synthesizeGems = function (partId, quality) {
+    if (Game.state.screen !== "gems") return Promise.resolve({ ok: false });
+    return Game.accounts.synthesizeGems(partId, quality);
+  };
   Game.isLevelUnlocked = function (levelId) {
     var level = C.levels.find(function (item) { return item.id === levelId; });
     if (!level) return false;
@@ -165,6 +206,23 @@
     var rect = C.wallUI.actionButton;
     return { x: rect.x, y: rect.y, w: rect.w, h: rect.h };
   };
+  Game.getGemPartTabRect = function (index) {
+    var geo = C.gemUI.partTabs;
+    return { x: geo.x + index * (geo.w + geo.gap), y: geo.y, w: geo.w, h: geo.h };
+  };
+  Game.getGemSocketRect = function (index) {
+    var geo = C.gemUI.sockets, column = index % geo.columns, row = Math.floor(index / geo.columns);
+    return { x: geo.x + column * (geo.w + geo.gapX), y: geo.y + row * (geo.h + geo.gapY), w: geo.w, h: geo.h };
+  };
+  Game.getGemInventoryRowRect = function (index) {
+    var geo = C.gemUI.inventory;
+    return { x: geo.x, y: geo.y + index * geo.rowHeight, w: geo.w, h: geo.rowHeight };
+  };
+  Game.getGemInventoryPrevRect = function () { return C.gemUI.inventoryPrev; };
+  Game.getGemInventoryNextRect = function () { return C.gemUI.inventoryNext; };
+  Game.getGemSynthesisPrevRect = function () { return C.gemUI.synthesisPrev; };
+  Game.getGemSynthesisNextRect = function () { return C.gemUI.synthesisNext; };
+  Game.getGemSynthesisButtonRect = function () { return C.gemUI.synthesisButton; };
   Game.getLevelBriefPanel = function () {
     var geo = C.levelSelect, roster = Game.getLevelRoster(Game.state.levelPreview);
     var rows = roster.minions.length + roster.elites.length + (roster.boss ? 1 : 0);

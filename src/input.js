@@ -272,6 +272,7 @@
     }
     if (S.screen === "attributes") {
       if (pointInRect(point, C.attributesUI.equipment)) Game.openEquipment();
+      else if (pointInRect(point, C.attributesUI.gems)) Game.openGems();
       else if (pointInRect(point, C.attributesUI.wall)) Game.openWall();
       else if (pointInRect(point, C.attributesUI.back)) Game.backToMenu();
       return;
@@ -293,6 +294,40 @@
           Game.upgradeWall(wallView.canBreakthrough ? "breakthrough" : "level");
           return;
         }
+      }
+      return;
+    }
+    if (S.screen === "gems") {
+      if (pointInRect(point, C.gemUI.back)) { Game.backToAttributes(); return; }
+      if (Game.accounts.getStatus() !== "ready" || Game.accounts.state.gemBusy) return;
+      var gemPart = Game.gems.getPart(S.gemPart), gemPage = Game.getGemPage(S.gemPart), gemIndex;
+      for (gemIndex = 0; gemIndex < C.equipment.slots.length; gemIndex++) {
+        if (pointInRect(point, Game.getGemPartTabRect(gemIndex))) {
+          Game.selectGemPart(C.equipment.slots[gemIndex].id);
+          return;
+        }
+      }
+      if (pointInRect(point, Game.getGemInventoryPrevRect())) { Game.setGemPage(-1); return; }
+      if (pointInRect(point, Game.getGemInventoryNextRect())) { Game.setGemPage(1); return; }
+      if (pointInRect(point, Game.getGemSynthesisPrevRect())) { Game.cycleGemSynthesisQuality(-1); return; }
+      if (pointInRect(point, Game.getGemSynthesisNextRect())) { Game.cycleGemSynthesisQuality(1); return; }
+      for (gemIndex = 0; gemIndex < gemPart.sockets.length; gemIndex++) {
+        if (gemPart.sockets[gemIndex] && pointInRect(point, Game.getGemSocketRect(gemIndex))) {
+          Game.unsocketGem(gemPart.sockets[gemIndex].id);
+          return;
+        }
+      }
+      var pageRows = C.gemUI.inventory.rows, pageStart = gemPage * pageRows;
+      for (gemIndex = 0; gemIndex < pageRows; gemIndex++) {
+        var gem = gemPart.inventory[pageStart + gemIndex];
+        if (gem && gemPart.canSocket && pointInRect(point, Game.getGemInventoryRowRect(gemIndex))) {
+          Game.socketGem(gem.id);
+          return;
+        }
+      }
+      if (S.gemSynthQuality < C.gems.maxQuality && gemPart.counts[S.gemSynthQuality] >= C.gems.synthesisCost && pointInRect(point, Game.getGemSynthesisButtonRect())) {
+        Game.synthesizeGems(gemPart.partId, S.gemSynthQuality);
+        return;
       }
       return;
     }

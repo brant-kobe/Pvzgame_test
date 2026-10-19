@@ -19,6 +19,11 @@
     wallAction: null,
     wallError: "",
     wallNotice: "",
+    gems: null,
+    gemBusy: false,
+    gemAction: null,
+    gemError: "",
+    gemNotice: "",
     error: "",
     busy: false,
     lastReportSaved: false,
@@ -84,8 +89,12 @@
     state.wall = null;
     state.wallBusy = false;
     state.wallAction = null;
+    state.gems = null;
+    state.gemBusy = false;
+    state.gemAction = null;
     if (Game.equipment) Game.equipment.clear();
     if (Game.wall) Game.wall.clear();
+    if (Game.gems) Game.gems.clear();
   }
 
   function applyMe(data) {
@@ -95,10 +104,12 @@
     state.resources = data.resources || {};
     state.equipment = data.equipment || null;
     state.wall = data.wall || null;
+    state.gems = data.gems || [];
     state.status = state.account ? "ready" : "guest";
     state.error = "";
     if (Game.equipment) Game.equipment.applyAccount(state.equipment);
     if (Game.wall) Game.wall.applyAccount(state.wall);
+    if (Game.gems) Game.gems.applyAccount(state.gems);
   }
 
   function applyResources(values) {
@@ -316,6 +327,53 @@
     });
   }
 
+  function runGemAction(action, path, body, notice) {
+    if (state.status !== "ready") return Promise.resolve({ ok: false, error: "登录后才能管理宝石" });
+    if (state.gemBusy) return Promise.resolve({ ok: false, error: "正在处理宝石" });
+    state.gemBusy = true;
+    state.gemAction = action;
+    state.gemError = "";
+    state.gemNotice = "";
+    return request(path, { method: "POST", body: body }).then(function (result) {
+      state.gemBusy = false;
+      state.gemAction = null;
+      if (result.status === 200 && result.data && result.data.gems) {
+        state.gems = result.data.gems;
+        if (Game.gems) Game.gems.applyAccount(state.gems);
+        state.gemNotice = notice(result.data);
+        return { ok: true, data: result.data };
+      }
+      if (result.status === 401) {
+        state.status = "guest";
+        forgetAccount();
+        state.gemError = "登录已过期";
+        return { ok: false, error: state.gemError, status: 401 };
+      }
+      state.gemError = errorMessage(result, result.networkError ? "未连接数据库" : "宝石操作失败");
+      return { ok: false, error: state.gemError, status: result.status };
+    }, function () {
+      state.gemBusy = false;
+      state.gemAction = null;
+      state.gemError = "未连接数据库";
+      return { ok: false, error: state.gemError };
+    });
+  }
+
+  function socketGem(gemId) {
+    return runGemAction("socket", "/api/me/gems/socket", { gemId: gemId }, function () { return "宝石已镶嵌"; });
+  }
+
+  function unsocketGem(gemId) {
+    return runGemAction("unsocket", "/api/me/gems/unsocket", { gemId: gemId }, function () { return "宝石已卸下"; });
+  }
+
+  function synthesizeGems(partId, quality) {
+    return runGemAction("synthesize", "/api/me/gems/synthesize", { partId: partId, quality: quality }, function (data) {
+      var info = C.gems.qualities[data.gem ? data.gem.quality : quality + 1];
+      return "合成成功 · " + (info ? info.name : "新宝石");
+    });
+  }
+
   function completedMap() {
     var map = {};
     if (state.status !== "ready") {
@@ -411,6 +469,10 @@
     getEquipment: function () { return state.equipment; },
     upgradeWall: upgradeWall,
     getWall: function () { return state.wall; },
+    socketGem: socketGem,
+    unsocketGem: unsocketGem,
+    synthesizeGems: synthesizeGems,
+    getGems: function () { return state.gems; },
     getProgress: function () { return { completed: completedMap() }; },
     isCompleted: function (levelId) { return !!completedMap()[levelId]; },
     getRecord: recordOf,

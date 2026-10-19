@@ -1,0 +1,199 @@
+/* 宝石层：部位槽位、背包词条与属性修正。 */
+(function (Game) {
+  "use strict";
+  var C = Game.config;
+
+  var state = { data: null };
+
+  function finite(value) { return typeof value === "number" && isFinite(value) ? value : 0; }
+  function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+
+  function partIds() {
+    var ids = {};
+    (C.equipment.slots || []).forEach(function (slot) { ids[slot.id] = true; });
+    return ids;
+  }
+
+  function normalizeAffix(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    var kind = String(raw.kind || ""), name = String(raw.name || ""), id = String(raw.id || "");
+    if (!kind || !name || !id) return null;
+    var element = null;
+    if (kind === "elementAttack") {
+      element = String(raw.element || "");
+      if (!C.elements[element]) return null;
+    }
+    return {
+      id: id,
+      kind: kind,
+      element: element,
+      name: name,
+      value: finite(raw.value),
+      percent: !!raw.percent,
+      text: String(raw.text || (name + " +" + finite(raw.value)))
+    };
+  }
+
+  function normalize(data) {
+    if (Object.prototype.toString.call(data) !== "[object Array]") return [];
+    var validParts = partIds(), used = {}, out = [];
+    data.forEach(function (row) {
+      if (!row || typeof row !== "object") return;
+      var partId = String(row.partId || "");
+      if (!validParts[partId]) return;
+      var quality = Math.round(finite(row.quality));
+      if (quality < 0 || quality > C.gems.maxQuality) return;
+      var affix = normalizeAffix(row.affix);
+      if (!affix) return;
+      var slot = row.slotIndex;
+      if (slot !== null && slot !== undefined) {
+        slot = Math.round(finite(slot));
+        if (slot < 0 || slot >= C.gems.socketsPerPart) slot = null;
+      } else slot = null;
+      if (slot !== null) {
+        var key = partId + ":" + slot;
+        if (used[key]) slot = null;
+        else used[key] = true;
+      }
+      out.push({
+        id: Math.max(0, Math.round(finite(row.id))),
+        partId: partId,
+        quality: quality,
+        slotIndex: slot,
+        affix: affix
+      });
+    });
+    return out;
+  }
+
+  function qualities() { return C.gems.qualities || []; }
+  function qualityInfo(value) { return qualities()[clamp(Math.round(finite(value)), 0, C.gems.maxQuality)] || qualities()[0]; }
+
+  function decorate(gem) {
+    var info = qualityInfo(gem.quality);
+    return {
+      id: gem.id,
+      partId: gem.partId,
+      quality: gem.quality,
+      qualityName: info.name,
+      qualityShort: info.short,
+      color: info.color,
+      slotIndex: gem.slotIndex,
+      affix: gem.affix
+    };
+  }
+
+  function getAll() { return state.data || []; }
+
+  function getPart(partId) {
+    var part = (C.equipment.slots || []).filter(function (slot) { return slot.id === partId; })[0] || C.equipment.slots[0];
+    var id = part ? part.id : "arm";
+    var sockets = [], counts = [], inventory = [], socketed = 0, i;
+    for (i = 0; i < C.gems.socketsPerPart; i++) sockets.push(null);
+    for (i = 0; i <= C.gems.maxQuality; i++) counts.push(0);
+    getAll().forEach(function (gem) {
+      if (gem.partId !== id) return;
+      if (gem.slotIndex !== null) {
+        sockets[gem.slotIndex] = decorate(gem);
+        socketed++;
+      } else {
+        counts[gem.quality]++;
+        inventory.push(decorate(gem));
+      }
+    });
+    inventory.sort(function (a, b) {
+      if (a.quality !== b.quality) return b.quality - a.quality;
+      return a.id - b.id;
+    });
+    return {
+      partId: id,
+      name: part ? part.name : "手臂",
+      short: part ? part.short : "臂",
+      color: part ? part.color : C.colors.cyan,
+      sockets: sockets,
+      inventory: inventory,
+      counts: counts,
+      socketedCount: socketed,
+      capacity: C.gems.socketsPerPart,
+      canSocket: socketed < C.gems.socketsPerPart
+    };
+  }
+
+  function getSocket(partId, slotIndex) {
+    var part = getPart(partId);
+    if (slotIndex < 0 || slotIndex >= part.sockets.length) return null;
+    return part.sockets[slotIndex];
+  }
+
+  function getDefaultSynthesisQuality(partId) {
+    var part = getPart(partId);
+    for (var quality = 0; quality < C.gems.maxQuality; quality++) {
+      if (part.counts[quality] >= C.gems.synthesisCost) return quality;
+    }
+    return 0;
+  }
+
+  function emptyTotals() {
+    var elements = {};
+    Object.keys(C.elements).forEach(function (id) { elements[id] = 0; });
+    return {
+      attack: 0,
+      elementAttack: elements,
+      cooldownReduction: 0,
+      wallHpBonus: 0,
+      critRate: 0,
+      critDamage: 0,
+      statusDurationMultiplier: 0
+    };
+  }
+
+  function getTotals() {
+    var totals = emptyTotals(), socketed = false;
+    getAll().forEach(function (gem) {
+      if (gem.slotIndex === null) return;
+      socketed = true;
+      var kind = gem.affix.kind, value = finite(gem.affix.value);
+      if (kind === "attack") totals.attack += value;
+      else if (kind === "elementAttack" && totals.elementAttack[gem.affix.element] !== undefined) totals.elementAttack[gem.affix.element] += value;
+      else if (kind === "cooldownReduction") totals.cooldownReduction += value;
+      else if (kind === "wallHpBonus") totals.wallHpBonus += value;
+      else if (kind === "critRate") totals.critRate += value;
+      else if (kind === "critDamage") totals.critDamage += value;
+      else if (kind === "statusDurationMultiplier") totals.statusDurationMultiplier += value;
+    });
+    totals.socketed = socketed;
+    return totals;
+  }
+
+  function applyModifiers() {
+    if (!Game.attributes) return;
+    var totals = getTotals();
+    if (totals.socketed) Game.attributes.setGemModifiers(totals);
+    else Game.attributes.clearGemModifiers();
+    if (Game.state && Game.state.player) Game.attributes.applyPlayer(Game.state.player);
+  }
+
+  function applyAccount(data) {
+    state.data = normalize(data);
+    applyModifiers();
+  }
+
+  function clear() {
+    state.data = null;
+    if (!Game.attributes) return;
+    Game.attributes.clearGemModifiers();
+    if (Game.state && Game.state.player) Game.attributes.applyPlayer(Game.state.player);
+  }
+
+  Game.gems = {
+    state: state,
+    applyAccount: applyAccount,
+    clear: clear,
+    getAll: getAll,
+    getPart: getPart,
+    getSocket: getSocket,
+    getTotals: getTotals,
+    getDefaultSynthesisQuality: getDefaultSynthesisQuality,
+    qualityInfo: qualityInfo
+  };
+})(window.Game = window.Game || {});

@@ -182,9 +182,10 @@
       elementTitleY: 326,
       elementX: [56, 160, 264], elementY: [360, 392], elementOrder: ["physical", "fire", "ice", "electric", "wind", "energy"],
       noteY: 444,
-      equipment: { x: 34, y: 514, w: 96, h: 36 },
-      wall: { x: 132, y: 514, w: 96, h: 36 },
-      back: { x: 230, y: 514, w: 96, h: 36 }
+      equipment: { x: 26, y: 514, w: 74, h: 36 },
+      gems: { x: 104, y: 514, w: 74, h: 36 },
+      wall: { x: 182, y: 514, w: 74, h: 36 },
+      back: { x: 260, y: 514, w: 74, h: 36 }
     },
     equipmentUI: {
       panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
@@ -202,10 +203,27 @@
       noteY: 482,
       back: { x: 98, y: 514, w: 164, h: 36 }
     },
+    gemUI: {
+      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
+      titleY: 112, subtitleY: 136,
+      partTabs: { x: 32, y: 152, w: 46, h: 28, gap: 4 },
+      summaryY: 198,
+      sockets: { x: 34, y: 208, w: 92, h: 48, gapX: 4, gapY: 4, columns: 3 },
+      inventoryTitleY: 334,
+      inventory: { x: 34, y: 344, w: 292, h: 84, rowHeight: 28, rows: 3 },
+      inventoryPrev: { x: 252, y: 321, w: 20, h: 18 },
+      inventoryNext: { x: 278, y: 321, w: 20, h: 18 },
+      synthesis: { x: 34, y: 430, w: 292, h: 62 },
+      synthesisPrev: { x: 48, y: 464, w: 24, h: 24 },
+      synthesisNext: { x: 196, y: 464, w: 24, h: 24 },
+      synthesisButton: { x: 236, y: 458, w: 78, h: 30 },
+      noteY: 506,
+      back: { x: 98, y: 514, w: 164, h: 36 }
+    },
     accounts: { apiBase: "", healthPath: "/api/health", timeoutMs: 4000, usernameMin: 2, usernameMax: 16, passwordMin: 6, passwordMax: 64, legacyKey: "blockline.progress", maxRecords: 5, maxStatusNote: 26 },
     resources: [
       { id: "coin", name: "金币", color: "#ffd166" },
-      { id: "gem", name: "宝石", color: "#68d8ff" },
+      { id: "gem", name: "钻石", color: "#68d8ff" },
       { id: "tech", name: "零件", color: "#63e6a0" },
       { id: "blueprintArm", name: "手臂图纸", color: "#68d8ff" },
       { id: "blueprintClothes", name: "衣服图纸", color: "#63e6a0" },
@@ -228,6 +246,16 @@
       ]
     },
     wall: { maxLevel: 200, hpPerLevel: 200, breakthroughStep: 10, rareEarthBase: 2 },
+    gems: {
+      maxQuality: 4, socketsPerPart: 6, synthesisCost: 5,
+      qualities: [
+        { id: 0, name: "灰色", short: "灰", color: "#9aa8b2" },
+        { id: 1, name: "绿色", short: "绿", color: "#63e6a0" },
+        { id: 2, name: "蓝色", short: "蓝", color: "#68d8ff" },
+        { id: 3, name: "紫色", short: "紫", color: "#c9a1ff" },
+        { id: 4, name: "红色", short: "红", color: "#ff6b6b" }
+      ]
+    },
     bossHealth: { bars: 3, width: 108, barHeight: 9, offsetY: 12, headExtent: 1.78, track: "rgba(255, 107, 107, .42)" },
     ranges: { far: 480, mid: 320, near: 125 },
     rifleRange: "far",

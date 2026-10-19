@@ -31,3 +31,18 @@ class EquipmentUpgrade(BaseModel):
 
 class WallUpgrade(BaseModel):
     action: str = ""
+
+
+class GemSocket(BaseModel):
+    gemId: int = 0
+
+
+class GemSynthesis(BaseModel):
+    partId: str = ""
+    quality: int = -1
+
+
+class GemGrant(BaseModel):
+    partId: str = ""
+    quality: int = -1
+    count: int = 0

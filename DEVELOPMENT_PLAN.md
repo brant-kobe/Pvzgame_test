@@ -586,10 +586,11 @@ data/
 | `accounts` | `id`、`username`（唯一、`COLLATE NOCASE`）、`password_hash`、`created_at`、`last_login_at` | 用户名不区分大小写，中文不受影响 |
 | `sessions` | `token_hash`（主键）、`account_id`（级联删除）、`created_at`、`expires_at` | 登录态落库，服务重启不掉线 |
 | `level_progress` | `account_id` + `level_id`（联合主键）、`completed_at`、`best_time`、`best_kills`、`attempts`、`wins` | **通关 + 每关统计**，`best_*` 取更优、`attempts` / `wins` 累加 |
-| `resources` | `account_id` + `resource_id`（联合主键）、`amount` | 金币 / 宝石 / 零件 / 六种部位图纸 / 钢材 / 稀土；目录来自 `config.resources` |
+| `resources` | `account_id` + `resource_id`（联合主键）、`amount` | 金币 / 钻石 / 零件 / 六种部位图纸 / 钢材 / 稀土；目录来自 `config.resources` |
 | `equipment` | `account_id` + `slot_id`（联合主键）、`element_id`、`level` | 六部位装备的固定随机元素与等级；`level` 默认 1、上限 100 |
 | `wall_state` | `account_id`（主键）、`level`、`breakthroughs` | 城墙等级 1～200 与已完成稀土突破次数 0～19 |
-| `schema_version` | `version` | 供以后手写迁移脚本判断版本；当前为 3 |
+| `gems` | `id`（自增主键）、`account_id`、`part_id`、`quality`、`affix_id`、`slot_index` | 部位绑定宝石；`slot_index` 0～5 已镶嵌、`NULL` 背包；唯一约束 `(account_id, part_id, slot_index)` |
+| `schema_version` | `version` | 供以后手写迁移脚本判断版本；当前为 4 |
 
 - SQLAlchemy 2.0 类型化声明式模型；SQLite 连接统一设 `foreign_keys=ON`、`journal_mode=WAL`、`busy_timeout=5000`。
 - 建表用 `Base.metadata.create_all()` 配合 `schema_version` 记录版本；**暂不引入 Alembic**（本地单机、单库），将来真需要版本化迁移时再补。
@@ -606,14 +607,18 @@ data/
 | POST | `/api/auth/register` | `{username, password}` → 建号并直接登录，下发会话 Cookie |
 | POST | `/api/auth/login` | 校验密码 → 新会话 |
 | POST | `/api/auth/logout` | 删除当前会话并清 Cookie |
-| GET | `/api/me` | 账户信息 + 全部关卡记录 + 资源 + 六部位装备 + 城墙状态（登录后启动拉一次） |
+| GET | `/api/me` | 账户信息 + 全部关卡记录 + 资源 + 六部位装备 + 城墙状态 + 全部宝石（登录后启动拉一次） |
 | POST | `/api/me/progress` | `{levelId, time, kills, win}` → upsert，维护 `best_*` / `attempts` / `wins` |
 | GET / POST | `/api/me/resources` | 读取 / `{resourceId, delta}` 增减（资源产出未接入，仅用于调试注入） |
 | POST | `/api/me/equipment/upgrade` | `{slotId}` → 校验满级与材料，扣金币 + 部位图纸，等级 +1 |
 | POST | `/api/me/wall/upgrade` | `{action: "level"|"breakthrough"}` → 钢材升级或稀土突破 |
-| DELETE | `/api/me` | `{password}` 二次确认后删号（级联清进度、资源、装备与城墙） |
+| POST | `/api/me/gems/socket` | `{gemId}` → 放进该部位第一个空槽 |
+| POST | `/api/me/gems/unsocket` | `{gemId}` → 从槽位回到背包 |
+| POST | `/api/me/gems/synthesize` | `{partId, quality}` → 5 颗未镶嵌同部位同品质合成高一档 |
+| POST | `/api/me/gems/grant` | `{partId, quality, count}` → 调试注入宝石，正式玩法不调用 |
+| DELETE | `/api/me` | `{password}` 二次确认后删号（级联清进度、资源、装备、城墙与宝石） |
 
-统一错误体 `{"error": {"code", "message"}}`：`401` 未登录、`403` 密码错误、`409` 用户名已存在、`422` 参数不合法。所有写接口只接受 `POST` / `DELETE`，并校验 `Origin` / `Referer` 同源，配合 `SameSite=Strict` 防止本地其它页面误触发。
+统一错误体 `{"error": {"code", "message"}}`：`401` 未登录、`403` 密码错误、`409` 用户名已存在 / 宝石槽位并发冲突、`422` 参数不合法。所有写接口只接受 `POST` / `DELETE`，并校验 `Origin` / `Referer` 同源，配合 `SameSite=Strict` 防止本地其它页面误触发。
 
 ### 12.5 前端数据层
 
@@ -649,7 +654,7 @@ data/
 ### 12.7 配置项
 
 - `config.accounts`：`{ apiBase: "", healthPath: "/api/health", timeoutMs: 4000, usernameMin: 2, usernameMax: 16, usernamePattern: 中文/字母/数字/下划线, passwordMin: 6, passwordMax: 64 }`
-- `config.resources`：资源目录（金币 / 宝石 / 零件 + 六种部位图纸 + 钢材 / 稀土，各带 `id` / `name` / `color`），**是资源目录的唯一来源**；服务端 `RESOURCE_IDS` 必须同步
+- `config.resources`：资源目录（金币 / 钻石 / 零件 + 六种部位图纸 + 钢材 / 稀土，各带 `id` / `name` / `color`），**是资源目录的唯一来源**；服务端 `RESOURCE_IDS` 必须同步。`gem` 是货币「钻石」的 id，与装备宝石系统完全分开
 - `config.equipment`：六部位 id / 名称 / 颜色 / 专属图纸 id；服务端 `EQUIPMENT_SLOTS` 与之保持一致
 - `config.equipmentUI`：装备面板、2×3 卡片与返回按钮几何；卡片与按钮矩形由 `Game.getEquipmentCardRect` / `Game.getEquipmentUpgradeRect` 统一给出
 - `config.wall` / `config.wallUI`：城墙上限、每级血量与面板 / 卡片 / 按钮几何；服务端 `WALL_*` 是数值与价格的权威
@@ -782,8 +787,8 @@ git diff --check
 - 加载顺序：`config → attributes → equipment → wall → accounts → utils → state → combat → update → sprites → render → input → main`。
 - `src/accounts.js` 缓存 `equipment`、`equipmentBusy`、`equipmentBusySlot`、`equipmentError`、`equipmentNotice`；`applyMe` 应用装备，`forgetAccount` 清空装备；`upgradeEquipment` 走异步接口，401 回 guest，网络失败保留缓存并提示。
 - `Game.openEquipment` / `Game.backToAttributes` / `Game.upgradeEquipment` 是界面切换与升级入口；卡片、按钮、返回按钮几何由 `Game.getEquipmentCardRect` / `Game.getEquipmentUpgradeRect` / `config.equipmentUI` 统一给出。
-- 属性面板底部为「装备 / 城墙 / 返回」三按钮；装备界面为 2 列 × 3 行、140×106 卡片，显示部位、`Lv.N / 100`、攻击、元素、金币与图纸消耗、强化按钮；底部状态行显示成功 / 错误或产出待接入提示。`drawHud` 在装备界面跳过。
-- 账户中心资源区最终为 4 列 × 3 行网格，展示金币、宝石、零件、六种图纸、钢材与稀土（城墙系统加入后从 3×3 扩展为 4×3）。
+- 属性面板底部为「装备 / 宝石 / 城墙 / 返回」四按钮；装备界面为 2 列 × 3 行、140×106 卡片，显示部位、`Lv.N / 100`、攻击、元素、金币与图纸消耗、强化按钮；底部状态行显示成功 / 错误或产出待接入提示。`drawHud` 在装备界面跳过。
+- 账户中心资源区最终为 4 列 × 3 行网格，展示金币、钻石、零件、六种图纸、钢材与稀土（城墙系统加入后从 3×3 扩展为 4×3）。
 
 ### 14.4 验证（装备阶段）
 
@@ -819,7 +824,7 @@ git diff --check
 ### 15.2 后端
 
 - 新增 `wall_state` 表：`account_id`（主键、级联删除）、`level`、`breakthroughs`。
-- `schema_version` 从 2 升到 **3**；`create_all()` 为现有库补建新表，旧账户在下次 `/api/me` 时创建 Lv.1 / 0 次突破。
+- `schema_version` 从 2 升到 **3**（第 16 节宝石系统再升到 **4**）；`create_all()` 为现有库补建新表，旧账户在下次 `/api/me` 时创建 Lv.1 / 0 次突破。
 - 新增 `server/app/wall.py`：`ensure_state`、`hp_bonus`、`steel_cost`、`next_breakthrough_level`、`rare_earth_cost`、`breakthrough_required`、`payload`。
 - `GET /api/me` 增加 `wall`；`POST /api/me/wall/upgrade` 接收 `{action: "level"|"breakthrough"}`：
   - `level`：满级 / 未突破时拒绝；扣钢材并等级 +1。
@@ -832,18 +837,18 @@ git diff --check
 - `src/attributes.js` 新增独立 `wallHpExtra` 与 `setWallHpBonus` / `getWallHpBonus`；`setModifiers` / `clearModifiers` 只处理装备，不清除城墙加成。
 - 新增 `src/wall.js`（`Game.wall`）：`applyAccount` / `clear` / `getView` / `getData`。`syncWall()` 在测试场跳过 9999，在战斗中按原血量比例保留，在菜单/面板中补满。
 - `src/accounts.js` 增加 `wall`、`wallBusy`、`wallAction`、`wallError`、`wallNotice` 与 `upgradeWall(action)` / `getWall()`；`applyMe` 应用城墙，`forgetAccount` 清空城墙，401 回 guest。
-- 加载顺序：`config → attributes → equipment → wall → accounts → utils → state → combat → update → sprites → render → input → main`。
+- 加载顺序：`config → attributes → equipment → wall → gems → accounts → utils → state → combat → update → sprites → render → input → main`。
 - `src/state.js` 新增 `Game.openWall`、`Game.upgradeWall`、`Game.getWallActionButtonRect`；`config.wallUI` 统一定义面板、主卡、单一动作卡与动作按钮几何。
-- 属性面板底部改为「装备 / 城墙 / 返回」三按钮；城墙界面显示等级、血量、距下一突破节点进度与状态；普通等级只显示钢材强化卡与「强化」按钮，到达 10/20/…/190 节点时同一张行动卡切换为稀土突破卡与「突破」按钮，避免常驻一个不可用的突破入口。`drawHud` 在城墙界面跳过。
+- 属性面板底部改为「装备 / 宝石 / 城墙 / 返回」四按钮；城墙界面显示等级、血量、距下一突破节点进度与状态；普通等级只显示钢材强化卡与「强化」按钮，到达 10/20/…/190 节点时同一张行动卡切换为稀土突破卡与「突破」按钮，避免常驻一个不可用的突破入口。`drawHud` 在城墙界面跳过。
 - 材料图标由 `render.js` 的 `drawMaterialIcon` 绘制：钢材是灰白色长方体（顶面高光 + 左右深浅侧面），稀土是金色圆锥（渐变锥体 + 椭圆底座 + 高光线）；顶部资源行、动作卡与按钮统一复用同一套图标。稀土主题色改为金色 `#f2c14e`。
 - 账户中心资源区从 3 列 × 3 行改为 **4 列 × 3 行**，容纳 11 项资源。
 
 ### 15.4 验证
 
-- `tmp/check_db.py`：**62 项**通过 —— schema 3、`wall_state` 幂等创建、Lv.1/Lv.10/Lv.200 血量、钢材 20×等级、10 级节点、稀土 2/4/…/38、Lv.199 不需要第 20 次突破、删号级联。
-- `tmp/check_api.py`：**88 项**通过 —— `/api/me` 城墙字段、Lv.1 消耗 20 钢材、Lv.10 阻断、稀土突破后等级不变、扣 2 稀土、Lv.11、Lv.190 消耗 38、Lv.199→200 消耗 3980、满级 422、重新登录保持。
-- `tmp/check-wall.js`：**62 项**通过 —— 血量换算、钢材升级、10 级阻断与突破、材料不足、满级、单一动作卡 / 按钮几何、普通等级只显示强化、节点只显示突破、突破按钮触发请求、未登录、测试场 9999、401 / 网络失败 / 登出。
-- `tmp/check-accounts.js`：**139 项**通过 —— 城墙加载 / 登出清理、钢材 / 稀土从 0 开始、11 项资源网格。
+- `tmp/check_db.py`：**88 项**通过 —— schema 4、`wall_state` 幂等创建、Lv.1/Lv.10/Lv.200 血量、钢材 20×等级、10 级节点、稀土 2/4/…/38、Lv.199 不需要第 20 次突破、删号级联；宝石系统加入后的表与级联也已覆盖。
+- `tmp/check_api.py`：**115 项**通过 —— `/api/me` 城墙字段、Lv.1 消耗 20 钢材、Lv.10 阻断、稀土突破后等级不变、扣 2 稀土、Lv.11、Lv.190 消耗 38、Lv.199→200 消耗 3980、满级 422、重新登录保持；宝石接口已加入。
+- `tmp/check-wall.js`：**63 项**通过 —— 血量换算、钢材升级、10 级阻断与突破、材料不足、满级、单一动作卡 / 按钮几何、普通等级只显示强化、节点只显示突破、突破按钮触发请求、未登录、测试场 9999、401 / 网络失败 / 登出。
+- `tmp/check-accounts.js`：**147 项**通过 —— 城墙 / 宝石加载与登出清理、钢材 / 稀土从 0 开始、11 项资源网格。
 - `tmp/check-equipment.js`：**76 项**通过；`tmp/check-attributes.js`、`tmp/check-wall-hp.js`、`tmp/smoke-whirlwind.js` 与既有脚本通过。
 - 截图 `tmp/wall-screen.png`（突破节点）、`tmp/wall-normal-screen.png`（普通强化）、`tmp/account-screen.png`、`tmp/attributes-screen.png` 核对。
 
@@ -855,3 +860,72 @@ git diff --check
 - 每 10 级节点依次消耗 2/4/…/38 稀土；Lv.200 满级，满级后两种操作均 422。
 - 未登录、材料不足、未到节点、未突破、满级、401、网络失败均有正确提示且不产生错误扣减。
 - 属性面板可进入城墙界面；测试场 9999 不被覆盖；本轮不新增资源产出、不改战斗公式、不改装备与关卡数据。
+
+## 16. 装备宝石系统（6 部位 × 6 槽位 · 已实现）
+
+### 16.1 定位与规则
+
+- 六件装备各开放 **6 个宝石槽位**，Lv.1 即可使用；宝石按部位绑定，手臂宝石只能进入手臂槽位。
+- 品质五档：灰 / 绿 / 蓝 / 紫 / 红，颜色分别为 `#9aa8b2` / `#63e6a0` / `#68d8ff` / `#c9a1ff` / `#ff6b6b`。
+- 每颗宝石固定 **1 条词条**，词条类型等概率随机；品质只提高数值。
+- 只有 `slotIndex !== null` 的已镶嵌宝石提供属性；背包宝石不生效。
+- 同一部位、同一品质的 **5 颗未镶嵌宝石**自动合成 1 颗同部位、高一档品质的宝石，词条重新随机；已镶嵌宝石受保护；红色封顶。
+- 本轮不做正式产出；新账户宝石为空，`POST /api/me/gems/grant` 仅用于开发 / 测试注入，客户端不提供入口。
+- 账户资源 `gem` 的显示名改为「钻石」，与新宝石系统分开；资源 id / 数据库 / 接口不变。
+
+### 16.2 数值
+
+| 词条 | 灰 | 绿 | 蓝 | 紫 | 红 |
+|---|---:|---:|---:|---:|---:|
+| 攻击力 | +10 | +20 | +30 | +40 | +50 |
+| 六系元素攻击（每系独立） | +10 | +20 | +30 | +40 | +50 |
+| 冷却缩减 | +1% | +2% | +3% | +4% | +5% |
+| 防线血量 | +200 | +400 | +600 | +800 | +1000 |
+| 暴击率 | +1% | +2% | +3% | +4% | +5% |
+| 暴击伤害 | +10% | +20% | +30% | +40% | +50% |
+| 负面时间 | +10% | +20% | +30% | +40% | +50% |
+
+冷却 50%、暴击 95%、暴伤 500%、负面时间 200% 的 caps 仍然生效。
+
+### 16.3 后端
+
+- `gem` 数据表：`id` / `account_id` / `part_id` / `quality` / `affix_id` / `slot_index`；唯一约束 `(account_id, part_id, slot_index)`，SQLite 允许多个 `NULL` 背包宝石。
+- `SCHEMA_VERSION` 3 → **4**；`create_all()` 自动补表，旧账户宝石为空。
+- `server/app/gems.py`：词条数值与文本、随机词条、首空槽镶嵌、卸下、五合一、调试注入。
+- `GET /api/me` 增加 `gems` 列表；新增 `/api/me/gems/socket`、`/unsocket`、`/synthesize`、`/grant`。
+- 错误码：`unknown_gem_part` / `invalid_gem_quality` / `invalid_gem_count` / `gem_not_found` / `gem_slots_full` / `not_enough_gems` / `gem_max_quality` / `gem_slot_conflict`。
+- 删除账户级联删除宝石。
+
+### 16.4 前端
+
+- 新增 `src/gems.js`（`Game.gems`）：归一化、`getPart`、`getSocket`、`getTotals`、`getDefaultSynthesisQuality`；只汇总已镶嵌宝石。
+- `src/attributes.js` 增加独立 `gemModifiers`、`setGemModifiers` / `clearGemModifiers`，**不能写进装备或城墙的修正入口**。
+- `src/accounts.js` 增加 `gems`、`gemBusy`、`gemAction`、`gemError`、`gemNotice` 与 `socketGem` / `unsocketGem` / `synthesizeGems`；登录加载、401 / 登出清空。
+- 加载顺序加入 `gems.js`；所有测试沙箱同步加载。
+- `config.attributesUI` 改为四个 74×36 按钮；`config.gemUI` 统一面板、页签、槽位、背包与合成栏几何。
+
+### 16.5 界面
+
+- 属性面板底部：装备 / 宝石 / 城墙 / 返回。
+- 宝石界面：六个部位页签（显示已镶嵌数量）、当前部位摘要、3×2 六槽位、分页背包（每页 3 行）、合成栏（品质左右切换 + 数量 + 合成按钮）、状态行与返回。
+- 空槽显示「+ 空槽」；已镶嵌槽显示品质色、六边形切割宝石图标、品质短名与词条文本；点击槽位直接卸下。
+- 背包行显示品质名、词条文本与「镶嵌 ›」；点击放入该部位第一个空槽，6 格已满时置灰。
+- 合成栏显示「当前品质 数量 / 5」「未镶嵌」，红色显示「已最高」，数量不足显示「不足 5 颗」。
+- 未登录 / 离线显示登录提示并禁用操作；busy 显示处理中并阻止重复点击。
+
+### 16.6 验证
+
+- `tmp/check-gems.js` 新增；覆盖五档数值、12 种词条汇总、仅镶嵌生效、六槽上限、卸下、五合一、红色封顶、UI 几何 / 绘制 / 点击、401 / 网络 / 登出。
+- `tmp/check_db.py`：schema 4、`gems` 表、多个 `NULL` 背包、词条数值、镶嵌 / 卸下 / 合成 / 红色上限 / 级联删除。
+- `tmp/check_api.py`：`/api/me` 宝石为空、注入、镶嵌、六槽上限、卸下、合成、非法参数、持久化、静态 `gems.js`。
+- `tmp/check-accounts.js`：宝石加载 / 登出清理、钻石资源名。
+- `tmp/check_equipment.js` / `tmp/check_wall.js` / `tmp/check_attributes.js`：属性面板四入口与宝石说明。
+- 截图 `tmp/gems-screen.png`；`tmp/trace-draw.js` 新增 `account gems` 场景。
+
+### 16.7 验收标准
+
+- 新账户宝石背包为空；注入 5 颗灰色手臂宝石后可合成 1 颗绿色手臂宝石，部位不变、词条随机、5 颗被消耗。
+- 6 个槽位依次填满，第 7 颗返回槽位已满；卸下后对应加成立即消失。
+- 只有已镶嵌宝石计入属性；背包宝石不影响攻击 / 元素 / 冷却 / 防线 / 暴击 / 暴伤 / 负面时间。
+- 红色宝石不能继续合成；不足 5 颗、不同部位、不同品质均不能合成。
+- 未登录、401、网络失败、busy 均有正确提示且不产生错误扣减。
