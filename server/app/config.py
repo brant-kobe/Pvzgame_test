@@ -24,10 +24,40 @@ PBKDF2_ALGORITHM = "sha256"
 PBKDF2_ITERATIONS = 200000
 PBKDF2_PREFIX = "pbkdf2_sha256"
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
-RESOURCE_IDS = ("coin", "gem", "tech")
+RESOURCE_IDS = (
+    "coin",
+    "gem",
+    "tech",
+    "blueprintArm",
+    "blueprintClothes",
+    "blueprintHelmet",
+    "blueprintPants",
+    "blueprintShoes",
+    "blueprintGloves",
+)
 MAX_LEVEL_ID = 64
+
+EQUIPMENT_SLOTS = ("arm", "clothes", "helmet", "pants", "shoes", "gloves")
+EQUIPMENT_ELEMENTS = ("physical", "fire", "ice", "electric", "wind", "energy")
+EQUIPMENT_MAX_LEVEL = 100
+EQUIPMENT_ATTACK_BASE = 10
+EQUIPMENT_ATTACK_PER_LEVEL = 5
+EQUIPMENT_ELEMENT_BASE = 10
+EQUIPMENT_ELEMENT_PER_LEVEL = 5
+EQUIPMENT_COIN_BASE = 80
+EQUIPMENT_COIN_PER_LEVEL = 40
+EQUIPMENT_BLUEPRINT_BASE = 10
+EQUIPMENT_BLUEPRINT_PER_LEVEL = 10
+EQUIPMENT_BLUEPRINTS = {
+    "arm": "blueprintArm",
+    "clothes": "blueprintClothes",
+    "helmet": "blueprintHelmet",
+    "pants": "blueprintPants",
+    "shoes": "blueprintShoes",
+    "gloves": "blueprintGloves",
+}
 
 STATIC_DIRS = ("src", "styles", "assets", "pictures")
 LOCAL_ORIGIN_HOSTS = ("127.0.0.1", "localhost", "[::1]")

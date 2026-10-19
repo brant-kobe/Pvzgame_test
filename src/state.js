@@ -38,6 +38,12 @@
   Game.openZombieCodex = function () { Game.state.zombieCodexCategory = "minion"; Game.state.selectedZombieCodexId = null; Game.state.codexPage = 0; Game.state.screen = "zombieCodex"; };
   Game.openSkillCodex = function () { Game.state.selectedSkillCodexId = null; Game.state.codexPage = 0; Game.state.screen = "skillCodex"; };
   Game.openAttributes = function () { Game.state.screen = "attributes"; };
+  Game.openEquipment = function () {
+    Game.accounts.state.equipmentError = "";
+    Game.accounts.state.equipmentNotice = "";
+    Game.state.screen = "equipment";
+  };
+  Game.backToAttributes = function () { Game.state.screen = "attributes"; };
   Game.backToMenu = function () { Game.state.levelPreview = null; Game.state.screen = "menu"; };
   Game.getTestEnemyIds = function () { return Object.keys(C.enemies); };
   Game.startTestArena = function () {
@@ -119,6 +125,10 @@
     if (Game.accounts.getStatus() !== "ready") { Game.accounts.state.notice = "登录后才能导入旧进度"; return; }
     Game.accounts.importLegacy();
   };
+  Game.upgradeEquipment = function (slotId) {
+    if (Game.state.screen !== "equipment") return Promise.resolve({ ok: false });
+    return Game.accounts.upgradeEquipment(slotId);
+  };
   Game.isLevelUnlocked = function (levelId) {
     var level = C.levels.find(function (item) { return item.id === levelId; });
     if (!level) return false;
@@ -133,6 +143,14 @@
   Game.getLevelInfoRect = function (index) {
     var geo = C.levelSelect, row = Game.getLevelRowRect(index), size = geo.infoSize;
     return { x: row.x + geo.infoX - size / 2, y: row.y + (row.h - size) / 2, w: size, h: size };
+  };
+  Game.getEquipmentCardRect = function (index) {
+    var geo = C.equipmentUI, column = index % 2, row = Math.floor(index / 2);
+    return { x: geo.cardX[column], y: geo.cardY[row], w: geo.cardWidth, h: geo.cardHeight };
+  };
+  Game.getEquipmentUpgradeRect = function (index) {
+    var card = Game.getEquipmentCardRect(index);
+    return { x: card.x + 10, y: card.y + 80, w: card.w - 20, h: 20 };
   };
   Game.getLevelBriefPanel = function () {
     var geo = C.levelSelect, roster = Game.getLevelRoster(Game.state.levelPreview);

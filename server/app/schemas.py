@@ -23,3 +23,7 @@ class ProgressReport(BaseModel):
 class ResourceChange(BaseModel):
     resourceId: str
     delta: int = 0
+
+
+class EquipmentUpgrade(BaseModel):
+    slotId: str = ""

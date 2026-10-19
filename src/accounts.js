@@ -9,6 +9,11 @@
     progress: {},
     sessionProgress: {},
     resources: {},
+    equipment: null,
+    equipmentBusy: false,
+    equipmentBusySlot: null,
+    equipmentError: "",
+    equipmentNotice: "",
     error: "",
     busy: false,
     lastReportSaved: false,
@@ -68,6 +73,10 @@
     state.progress = {};
     state.sessionProgress = {};
     state.resources = {};
+    state.equipment = null;
+    state.equipmentBusy = false;
+    state.equipmentBusySlot = null;
+    if (Game.equipment) Game.equipment.clear();
   }
 
   function applyMe(data) {
@@ -75,8 +84,14 @@
     state.progress = data.progress || {};
     state.sessionProgress = {};
     state.resources = data.resources || {};
+    state.equipment = data.equipment || null;
     state.status = state.account ? "ready" : "guest";
     state.error = "";
+    if (Game.equipment) Game.equipment.applyAccount(state.equipment);
+  }
+
+  function applyResources(values) {
+    Object.keys(values || {}).forEach(function (id) { state.resources[id] = values[id]; });
   }
 
   function load() {
@@ -217,10 +232,43 @@
     if (state.status !== "ready") return Promise.resolve({ ok: false });
     return request("/api/me/resources", { method: "POST", body: { resourceId: resourceId, delta: delta } }).then(function (result) {
       if (result.status === 200 && result.data && result.data.resources) {
-        Object.keys(result.data.resources).forEach(function (id) { state.resources[id] = result.data.resources[id]; });
+        applyResources(result.data.resources);
         return { ok: true };
       }
       return { ok: false, status: result.status };
+    });
+  }
+
+  function upgradeEquipment(slotId) {
+    if (state.status !== "ready") return Promise.resolve({ ok: false, error: "登录后才能强化装备" });
+    if (state.equipmentBusy) return Promise.resolve({ ok: false, error: "正在强化装备" });
+    state.equipmentBusy = true;
+    state.equipmentBusySlot = slotId;
+    state.equipmentError = "";
+    state.equipmentNotice = "";
+    return request("/api/me/equipment/upgrade", { method: "POST", body: { slotId: slotId } }).then(function (result) {
+      state.equipmentBusy = false;
+      state.equipmentBusySlot = null;
+      if (result.status === 200 && result.data && result.data.equipment) {
+        state.equipment = result.data.equipment;
+        applyResources(result.data.resources || {});
+        state.equipmentNotice = "强化成功 · Lv." + (result.data.level || 0);
+        if (Game.equipment) Game.equipment.applyAccount(state.equipment);
+        return { ok: true, level: result.data.level, slotId: result.data.slotId };
+      }
+      if (result.status === 401) {
+        state.status = "guest";
+        forgetAccount();
+        state.equipmentError = "登录已过期";
+        return { ok: false, error: state.equipmentError, status: 401 };
+      }
+      state.equipmentError = errorMessage(result, result.networkError ? "未连接数据库" : "强化失败");
+      return { ok: false, error: state.equipmentError, status: result.status };
+    }, function () {
+      state.equipmentBusy = false;
+      state.equipmentBusySlot = null;
+      state.equipmentError = "未连接数据库";
+      return { ok: false, error: state.equipmentError };
     });
   }
 
@@ -314,6 +362,9 @@
     removeAccount: removeAccount,
     reportRun: reportRun,
     addResource: addResource,
+    applyResources: applyResources,
+    upgradeEquipment: upgradeEquipment,
+    getEquipment: function () { return state.equipment; },
     getProgress: function () { return { completed: completedMap() }; },
     isCompleted: function (levelId) { return !!completedMap()[levelId]; },
     getRecord: recordOf,

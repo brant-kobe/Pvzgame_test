@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .. import config, models, security, times
+from .. import config, equipment, models, security, times
 from ..database import get_db
 from ..errors import ApiError
-from ..schemas import PasswordConfirm, ProgressReport, ResourceChange
-from ..serializers import account_payload, level_payload, progress_payload, resource_payload
+from ..schemas import EquipmentUpgrade, PasswordConfirm, ProgressReport, ResourceChange
+from ..serializers import account_payload, equipment_payload, level_payload, progress_payload, resource_payload
 
 router = APIRouter()
 
@@ -26,10 +26,12 @@ def _resource_rows(db: Session, account_id: int):
 
 @router.get("")
 def me(account: models.Account = Depends(security.current_account), db: Session = Depends(get_db)) -> dict:
+    equipment_rows = equipment.ensure_rows(db, account.id)
     return {
         "account": account_payload(account),
         "progress": progress_payload(_progress_rows(db, account.id)),
         "resources": resource_payload(_resource_rows(db, account.id)),
+        "equipment": equipment_payload(equipment_rows),
     }
 
 
@@ -78,6 +80,42 @@ def change_resources(
     row.amount = max(0, row.amount + int(payload.delta))
     db.commit()
     return {"resources": resource_payload([row])}
+
+
+@router.post("/equipment/upgrade")
+def upgrade_equipment(
+    payload: EquipmentUpgrade,
+    account: models.Account = Depends(security.current_account),
+    db: Session = Depends(get_db),
+) -> dict:
+    slot_id = (payload.slotId or "").strip()
+    if slot_id not in config.EQUIPMENT_SLOTS:
+        raise ApiError(422, "unknown_equipment_slot", "未知装备部位")
+    equipment_rows = equipment.ensure_rows(db, account.id)
+    row = next((item for item in equipment_rows if item.slot_id == slot_id), None)
+    if row is None:
+        raise ApiError(422, "unknown_equipment_slot", "未知装备部位")
+    if row.level >= config.EQUIPMENT_MAX_LEVEL:
+        raise ApiError(422, "max_equipment_level", "装备已满级")
+    cost = equipment.cost_for(row.level, slot_id)
+    if cost is None:
+        raise ApiError(422, "max_equipment_level", "装备已满级")
+    owned = {item.resource_id: item.amount for item in _resource_rows(db, account.id)}
+    for resource_id, amount in cost.items():
+        if owned.get(resource_id, 0) < amount:
+            raise ApiError(422, "not_enough_resources", "金币或专属图纸不足")
+    for resource_id, amount in cost.items():
+        resource = db.get(models.Resource, (account.id, resource_id))
+        if resource is not None:
+            resource.amount -= amount
+    row.level += 1
+    db.commit()
+    return {
+        "equipment": equipment_payload(equipment_rows),
+        "resources": resource_payload(_resource_rows(db, account.id)),
+        "slotId": row.slot_id,
+        "level": row.level,
+    }
 
 
 @router.delete("", status_code=204)

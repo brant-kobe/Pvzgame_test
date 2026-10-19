@@ -271,7 +271,17 @@
       return;
     }
     if (S.screen === "attributes") {
-      if (pointInRect(point, C.attributesUI.back)) Game.backToMenu();
+      if (pointInRect(point, C.attributesUI.equipment)) Game.openEquipment();
+      else if (pointInRect(point, C.attributesUI.back)) Game.backToMenu();
+      return;
+    }
+    if (S.screen === "equipment") {
+      if (pointInRect(point, C.equipmentUI.back)) { Game.backToAttributes(); return; }
+      if (Game.accounts.getStatus() === "ready") {
+        for (var ei = 0; ei < C.equipment.slots.length; ei++) {
+          if (pointInRect(point, Game.getEquipmentUpgradeRect(ei))) { Game.upgradeEquipment(C.equipment.slots[ei].id); return; }
+        }
+      }
       return;
     }
     if (S.screen === "login") {

@@ -432,3 +432,13 @@ git diff --check
 - 首页重排：左上角圆形账户按钮；中间从上到下为标题、开始战斗、选择关卡、进入测试场；底部从左到右为属性面板、技能图鉴、僵尸图鉴；账户横幅移到圆钮右侧并限制宽度。新增只读属性面板，攻击力与六系显示纯数字。
 - 验证：新增 `tmp/check-attributes.js` **109 项**断言通过；`tmp/check-accounts.js` 修复回退遗留引用后 **117 项**通过；35 个 `check-*.js`、`tmp/smoke-whirlwind.js`、`node --check`、`git diff --check` 全部通过；数据层 `check_db.py` **36 项**、接口 `check_api.py` **46 项**也按当前 schema 重新通过；画面用 `tmp/trace-draw.js account menu|attributes` + `tmp/replay-draw.py` 出图核对（`tmp/menu-attributes.png`、`tmp/attributes-screen.png`）。
 - 本轮不修改 `server/`、数据库 schema、资源产出与账号存档；装备与属性持久化留给下一阶段。
+
+---
+
+## 2026-10-18 · 装备系统（六部位 · 100 级）
+
+- 新增 `equipment` 表与 `server/app/equipment.py`：六部位（手臂 / 衣服 / 头盔 / 裤子 / 鞋子 / 手套）各一件，首次创建时六系洗牌随机、之后元素固定；等级 Lv.1～100，攻击与元素均为 `10 + 5 × (level - 1)`；`schema_version` 升到 2，旧库由 `create_all()` 补建表并在 `/api/me` 补齐装备。
+- 新增 `POST /api/me/equipment/upgrade`：服务端校验部位、满级与材料，扣除金币 + 部位专属图纸并升级。金币 `80 + 40 × (当前等级 - 1)`，图纸 `10 × 当前等级`（Lv.1→2 为 80 + 10，Lv.99→100 为 4000 + 990）；`nextCost` 由服务端返回，前端不重复维护价格。
+- 新增 `src/equipment.js`（`Game.equipment`）：六件装备的攻击求和、元素按属性分别求和后调用 `Game.attributes.setModifiers`，登录时应用、登出 / 401 时清空；账户层新增装备缓存、busy、错误与升级接口。
+- 属性面板底部改为「装备 / 返回」双按钮；新增 2×3 装备卡片界面，显示等级 / 100、攻击、元素、金币与图纸消耗、强化按钮和状态提示；账户中心资源区改为 9 项网格（金币 / 宝石 / 零件 + 六种图纸）。本轮资源产出仍未接入，界面标注「产出待接入」。
+- 验证：`tmp/check_db.py` 48 项、`tmp/check_api.py` 64 项、`tmp/check-equipment.js` 76 项、`tmp/check-accounts.js` 130 项全部通过；`check-attributes.js`、`smoke-whirlwind.js` 与既有脚本通过；`node --check`、`git diff --check`、`compileall` 通过；截图 `tmp/equipment-screen.png`、`tmp/account-screen.png`。

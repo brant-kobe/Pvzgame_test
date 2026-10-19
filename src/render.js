@@ -98,6 +98,7 @@
     if (S.screen === "login") Game.drawLogin();
     if (S.screen === "account") Game.drawAccount();
     if (S.screen === "attributes") Game.drawAttributes();
+    if (S.screen === "equipment") Game.drawEquipment();
     if (S.screen === "upgrade") Game.drawUpgrade();
     if (S.screen === "paused") Game.drawPause();
     if (S.screen === "victory" || S.screen === "defeat") Game.drawResult();
@@ -1312,7 +1313,7 @@
 
   Game.drawHud = function () {
     var p = S.player, session = S.session;
-    if (!p || S.screen === "menu" || S.screen === "zombieCodex" || S.screen === "skillCodex" || S.screen === "attributes") return;
+    if (!p || S.screen === "menu" || S.screen === "zombieCodex" || S.screen === "skillCodex" || S.screen === "attributes" || S.screen === "equipment") return;
     var level = C.levels.find(function (item) { return item.id === session.level; });
     Game.drawPauseButton(14, 15, 28, 28);
     ctx.save();
@@ -1516,10 +1517,10 @@
     text("资源", 44, box.resourceY - 6, "bold 12px Segoe UI, Microsoft YaHei", C.colors.cyan);
     panel(38, box.resourceY, 284, box.resourceHeight, "rgba(13, 34, 46, .92)", "rgba(153, 205, 218, .16)", 14);
     resources.forEach(function (item, index) {
-      var x = 66 + index * 88;
-      dot(x, box.resourceY + 26, 6, item.color, "rgba(255, 255, 255, .24)");
-      text(item.name, x + 12, box.resourceY + 30, "11px Segoe UI, Microsoft YaHei", C.colors.text);
-      text(String(item.amount), x + 12, box.resourceY + 46, "bold 13px Segoe UI, Microsoft YaHei", item.color);
+      var column = index % 3, line = Math.floor(index / 3), x = 52 + column * 94, y = box.resourceY + 18 + line * 24;
+      dot(x - 8, y - 4, 4, item.color, "rgba(255, 255, 255, .24)");
+      text(item.name, x, y, "9px Segoe UI, Microsoft YaHei", C.colors.muted);
+      text(String(item.amount), x, y + 12, "bold 11px Segoe UI, Microsoft YaHei", item.color);
     });
     text("关卡记录", 44, box.recordY - 12, "bold 12px Segoe UI, Microsoft YaHei", C.colors.cyan);
     if (!records.length) text("暂无记录 · 通关一局后会自动出现在这里", 44, box.recordY + 8, "11px Segoe UI, Microsoft YaHei", C.colors.muted);
@@ -1554,7 +1555,7 @@
     panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .96)", "rgba(153, 205, 218, .22)", 20);
     badge("SURVIVOR  ATTRIBUTES", 102, 70, 156, C.colors.cyan);
     text("角色属性", center, ui.titleY, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
-    text("基础属性 · 攻击力与元素攻击力为数值", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text("基础属性 + 装备加成 · 攻击力与元素攻击力为数值", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     for (var row = 0; row < 3; row++) {
       [0, 1].forEach(function (column) {
         var item = stats[row + column * 3], x = ui.statX[column], y = ui.statY[row];
@@ -1573,7 +1574,48 @@
     text("攻击与元素加成对直接命中与持续伤害生效", center, ui.noteY, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     text("攻击 / 元素无上限 · 装备加成直接加数字", center, ui.noteY + 16, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     text("暴击仅作用于步枪", center, ui.noteY + 32, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
-    Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回首页", "#4b7180");
+    Game.button(ui.equipment.x, ui.equipment.y, ui.equipment.w, ui.equipment.h, "装备", C.colors.yellow);
+    Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回", "#4b7180");
+  };
+  Game.drawEquipment = function () {
+    var ui = C.equipmentUI, center = C.width / 2, slots = Game.equipment.getSlots();
+    var state = Game.accounts.state, ready = Game.accounts.getStatus() === "ready";
+    Game.overlay();
+    panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .96)", "rgba(153, 205, 218, .22)", 20);
+    badge("LOADOUT  ·  EQUIPMENT", 101, 70, 158, C.colors.yellow);
+    text("装备强化", center, ui.titleY, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    text("六部位 · 攻击与元素加成随等级提升", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    if (ready) {
+      text("金币 " + (Game.accounts.getResources().coin || 0), 44, ui.resourceY, "bold 10px Segoe UI, Microsoft YaHei", C.colors.yellow);
+      text("图纸按部位", 316, ui.resourceY, "10px Segoe UI, Microsoft YaHei", C.colors.muted, "right");
+    } else {
+      text("登录后可查看与强化装备", 44, ui.resourceY, "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+    }
+    slots.forEach(function (slot, index) {
+      var card = Game.getEquipmentCardRect(index), cost = slot.nextCost, button = Game.getEquipmentUpgradeRect(index);
+      U.roundedRect(ctx, card.x, card.y, card.w, card.h, 12, "rgba(13, 34, 46, .94)", slot.color);
+      dot(card.x + 16, card.y + 18, 5, slot.color, "rgba(255, 255, 255, .24)");
+      text(slot.name, card.x + 28, card.y + 22, "bold 14px Segoe UI, Microsoft YaHei", C.colors.text);
+      text(slot.level ? "Lv." + slot.level + " / " + slot.maxLevel : (ready ? "未获取" : "未登录"), card.x + card.w - 10, card.y + 21, "bold 10px Segoe UI, Microsoft YaHei", slot.level ? C.colors.cyan : C.colors.muted, "right");
+      text("攻击 +" + slot.attackBonus, card.x + 12, card.y + 44, "11px Segoe UI, Microsoft YaHei", C.colors.text);
+      text((slot.elementName || "—") + " +" + slot.elementBonus, card.x + card.w - 12, card.y + 44, "bold 11px Segoe UI, Microsoft YaHei", slot.elementColor, "right");
+      if (slot.level && cost && !slot.maxed) {
+        var coinNeed = Math.round(cost.coin || 0), blueprintNeed = Math.round(cost[slot.blueprintId] || 0);
+        text("金币 " + slot.coin + "/" + coinNeed, card.x + 12, card.y + 64, "8px Segoe UI, Microsoft YaHei", slot.coin >= coinNeed ? C.colors.green : C.colors.red);
+        text("图纸 " + slot.blueprint + "/" + blueprintNeed, card.x + 12, card.y + 76, "8px Segoe UI, Microsoft YaHei", slot.blueprint >= blueprintNeed ? C.colors.green : C.colors.red);
+      } else if (slot.level && slot.maxed) {
+        text("已满级", card.x + 12, card.y + 72, "bold 9px Segoe UI, Microsoft YaHei", C.colors.yellow);
+      } else {
+        text(ready ? "同步中" : "请先登录账户", card.x + 12, card.y + 72, "9px Segoe UI, Microsoft YaHei", C.colors.muted);
+      }
+      var label = !ready ? "未登录" : (!slot.level ? "未获取" : (slot.maxed ? "已满级" : (state.equipmentBusySlot === slot.id ? "强化中…" : "强化")));
+      var enabled = ready && !!slot.level && !slot.maxed && !state.equipmentBusy;
+      U.roundedRect(ctx, button.x, button.y, button.w, button.h, 7, enabled ? (slot.affordable ? C.colors.green : C.colors.yellow) : "rgba(38, 56, 66, .9)", enabled ? "rgba(255, 255, 255, .2)" : "rgba(153, 205, 218, .16)");
+      text(label, button.x + button.w / 2, button.y + 14, "bold 10px Segoe UI, Microsoft YaHei", enabled ? "#071217" : C.colors.muted, "center");
+    });
+    var message = state.equipmentError || state.equipmentNotice || "材料：金币 + 部位专属图纸 · 产出待接入";
+    text(String(message).slice(0, 34), center, ui.noteY, "9px Segoe UI, Microsoft YaHei", state.equipmentError ? C.colors.red : (state.equipmentNotice ? C.colors.green : C.colors.muted), "center");
+    Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回属性", "#4b7180");
   };
   function dot(x, y, radius, fill, stroke) {
     ctx.beginPath();

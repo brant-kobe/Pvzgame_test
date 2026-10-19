@@ -562,13 +562,14 @@ server/
     __init__.py           # create_app()：中间件、路由装配、静态挂载
     config.py             # 数据库 URL、会话时长、用户名/密码规则、端口、允许的 Origin
     database.py           # engine / SessionLocal / Base / get_db 依赖 / SQLite PRAGMA
-    models.py             # Account / Session / LevelProgress / Resource
+    models.py             # Account / Session / LevelProgress / Resource / Equipment
     schemas.py            # Pydantic 请求与响应模型
     security.py           # pbkdf2 哈希与校验、会话签发、current_account 依赖
+    equipment.py          # 六部位装备领域逻辑、成长与升级消耗
     routers/
       health.py           # GET /api/health
       auth.py             # /api/auth/register|login|logout
-      me.py               # /api/me、/api/me/progress、/api/me/resources
+      me.py               # /api/me、progress、resources、equipment/upgrade
     web.py                # GET / → index.html；挂载 /src /styles /assets /pictures
 data/
   blockline.db            # 运行时生成（已加入 .gitignore）
@@ -584,8 +585,9 @@ data/
 | `accounts` | `id`、`username`（唯一、`COLLATE NOCASE`）、`password_hash`、`created_at`、`last_login_at` | 用户名不区分大小写，中文不受影响 |
 | `sessions` | `token_hash`（主键）、`account_id`（级联删除）、`created_at`、`expires_at` | 登录态落库，服务重启不掉线 |
 | `level_progress` | `account_id` + `level_id`（联合主键）、`completed_at`、`best_time`、`best_kills`、`attempts`、`wins` | **通关 + 每关统计**，`best_*` 取更优、`attempts` / `wins` 累加 |
-| `resources` | `account_id` + `resource_id`（联合主键）、`amount` | 资源板块预留，目录来自 `config.resources` |
-| `schema_version` | `version` | 供以后手写迁移脚本判断版本 |
+| `resources` | `account_id` + `resource_id`（联合主键）、`amount` | 金币 / 宝石 / 零件与六种部位图纸；目录来自 `config.resources` |
+| `equipment` | `account_id` + `slot_id`（联合主键）、`element_id`、`level` | 六部位装备的固定随机元素与等级；`level` 默认 1、上限 100 |
+| `schema_version` | `version` | 供以后手写迁移脚本判断版本；当前为 2 |
 
 - SQLAlchemy 2.0 类型化声明式模型；SQLite 连接统一设 `foreign_keys=ON`、`journal_mode=WAL`、`busy_timeout=5000`。
 - 建表用 `Base.metadata.create_all()` 配合 `schema_version` 记录版本；**暂不引入 Alembic**（本地单机、单库），将来真需要版本化迁移时再补。
@@ -602,10 +604,11 @@ data/
 | POST | `/api/auth/register` | `{username, password}` → 建号并直接登录，下发会话 Cookie |
 | POST | `/api/auth/login` | 校验密码 → 新会话 |
 | POST | `/api/auth/logout` | 删除当前会话并清 Cookie |
-| GET | `/api/me` | 账户信息 + 全部关卡记录 + 资源（登录后启动拉一次） |
+| GET | `/api/me` | 账户信息 + 全部关卡记录 + 资源 + 六部位装备（登录后启动拉一次） |
 | POST | `/api/me/progress` | `{levelId, time, kills, win}` → upsert，维护 `best_*` / `attempts` / `wins` |
-| GET / POST | `/api/me/resources` | 读取 / `{resourceId, delta}` 增减（资源板块预留） |
-| DELETE | `/api/me` | `{password}` 二次确认后删号（级联清进度与资源） |
+| GET / POST | `/api/me/resources` | 读取 / `{resourceId, delta}` 增减（资源产出未接入，仅用于调试注入） |
+| POST | `/api/me/equipment/upgrade` | `{slotId}` → 校验满级与材料，扣金币 + 部位图纸，等级 +1 |
+| DELETE | `/api/me` | `{password}` 二次确认后删号（级联清进度、资源与装备） |
 
 统一错误体 `{"error": {"code", "message"}}`：`401` 未登录、`403` 密码错误、`409` 用户名已存在、`422` 参数不合法。所有写接口只接受 `POST` / `DELETE`，并校验 `Origin` / `Referer` 同源，配合 `SameSite=Strict` 防止本地其它页面误触发。
 
@@ -621,6 +624,8 @@ data/
 | `getProgress()` | **同步**返回缓存的 `{completed}`，供 render 直接读 |
 | `markLevelComplete(levelId, stats)` | 乐观更新缓存 + 异步 `POST /api/me/progress` |
 | `getResources()` / `addResource(id, delta)` | 按 `config.resources` 补齐缺省 0，写入走异步 |
+| `getEquipment()` / `upgradeEquipment(slotId)` | 读取缓存的六部位装备；升级走异步，成功后同步装备与资源缓存 |
+| `applyResources(values)` | 合并服务端返回的资源增量，供升级与调试注入复用 |
 | `deleteAccount(password)` | 删号成功后回到 `guest` |
 
 - `state.js` 里 `getProgress` / `markLevelComplete` / `isLevelCompleted` / `isLevelUnlocked` **四个公开函数名全部保留**（内部改为委托缓存），因此 `render.js` 的关卡列表、`Game.getContinueLevel`、`Game.winLevel` 的调用点零改动，Canvas 绘制仍是同步的。
@@ -640,7 +645,9 @@ data/
 ### 12.7 配置项
 
 - `config.accounts`：`{ apiBase: "", healthPath: "/api/health", timeoutMs: 4000, usernameMin: 2, usernameMax: 16, usernamePattern: 中文/字母/数字/下划线, passwordMin: 6, passwordMax: 64 }`
-- `config.resources`：资源目录（占位三项，各带 `id` / `name` / `color`），**是资源目录的唯一来源**
+- `config.resources`：资源目录（金币 / 宝石 / 零件 + 六种部位图纸，各带 `id` / `name` / `color`），**是资源目录的唯一来源**；服务端 `RESOURCE_IDS` 必须同步
+- `config.equipment`：六部位 id / 名称 / 颜色 / 专属图纸 id；服务端 `EQUIPMENT_SLOTS` 与之保持一致
+- `config.equipmentUI`：装备面板、2×3 卡片与返回按钮几何；卡片与按钮矩形由 `Game.getEquipmentCardRect` / `Game.getEquipmentUpgradeRect` 统一给出
 - `config.menu`：首页 6 个按钮的矩形
 - `config.accountUI`：登录与账户界面的几何
 - 服务端同名规则在 `server/app/config.py`，**是权威校验**；前端那份只做即时提示，两份必须同步。
@@ -739,4 +746,53 @@ git diff --check
 - 默认属性下战斗数值与当前版本一致。
 - 注入修正后，攻击/元素按数字叠加且无上限，冷却/负面时间/防线血量/暴击按定义生效。
 - 首页新布局与底部三个入口顺序正确，账户圆钮可点击。
-- 不修改 `server/`、数据库 schema 与资源产出；装备与属性持久化留给下一阶段。
+- 本阶段不修改 `server/`、数据库 schema 与资源产出；装备与属性持久化已在第 14 节实现。
+
+## 14. 装备系统（六部位 · 已实现）
+
+### 14.1 定位与规则
+
+装备是角色属性的第一个长期养成来源，只负责把六件装备的数值汇总成 `Game.attributes` 的修正；战斗公式、技能与关卡数据不改。
+
+- 六个部位：**手臂 / 衣服 / 头盔 / 裤子 / 鞋子 / 手套**，每个部位各一件，始终生效；没有背包、穿戴 / 卸下、替换或出售。
+- 新账户六个部位均为 **Lv.1**；元素在首次创建时随机分配，六系洗牌保证不重复，之后升级不改变元素。
+- 等级上限 **100**。每件装备的攻击与元素成长相同：`10 + 5 × (level - 1)`，即 Lv.1 +10、Lv.50 +255、Lv.100 +505。六件满级合计攻击 +3030；六系各一件时每系 +505。
+- 升级消耗按当前等级计算：
+  - 金币：`80 + 40 × (currentLevel - 1)`
+  - 专属图纸：`10 × currentLevel`
+  - 只扣该部位自己的图纸。Lv.1→2 为 80 金币 + 10 图纸，Lv.2→3 为 120 + 20，Lv.99→100 为 4000 + 990；单件满级累计 201,960 金币 + 495,000 图纸。
+- **资源产出本轮不实现**：金币与图纸在游戏内不会发放；现有 `/api/me/resources` 保留作调试 / 测试注入。装备界面会显示「产出待接入」。
+
+### 14.2 后端
+
+- 新增 `equipment` 表：`account_id`（级联删除）、`slot_id`、`element_id`、`level`，联合主键 `(account_id, slot_id)`。
+- `schema_version` 从 1 升到 **2**；`create_all()` 给现有库补建新表，旧账户在下次 `/api/me` 时补齐缺失部位。
+- 新增 `server/app/equipment.py`：`ensure_rows`、`attack_bonus`、`element_bonus`、`cost_for`、`payload`。随机元素用 `secrets.SystemRandom().sample`，六部位洗牌；`ensure_rows` 幂等，并对并发唯一键冲突回滚重读。
+- `GET /api/me` 增加 `equipment`；`POST /api/me/equipment/upgrade` 由服务端校验部位、满级与材料，在同一事务内扣除金币 + 专属图纸并升级。错误码：`unknown_equipment_slot` / `max_equipment_level` / `not_enough_resources`。
+- 接口返回每个部位的 `attackBonus`、`elementBonus`、`blueprintId`、`nextCost`；**前端不维护第二份成长或价格公式**。
+
+### 14.3 前端
+
+- 新增 `src/equipment.js`（`Game.equipment`）：`applyAccount` / `clear` / `getSlots` / `getSlot` / `getTotals`。它将六件装备的攻击求和、元素按属性分别求和后调用 `Game.attributes.setModifiers`，并在已有玩家对象时立即 `applyPlayer`；`clear()` 恢复基础属性。
+- 加载顺序：`config → attributes → equipment → accounts → utils → state → combat → update → sprites → render → input → main`。
+- `src/accounts.js` 缓存 `equipment`、`equipmentBusy`、`equipmentBusySlot`、`equipmentError`、`equipmentNotice`；`applyMe` 应用装备，`forgetAccount` 清空装备；`upgradeEquipment` 走异步接口，401 回 guest，网络失败保留缓存并提示。
+- `Game.openEquipment` / `Game.backToAttributes` / `Game.upgradeEquipment` 是界面切换与升级入口；卡片、按钮、返回按钮几何由 `Game.getEquipmentCardRect` / `Game.getEquipmentUpgradeRect` / `config.equipmentUI` 统一给出。
+- 属性面板底部改为「装备 / 返回」双按钮；装备界面为 2 列 × 3 行、140×106 卡片，显示部位、`Lv.N / 100`、攻击、元素、金币与图纸消耗、强化按钮；底部状态行显示成功 / 错误或产出待接入提示。`drawHud` 在装备界面跳过。
+- 账户中心资源区改为 3 列 × 3 行网格，展示金币、宝石、零件与六种图纸。
+
+### 14.4 验证
+
+- `tmp/check_db.py`：48 项通过 —— schema 2、装备表、六部位幂等补齐、六系不重复、Lv.1 / Lv.100 成长、Lv.1→2 / Lv.2→3 / Lv.99→100 消耗、满级无消耗、删号级联。
+- `tmp/check_api.py`：64 项通过 —— `/api/me` 六部位与 `maxLevel 100`、未知部位 422、材料不足 422、扣 80 金币 + 10 图纸、下一级 120 + 20、专属图纸不通用、循环升到 100 后满级 422、重新登录保持。
+- `tmp/check-equipment.js`：76 项通过 —— 元素重复叠加、属性与玩家倍率、登录 / 登出 / 401 / 网络失败、升级成功与失败、满级展示、2×3 卡片几何、属性面板入口、装备界面绘制、点击强化与返回、未登录占位。
+- `tmp/check-accounts.js`：130 项通过 —— 账户流程、资源网格、装备加载 / 登出清理。
+- 既有 `check-*.js`、`smoke-whirlwind.js`、`node --check`、`git diff --check`、`compileall` 通过；截图 `tmp/equipment-screen.png`、`tmp/account-screen.png` 核对。
+
+### 14.5 验收标准
+
+- 新账户 `/api/me` 返回六个部位，六系随机排列，Lv.1，`maxLevel` 为 100。
+- 六件装备的攻击与元素加成准确汇总，属性面板显示总值；登出后恢复基础值。
+- Lv.1→2 扣 80 金币 + 10 张对应图纸；Lv.2→3 扣 120 + 20；Lv.99→100 扣 4000 + 990。
+- 升级后等级、加成与 `nextCost` 同步，重新登录保持；失败不改变任何数据。
+- 属性面板可进入装备界面，六张卡片、`Lv.N / 100`、消耗、按钮、返回路径与提示完整可见。
+- 首页底部三个入口不变；本轮不新增资源产出、不改战斗公式、不改关卡与技能数据。

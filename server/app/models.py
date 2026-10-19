@@ -51,6 +51,15 @@ class Resource(Base):
     amount: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class Equipment(Base):
+    __tablename__ = "equipment"
+
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), primary_key=True)
+    slot_id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    element_id: Mapped[str] = mapped_column(String(16))
+    level: Mapped[int] = mapped_column(Integer, default=1)
+
+
 class SchemaVersion(Base):
     __tablename__ = "schema_version"
 

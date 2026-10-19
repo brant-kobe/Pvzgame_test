@@ -168,8 +168,8 @@
         switchMode: { x: 44, y: 404, w: 272, h: 34 }
       },
       account: {
-        cardY: 126, cardHeight: 80, resourceY: 226, resourceHeight: 56,
-        recordY: 322, recordStep: 20,
+        cardY: 126, cardHeight: 80, resourceY: 220, resourceHeight: 80,
+        recordY: 330, recordStep: 20,
         importButton: { x: 44, y: 424, w: 128, h: 34 },
         logoutButton: { x: 188, y: 424, w: 128, h: 34 },
         deleteButton: { x: 44, y: 466, w: 272, h: 34 }
@@ -182,14 +182,39 @@
       elementTitleY: 326,
       elementX: [56, 160, 264], elementY: [360, 392], elementOrder: ["physical", "fire", "ice", "electric", "wind", "energy"],
       noteY: 444,
+      equipment: { x: 44, y: 514, w: 128, h: 36 },
+      back: { x: 188, y: 514, w: 128, h: 36 }
+    },
+    equipmentUI: {
+      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
+      titleY: 112, subtitleY: 136, resourceY: 153,
+      cardX: [36, 184], cardY: [164, 276, 388], cardWidth: 140, cardHeight: 106,
+      noteY: 506,
       back: { x: 98, y: 514, w: 164, h: 36 }
     },
     accounts: { apiBase: "", healthPath: "/api/health", timeoutMs: 4000, usernameMin: 2, usernameMax: 16, passwordMin: 6, passwordMax: 64, legacyKey: "blockline.progress", maxRecords: 5, maxStatusNote: 26 },
     resources: [
       { id: "coin", name: "金币", color: "#ffd166" },
       { id: "gem", name: "宝石", color: "#68d8ff" },
-      { id: "tech", name: "零件", color: "#63e6a0" }
+      { id: "tech", name: "零件", color: "#63e6a0" },
+      { id: "blueprintArm", name: "手臂图纸", color: "#68d8ff" },
+      { id: "blueprintClothes", name: "衣服图纸", color: "#63e6a0" },
+      { id: "blueprintHelmet", name: "头盔图纸", color: "#ffd166" },
+      { id: "blueprintPants", name: "裤子图纸", color: "#9ab0bc" },
+      { id: "blueprintShoes", name: "鞋子图纸", color: "#c9a1ff" },
+      { id: "blueprintGloves", name: "手套图纸", color: "#ff9b52" }
     ],
+    equipment: {
+      maxLevel: 100,
+      slots: [
+        { id: "arm", name: "手臂", short: "臂", color: "#68d8ff", blueprintId: "blueprintArm" },
+        { id: "clothes", name: "衣服", short: "衣", color: "#63e6a0", blueprintId: "blueprintClothes" },
+        { id: "helmet", name: "头盔", short: "盔", color: "#ffd166", blueprintId: "blueprintHelmet" },
+        { id: "pants", name: "裤子", short: "裤", color: "#9ab0bc", blueprintId: "blueprintPants" },
+        { id: "shoes", name: "鞋子", short: "鞋", color: "#c9a1ff", blueprintId: "blueprintShoes" },
+        { id: "gloves", name: "手套", short: "手", color: "#ff9b52", blueprintId: "blueprintGloves" }
+      ]
+    },
     bossHealth: { bars: 3, width: 108, barHeight: 9, offsetY: 12, headExtent: 1.78, track: "rgba(255, 107, 107, .42)" },
     ranges: { far: 480, mid: 320, near: 125 },
     rifleRange: "far",
