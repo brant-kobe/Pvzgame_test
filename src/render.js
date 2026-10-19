@@ -99,6 +99,7 @@
     if (S.screen === "account") Game.drawAccount();
     if (S.screen === "attributes") Game.drawAttributes();
     if (S.screen === "equipment") Game.drawEquipment();
+    if (S.screen === "wall") Game.drawWallPanel();
     if (S.screen === "upgrade") Game.drawUpgrade();
     if (S.screen === "paused") Game.drawPause();
     if (S.screen === "victory" || S.screen === "defeat") Game.drawResult();
@@ -1313,7 +1314,7 @@
 
   Game.drawHud = function () {
     var p = S.player, session = S.session;
-    if (!p || S.screen === "menu" || S.screen === "zombieCodex" || S.screen === "skillCodex" || S.screen === "attributes" || S.screen === "equipment") return;
+    if (!p || S.screen === "menu" || S.screen === "zombieCodex" || S.screen === "skillCodex" || S.screen === "attributes" || S.screen === "equipment" || S.screen === "wall") return;
     var level = C.levels.find(function (item) { return item.id === session.level; });
     Game.drawPauseButton(14, 15, 28, 28);
     ctx.save();
@@ -1517,8 +1518,8 @@
     text("资源", 44, box.resourceY - 6, "bold 12px Segoe UI, Microsoft YaHei", C.colors.cyan);
     panel(38, box.resourceY, 284, box.resourceHeight, "rgba(13, 34, 46, .92)", "rgba(153, 205, 218, .16)", 14);
     resources.forEach(function (item, index) {
-      var column = index % 3, line = Math.floor(index / 3), x = 52 + column * 94, y = box.resourceY + 18 + line * 24;
-      dot(x - 8, y - 4, 4, item.color, "rgba(255, 255, 255, .24)");
+      var column = index % 4, line = Math.floor(index / 4), x = 48 + column * 72, y = box.resourceY + 18 + line * 24;
+      dot(x - 7, y - 4, 4, item.color, "rgba(255, 255, 255, .24)");
       text(item.name, x, y, "9px Segoe UI, Microsoft YaHei", C.colors.muted);
       text(String(item.amount), x, y + 12, "bold 11px Segoe UI, Microsoft YaHei", item.color);
     });
@@ -1555,7 +1556,7 @@
     panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .96)", "rgba(153, 205, 218, .22)", 20);
     badge("SURVIVOR  ATTRIBUTES", 102, 70, 156, C.colors.cyan);
     text("角色属性", center, ui.titleY, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
-    text("基础属性 + 装备加成 · 攻击力与元素攻击力为数值", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text("基础属性 + 装备 / 城墙加成 · 攻击力与元素攻击力为数值", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     for (var row = 0; row < 3; row++) {
       [0, 1].forEach(function (column) {
         var item = stats[row + column * 3], x = ui.statX[column], y = ui.statY[row];
@@ -1572,9 +1573,10 @@
       text(String(Math.round(a.elementAttack[id])), x + 10, y + 24, "bold 15px Segoe UI, Microsoft YaHei", info.color);
     });
     text("攻击与元素加成对直接命中与持续伤害生效", center, ui.noteY, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
-    text("攻击 / 元素无上限 · 装备加成直接加数字", center, ui.noteY + 16, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text("攻击 / 元素无上限 · 装备与城墙加成生效", center, ui.noteY + 16, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     text("暴击仅作用于步枪", center, ui.noteY + 32, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     Game.button(ui.equipment.x, ui.equipment.y, ui.equipment.w, ui.equipment.h, "装备", C.colors.yellow);
+    Game.button(ui.wall.x, ui.wall.y, ui.wall.w, ui.wall.h, "城墙", C.colors.cyan);
     Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回", "#4b7180");
   };
   Game.drawEquipment = function () {
@@ -1615,6 +1617,123 @@
     });
     var message = state.equipmentError || state.equipmentNotice || "材料：金币 + 部位专属图纸 · 产出待接入";
     text(String(message).slice(0, 34), center, ui.noteY, "9px Segoe UI, Microsoft YaHei", state.equipmentError ? C.colors.red : (state.equipmentNotice ? C.colors.green : C.colors.muted), "center");
+    Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回属性", "#4b7180");
+  };
+  function drawSteelIcon(cx, cy, size) {
+    var s = size, w = s * .44, h = s * .28;
+    var top = cy - s * .32, waist = cy - s * .15, middle = cy + s * .02, bottom = middle + h;
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(cx, cy + s * .39, s * .47, s * .09, 0, 0, Math.PI * 2); ctx.fillStyle = "rgba(0, 0, 0, .26)"; ctx.fill();
+    ctx.lineWidth = Math.max(1, s * .035); ctx.strokeStyle = "rgba(239, 247, 250, .66)";
+    ctx.beginPath(); ctx.moveTo(cx - w, waist); ctx.lineTo(cx, middle); ctx.lineTo(cx, bottom); ctx.lineTo(cx - w, waist + h); ctx.closePath();
+    ctx.fillStyle = "#8499a4"; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + w, waist); ctx.lineTo(cx, middle); ctx.lineTo(cx, bottom); ctx.lineTo(cx + w, waist + h); ctx.closePath();
+    ctx.fillStyle = "#5d727e"; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, top); ctx.lineTo(cx + w, waist); ctx.lineTo(cx, middle); ctx.lineTo(cx - w, waist); ctx.closePath();
+    ctx.fillStyle = "#dce7ec"; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - w + s * .04, waist + s * .015); ctx.lineTo(cx - s * .02, middle + s * .06);
+    ctx.strokeStyle = "rgba(255, 255, 255, .34)"; ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawRareEarthIcon(cx, cy, size) {
+    var s = size, rx = s * .42, ry = s * .14, apex = cy - s * .46, baseY = cy + s * .30;
+    var gradient = ctx.createLinearGradient(cx - rx, baseY, cx + rx, baseY);
+    gradient.addColorStop(0, "#a97016"); gradient.addColorStop(.48, "#ffd166"); gradient.addColorStop(1, "#d99a22");
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(cx, baseY + ry * .72, rx * .92, ry * .56, 0, 0, Math.PI * 2); ctx.fillStyle = "rgba(0, 0, 0, .24)"; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx, baseY, rx, ry, 0, 0, Math.PI * 2); ctx.fillStyle = "#8a5c13"; ctx.fill();
+    ctx.lineWidth = Math.max(1, s * .03); ctx.strokeStyle = "rgba(255, 233, 168, .68)"; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, apex); ctx.lineTo(cx - rx, baseY); ctx.ellipse(cx, baseY, rx, ry, 0, Math.PI, 0, true); ctx.closePath();
+    ctx.fillStyle = gradient; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, apex); ctx.lineTo(cx - rx * .26, baseY - ry * .2);
+    ctx.strokeStyle = "rgba(255, 247, 214, .72)"; ctx.lineWidth = Math.max(1, s * .04); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, baseY, rx, ry, 0, 0, Math.PI, false);
+    ctx.strokeStyle = "rgba(255, 225, 150, .62)"; ctx.lineWidth = Math.max(1, s * .03); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawMaterialIcon(kind, cx, cy, size) {
+    if (kind === "rareEarth") drawRareEarthIcon(cx, cy, size);
+    else drawSteelIcon(cx, cy, size);
+  }
+
+  function materialLabel(kind, label, x, y, color, align) {
+    var font = "bold 10px Segoe UI, Microsoft YaHei";
+    ctx.font = font;
+    var left = align === "right" ? x - ctx.measureText(label).width : x;
+    drawMaterialIcon(kind, left - 8, y - 3, 12);
+    text(label, left, y, font, color, "left");
+  }
+
+  Game.drawWallPanel = function () {
+    var ui = C.wallUI, center = C.width / 2, view = Game.wall.getView(), state = Game.accounts.state;
+    var ready = Game.accounts.getStatus() === "ready" && view.ready;
+    var bt = view.breakthrough, next = bt.atLevel, busy = state.wallBusy;
+    var rare = ready && !view.maxed && bt.required;
+    var material = rare ? "rareEarth" : "steel";
+    Game.overlay();
+    panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .96)", "rgba(153, 205, 218, .22)", 20);
+    badge("DEFENSE  ·  WALL", 107, 70, 146, C.colors.cyan);
+    text("城墙材料", center, ui.titleY, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    text("钢材升级血量 · 每 10 级消耗稀土突破", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    if (ready) {
+      materialLabel("steel", "钢材 " + view.steel, 48, ui.resourceY, "#c8d6dd");
+      materialLabel("rareEarth", "稀土 " + view.rareEarth, 316, ui.resourceY, "#f2c14e", "right");
+    } else {
+      text("登录后可查看与强化城墙", 44, ui.resourceY, "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+    }
+
+    var main = ui.mainCard;
+    panel(main.x, main.y, main.w, main.h, "rgba(17, 47, 62, .94)", "rgba(104, 216, 255, .22)", 14);
+    text("防线等级", main.x + 16, main.y + 22, "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+    text(ready ? "Lv." + view.level + " / " + view.maxLevel : "未登录", main.x + 16, main.y + 47, "bold 21px Segoe UI, Microsoft YaHei", ready ? C.colors.cyan : C.colors.muted);
+    text("防线血量", main.x + 150, main.y + 22, "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+    text(ready ? String(view.maxHp) : "1000", main.x + 150, main.y + 46, "bold 18px Segoe UI, Microsoft YaHei", C.colors.green);
+    var progress = view.maxed ? 1 : (next ? U.clamp((view.level - (next - C.wall.breakthroughStep)) / C.wall.breakthroughStep, 0, 1) : 1);
+    U.roundedRect(ctx, main.x + 16, main.y + 64, main.w - 32, 8, 4, "rgba(5, 16, 23, .9)");
+    U.roundedRect(ctx, main.x + 16, main.y + 64, (main.w - 32) * progress, 8, 4, C.colors.cyan);
+    var progressText = view.maxed ? "已达到最高等级" : (bt.required ? "已达到 Lv." + next + " 突破节点" : "距离 Lv." + next + " 突破还差 " + Math.max(0, next - view.level) + " 级");
+    text(ready ? progressText : "登录后显示城墙进度", main.x + 16, main.y + 92, "9px Segoe UI, Microsoft YaHei", bt.required ? C.colors.yellow : C.colors.muted);
+
+    var card = ui.actionCard;
+    panel(card.x, card.y, card.w, card.h, "rgba(13, 34, 46, .94)", rare ? "rgba(242, 193, 78, .44)" : "rgba(200, 214, 221, .32)", 14);
+    drawMaterialIcon(material, card.x + 40, card.y + 48, 44);
+    text(rare ? "稀土突破" : "钢材强化", card.x + 72, card.y + 34, "bold 14px Segoe UI, Microsoft YaHei", C.colors.text);
+    var desc = !ready ? "登录后查看城墙材料" : (view.maxed ? "城墙已达到最高等级" : (rare ? "Lv." + bt.atLevel + " 突破 · 突破无属性加成" : "Lv." + view.level + " → " + (view.level + 1) + " · 血量 +" + view.hpPerLevel));
+    text(desc, card.x + 72, card.y + 56, "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+    var hint = !ready ? "材料：钢材 + 稀土" : (view.maxed ? "钢材与稀土不再消耗" : (rare ? "突破只解锁后续等级，不增加血量" : "每次强化提高 " + view.hpPerLevel + " 防线血量"));
+    text(hint, card.x + 72, card.y + 76, "9px Segoe UI, Microsoft YaHei", C.colors.muted);
+    var costLabel, costColor;
+    if (!ready) { costLabel = "材料数量登录后显示"; costColor = C.colors.muted; }
+    else if (view.maxed) { costLabel = "已满级"; costColor = C.colors.yellow; }
+    else if (rare) {
+      costLabel = "稀土 " + view.rareEarth + "/" + bt.cost;
+      costColor = view.rareEarth >= bt.cost ? C.colors.green : C.colors.red;
+    } else {
+      costLabel = "钢材 " + view.steel + "/" + view.nextSteelCost;
+      costColor = view.steel >= view.nextSteelCost ? C.colors.green : C.colors.red;
+    }
+    materialLabel(material, costLabel, card.x + 72, card.y + 99, costColor);
+
+    var button = Game.getWallActionButtonRect(), label, enabled = false;
+    if (!ready) label = "未登录";
+    else if (view.maxed) label = "已满级";
+    else if (rare) {
+      label = busy && state.wallAction === "breakthrough" ? "突破中…" : "突破";
+      enabled = view.canBreakthrough && !busy;
+    } else {
+      label = busy && state.wallAction === "level" ? "强化中…" : "强化";
+      enabled = view.canLevel && !busy;
+    }
+    var fill = "rgba(38, 56, 66, .9)";
+    if (enabled) fill = rare ? (view.rareEarth >= bt.cost ? "#f2c14e" : "#d0a940") : (view.steel >= view.nextSteelCost ? C.colors.green : C.colors.yellow);
+    U.roundedRect(ctx, button.x, button.y, button.w, button.h, 9, fill, enabled ? "rgba(255, 255, 255, .2)" : "rgba(153, 205, 218, .16)");
+    if (ready) drawMaterialIcon(material, button.x + 22, button.y + 17, 16);
+    text(label, button.x + button.w / 2 + (ready ? 8 : 0), button.y + 22, "bold 11px Segoe UI, Microsoft YaHei", enabled ? "#071217" : C.colors.muted, "center");
+
+    var message = state.wallError || state.wallNotice || (rare ? "突破后继续用钢材强化 · 产出待接入" : "材料：钢材 + 稀土 · 产出待接入");
+    text(String(message).slice(0, 34), center, ui.noteY, "9px Segoe UI, Microsoft YaHei", state.wallError ? C.colors.red : (state.wallNotice ? C.colors.green : C.colors.muted), "center");
     Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回属性", "#4b7180");
   };
   function dot(x, y, radius, fill, stroke) {

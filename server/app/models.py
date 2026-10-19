@@ -60,6 +60,14 @@ class Equipment(Base):
     level: Mapped[int] = mapped_column(Integer, default=1)
 
 
+class WallState(Base):
+    __tablename__ = "wall_state"
+
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), primary_key=True)
+    level: Mapped[int] = mapped_column(Integer, default=1)
+    breakthroughs: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class SchemaVersion(Base):
     __tablename__ = "schema_version"
 

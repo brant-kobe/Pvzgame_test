@@ -442,3 +442,14 @@ git diff --check
 - 新增 `src/equipment.js`（`Game.equipment`）：六件装备的攻击求和、元素按属性分别求和后调用 `Game.attributes.setModifiers`，登录时应用、登出 / 401 时清空；账户层新增装备缓存、busy、错误与升级接口。
 - 属性面板底部改为「装备 / 返回」双按钮；新增 2×3 装备卡片界面，显示等级 / 100、攻击、元素、金币与图纸消耗、强化按钮和状态提示；账户中心资源区改为 9 项网格（金币 / 宝石 / 零件 + 六种图纸）。本轮资源产出仍未接入，界面标注「产出待接入」。
 - 验证：`tmp/check_db.py` 48 项、`tmp/check_api.py` 64 项、`tmp/check-equipment.js` 76 项、`tmp/check-accounts.js` 130 项全部通过；`check-attributes.js`、`smoke-whirlwind.js` 与既有脚本通过；`node --check`、`git diff --check`、`compileall` 通过；截图 `tmp/equipment-screen.png`、`tmp/account-screen.png`。
+
+---
+
+## 2026-10-19 · 城墙材料系统（钢材 / 稀土 · 200 级）
+
+- 新增 `wall_state` 表与 `server/app/wall.py`：城墙 Lv.1～200，基础血量 1000、每级 +200（Lv.200 为 40,800）；`schema_version` 升到 3，旧库由 `create_all()` 补建表并在 `/api/me` 创建 Lv.1 状态。
+- 新增 `POST /api/me/wall/upgrade`：`action: "level"` 消耗 `20 × 当前等级` 钢材并升级；`action: "breakthrough"` 只在 10/20/…/190 节点可用，第 N 次消耗 `2 × N` 稀土，**等级与血量不变**；Lv.200 封顶。错误码覆盖满级、未突破、未到节点、材料不足与非法操作。
+- 新增资源 `steel` / `rareEarth`；`src/attributes.js` 增加独立的 `setWallHpBonus`，`src/wall.js` 汇总城墙血量并同步当前城墙（测试场 9999 跳过、战斗中按比例保留）；`src/accounts.js` 增加城墙缓存与 `upgradeWall` / `getWall`，登出 / 401 清空。
+- 属性面板底部改为「装备 / 城墙 / 返回」三按钮；新增城墙界面（等级、血量、下一突破节点进度、单一动作卡、材料数量与状态提示）；账户中心资源区扩为 4 列 × 3 行、11 项资源。本轮钢材 / 稀土产出仍未接入，界面标注「产出待接入」。
+- 城墙界面加入材料图标：钢材为灰白色长方体、稀土为金色圆锥，顶部资源行、动作卡与按钮统一复用；普通等级只显示「强化」，到达突破节点时同一张动作卡切换为「突破」，不再常驻不可用的突破按钮。
+- 验证：`tmp/check_db.py` 62 项、`tmp/check_api.py` 88 项、`tmp/check-wall.js` 62 项、`tmp/check-accounts.js` 139 项、`tmp/check-equipment.js` 76 项全部通过；`check-attributes.js`、`check-wall-hp.js`、`smoke-whirlwind.js` 与既有脚本通过；`node --check`、`git diff --check`、`compileall` 通过；截图 `tmp/wall-screen.png`、`tmp/wall-normal-screen.png`、`tmp/account-screen.png`。

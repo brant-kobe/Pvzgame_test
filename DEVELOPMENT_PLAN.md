@@ -562,14 +562,15 @@ server/
     __init__.py           # create_app()：中间件、路由装配、静态挂载
     config.py             # 数据库 URL、会话时长、用户名/密码规则、端口、允许的 Origin
     database.py           # engine / SessionLocal / Base / get_db 依赖 / SQLite PRAGMA
-    models.py             # Account / Session / LevelProgress / Resource / Equipment
+    models.py             # Account / Session / LevelProgress / Resource / Equipment / WallState
     schemas.py            # Pydantic 请求与响应模型
     security.py           # pbkdf2 哈希与校验、会话签发、current_account 依赖
     equipment.py          # 六部位装备领域逻辑、成长与升级消耗
+    wall.py               # 城墙等级、血量成长与稀土突破
     routers/
       health.py           # GET /api/health
       auth.py             # /api/auth/register|login|logout
-      me.py               # /api/me、progress、resources、equipment/upgrade
+      me.py               # /api/me、progress、resources、equipment/upgrade、wall/upgrade
     web.py                # GET / → index.html；挂载 /src /styles /assets /pictures
 data/
   blockline.db            # 运行时生成（已加入 .gitignore）
@@ -585,9 +586,10 @@ data/
 | `accounts` | `id`、`username`（唯一、`COLLATE NOCASE`）、`password_hash`、`created_at`、`last_login_at` | 用户名不区分大小写，中文不受影响 |
 | `sessions` | `token_hash`（主键）、`account_id`（级联删除）、`created_at`、`expires_at` | 登录态落库，服务重启不掉线 |
 | `level_progress` | `account_id` + `level_id`（联合主键）、`completed_at`、`best_time`、`best_kills`、`attempts`、`wins` | **通关 + 每关统计**，`best_*` 取更优、`attempts` / `wins` 累加 |
-| `resources` | `account_id` + `resource_id`（联合主键）、`amount` | 金币 / 宝石 / 零件与六种部位图纸；目录来自 `config.resources` |
+| `resources` | `account_id` + `resource_id`（联合主键）、`amount` | 金币 / 宝石 / 零件 / 六种部位图纸 / 钢材 / 稀土；目录来自 `config.resources` |
 | `equipment` | `account_id` + `slot_id`（联合主键）、`element_id`、`level` | 六部位装备的固定随机元素与等级；`level` 默认 1、上限 100 |
-| `schema_version` | `version` | 供以后手写迁移脚本判断版本；当前为 2 |
+| `wall_state` | `account_id`（主键）、`level`、`breakthroughs` | 城墙等级 1～200 与已完成稀土突破次数 0～19 |
+| `schema_version` | `version` | 供以后手写迁移脚本判断版本；当前为 3 |
 
 - SQLAlchemy 2.0 类型化声明式模型；SQLite 连接统一设 `foreign_keys=ON`、`journal_mode=WAL`、`busy_timeout=5000`。
 - 建表用 `Base.metadata.create_all()` 配合 `schema_version` 记录版本；**暂不引入 Alembic**（本地单机、单库），将来真需要版本化迁移时再补。
@@ -604,11 +606,12 @@ data/
 | POST | `/api/auth/register` | `{username, password}` → 建号并直接登录，下发会话 Cookie |
 | POST | `/api/auth/login` | 校验密码 → 新会话 |
 | POST | `/api/auth/logout` | 删除当前会话并清 Cookie |
-| GET | `/api/me` | 账户信息 + 全部关卡记录 + 资源 + 六部位装备（登录后启动拉一次） |
+| GET | `/api/me` | 账户信息 + 全部关卡记录 + 资源 + 六部位装备 + 城墙状态（登录后启动拉一次） |
 | POST | `/api/me/progress` | `{levelId, time, kills, win}` → upsert，维护 `best_*` / `attempts` / `wins` |
 | GET / POST | `/api/me/resources` | 读取 / `{resourceId, delta}` 增减（资源产出未接入，仅用于调试注入） |
 | POST | `/api/me/equipment/upgrade` | `{slotId}` → 校验满级与材料，扣金币 + 部位图纸，等级 +1 |
-| DELETE | `/api/me` | `{password}` 二次确认后删号（级联清进度、资源与装备） |
+| POST | `/api/me/wall/upgrade` | `{action: "level"|"breakthrough"}` → 钢材升级或稀土突破 |
+| DELETE | `/api/me` | `{password}` 二次确认后删号（级联清进度、资源、装备与城墙） |
 
 统一错误体 `{"error": {"code", "message"}}`：`401` 未登录、`403` 密码错误、`409` 用户名已存在、`422` 参数不合法。所有写接口只接受 `POST` / `DELETE`，并校验 `Origin` / `Referer` 同源，配合 `SameSite=Strict` 防止本地其它页面误触发。
 
@@ -625,6 +628,7 @@ data/
 | `markLevelComplete(levelId, stats)` | 乐观更新缓存 + 异步 `POST /api/me/progress` |
 | `getResources()` / `addResource(id, delta)` | 按 `config.resources` 补齐缺省 0，写入走异步 |
 | `getEquipment()` / `upgradeEquipment(slotId)` | 读取缓存的六部位装备；升级走异步，成功后同步装备与资源缓存 |
+| `getWall()` / `upgradeWall(action)` | 读取缓存城墙；`level` 或 `breakthrough` 走异步，成功后同步城墙与资源缓存 |
 | `applyResources(values)` | 合并服务端返回的资源增量，供升级与调试注入复用 |
 | `deleteAccount(password)` | 删号成功后回到 `guest` |
 
@@ -637,7 +641,7 @@ data/
 
 - **菜单**：底部新增按钮「账户：未登录 / 用户名」，6 个按钮矩形统一收进 `config.menu`，`drawMenu` 与 `input.js` 同源读取，顺带消除现有两处硬编码。
 - **新 screen `login`**：登录 / 注册切换、错误提示与离线说明；表单值走 DOM 浮层。
-- **新 screen `account`**：用户名、注册时间、通关 X/11、每关最佳用时与击杀（有记录才显示）、**资源占位区**、「导入本机旧进度」「注销登录」「删除账户」（删除需再输密码）。
+- **新 screen `account`**：用户名、注册时间、通关 X/11、每关最佳用时与击杀（有记录才显示）、**资源区（11 项）**、「导入本机旧进度」「注销登录」「删除账户」（删除需再输密码）。
 - **DOM 输入浮层 `#account-dialog`**：用户名 + 密码（`type="password"`）+ 提交 / 取消 + 红字错误行，样式对齐现有 `#test-controls`；Enter 提交、Esc 取消，提交期间禁用按钮。表单值不落 `localStorage`。
 - **顶部账户横幅**：只在菜单、关卡选择与结算界面显示，战斗中不画以免遮挡战场。
 - `Game.reset` 不触碰账户缓存；账户界面几何集中在 `config.accountUI`，与 `drawAccount` / `input.js` 共用。
@@ -645,9 +649,10 @@ data/
 ### 12.7 配置项
 
 - `config.accounts`：`{ apiBase: "", healthPath: "/api/health", timeoutMs: 4000, usernameMin: 2, usernameMax: 16, usernamePattern: 中文/字母/数字/下划线, passwordMin: 6, passwordMax: 64 }`
-- `config.resources`：资源目录（金币 / 宝石 / 零件 + 六种部位图纸，各带 `id` / `name` / `color`），**是资源目录的唯一来源**；服务端 `RESOURCE_IDS` 必须同步
+- `config.resources`：资源目录（金币 / 宝石 / 零件 + 六种部位图纸 + 钢材 / 稀土，各带 `id` / `name` / `color`），**是资源目录的唯一来源**；服务端 `RESOURCE_IDS` 必须同步
 - `config.equipment`：六部位 id / 名称 / 颜色 / 专属图纸 id；服务端 `EQUIPMENT_SLOTS` 与之保持一致
 - `config.equipmentUI`：装备面板、2×3 卡片与返回按钮几何；卡片与按钮矩形由 `Game.getEquipmentCardRect` / `Game.getEquipmentUpgradeRect` 统一给出
+- `config.wall` / `config.wallUI`：城墙上限、每级血量与面板 / 卡片 / 按钮几何；服务端 `WALL_*` 是数值与价格的权威
 - `config.menu`：首页 6 个按钮的矩形
 - `config.accountUI`：登录与账户界面的几何
 - 服务端同名规则在 `server/app/config.py`，**是权威校验**；前端那份只做即时提示，两份必须同步。
@@ -774,13 +779,15 @@ git diff --check
 ### 14.3 前端
 
 - 新增 `src/equipment.js`（`Game.equipment`）：`applyAccount` / `clear` / `getSlots` / `getSlot` / `getTotals`。它将六件装备的攻击求和、元素按属性分别求和后调用 `Game.attributes.setModifiers`，并在已有玩家对象时立即 `applyPlayer`；`clear()` 恢复基础属性。
-- 加载顺序：`config → attributes → equipment → accounts → utils → state → combat → update → sprites → render → input → main`。
+- 加载顺序：`config → attributes → equipment → wall → accounts → utils → state → combat → update → sprites → render → input → main`。
 - `src/accounts.js` 缓存 `equipment`、`equipmentBusy`、`equipmentBusySlot`、`equipmentError`、`equipmentNotice`；`applyMe` 应用装备，`forgetAccount` 清空装备；`upgradeEquipment` 走异步接口，401 回 guest，网络失败保留缓存并提示。
 - `Game.openEquipment` / `Game.backToAttributes` / `Game.upgradeEquipment` 是界面切换与升级入口；卡片、按钮、返回按钮几何由 `Game.getEquipmentCardRect` / `Game.getEquipmentUpgradeRect` / `config.equipmentUI` 统一给出。
-- 属性面板底部改为「装备 / 返回」双按钮；装备界面为 2 列 × 3 行、140×106 卡片，显示部位、`Lv.N / 100`、攻击、元素、金币与图纸消耗、强化按钮；底部状态行显示成功 / 错误或产出待接入提示。`drawHud` 在装备界面跳过。
-- 账户中心资源区改为 3 列 × 3 行网格，展示金币、宝石、零件与六种图纸。
+- 属性面板底部为「装备 / 城墙 / 返回」三按钮；装备界面为 2 列 × 3 行、140×106 卡片，显示部位、`Lv.N / 100`、攻击、元素、金币与图纸消耗、强化按钮；底部状态行显示成功 / 错误或产出待接入提示。`drawHud` 在装备界面跳过。
+- 账户中心资源区最终为 4 列 × 3 行网格，展示金币、宝石、零件、六种图纸、钢材与稀土（城墙系统加入后从 3×3 扩展为 4×3）。
 
-### 14.4 验证
+### 14.4 验证（装备阶段）
+
+以下为装备阶段当时的断言数；城墙系统加入后的最新数字见 15.4。
 
 - `tmp/check_db.py`：48 项通过 —— schema 2、装备表、六部位幂等补齐、六系不重复、Lv.1 / Lv.100 成长、Lv.1→2 / Lv.2→3 / Lv.99→100 消耗、满级无消耗、删号级联。
 - `tmp/check_api.py`：64 项通过 —— `/api/me` 六部位与 `maxLevel 100`、未知部位 422、材料不足 422、扣 80 金币 + 10 图纸、下一级 120 + 20、专属图纸不通用、循环升到 100 后满级 422、重新登录保持。
@@ -796,3 +803,55 @@ git diff --check
 - 升级后等级、加成与 `nextCost` 同步，重新登录保持；失败不改变任何数据。
 - 属性面板可进入装备界面，六张卡片、`Lv.N / 100`、消耗、按钮、返回路径与提示完整可见。
 - 首页底部三个入口不变；本轮不新增资源产出、不改战斗公式、不改关卡与技能数据。
+
+## 15. 城墙材料系统（钢材 / 稀土 · 已实现）
+
+### 15.1 定位与规则
+
+城墙是账号级长期养成，只影响开局城墙最大血量；战斗、装备、技能与关卡数据不改。
+
+- 等级上限 **200**，初始 Lv.1，基础血量 1000；每级 +200，即 `hpBonus = (level - 1) × 200`，Lv.200 最大血量 **40,800**。
+- **钢材**用于普通升级：消耗 `20 × 当前等级`。Lv.1→2 为 20，Lv.199→200 为 3980；单账号满级累计 398,000 钢材。
+- **稀土**用于突破：从 Lv.10 开始每 10 级一个节点（10/20/…/190），必须完成突破才能继续升到 11/21/…/191。第 N 次突破消耗 `2 × N` 稀土（2/4/…/38），Lv.200 封顶，共 19 次突破；单账号满级累计 380 稀土。
+- **突破没有任何加成**：等级与血量都不变，只增加 `breakthroughs` 并解除后续等级限制。
+- **资源产出本轮不实现**：钢材与稀土在游戏内不会发放；`/api/me/resources` 保留作调试 / 测试注入，城墙界面显示「产出待接入」。
+
+### 15.2 后端
+
+- 新增 `wall_state` 表：`account_id`（主键、级联删除）、`level`、`breakthroughs`。
+- `schema_version` 从 2 升到 **3**；`create_all()` 为现有库补建新表，旧账户在下次 `/api/me` 时创建 Lv.1 / 0 次突破。
+- 新增 `server/app/wall.py`：`ensure_state`、`hp_bonus`、`steel_cost`、`next_breakthrough_level`、`rare_earth_cost`、`breakthrough_required`、`payload`。
+- `GET /api/me` 增加 `wall`；`POST /api/me/wall/upgrade` 接收 `{action: "level"|"breakthrough"}`：
+  - `level`：满级 / 未突破时拒绝；扣钢材并等级 +1。
+  - `breakthrough`：满级 / 未到节点时拒绝；扣稀土并 `breakthroughs +1`，等级与血量不变。
+  - 错误码：`invalid_wall_action` / `wall_max_level` / `wall_breakthrough_required` / `wall_breakthrough_not_ready` / `not_enough_resources`。
+- 返回的 `wall` 包含 `level`、`maxLevel`、`hpBonus`、`hpPerLevel`、`nextSteelCost`、`breakthrough`、`maxed`；前端不重复实现价格与节点公式。
+
+### 15.3 前端
+
+- `src/attributes.js` 新增独立 `wallHpExtra` 与 `setWallHpBonus` / `getWallHpBonus`；`setModifiers` / `clearModifiers` 只处理装备，不清除城墙加成。
+- 新增 `src/wall.js`（`Game.wall`）：`applyAccount` / `clear` / `getView` / `getData`。`syncWall()` 在测试场跳过 9999，在战斗中按原血量比例保留，在菜单/面板中补满。
+- `src/accounts.js` 增加 `wall`、`wallBusy`、`wallAction`、`wallError`、`wallNotice` 与 `upgradeWall(action)` / `getWall()`；`applyMe` 应用城墙，`forgetAccount` 清空城墙，401 回 guest。
+- 加载顺序：`config → attributes → equipment → wall → accounts → utils → state → combat → update → sprites → render → input → main`。
+- `src/state.js` 新增 `Game.openWall`、`Game.upgradeWall`、`Game.getWallActionButtonRect`；`config.wallUI` 统一定义面板、主卡、单一动作卡与动作按钮几何。
+- 属性面板底部改为「装备 / 城墙 / 返回」三按钮；城墙界面显示等级、血量、距下一突破节点进度与状态；普通等级只显示钢材强化卡与「强化」按钮，到达 10/20/…/190 节点时同一张行动卡切换为稀土突破卡与「突破」按钮，避免常驻一个不可用的突破入口。`drawHud` 在城墙界面跳过。
+- 材料图标由 `render.js` 的 `drawMaterialIcon` 绘制：钢材是灰白色长方体（顶面高光 + 左右深浅侧面），稀土是金色圆锥（渐变锥体 + 椭圆底座 + 高光线）；顶部资源行、动作卡与按钮统一复用同一套图标。稀土主题色改为金色 `#f2c14e`。
+- 账户中心资源区从 3 列 × 3 行改为 **4 列 × 3 行**，容纳 11 项资源。
+
+### 15.4 验证
+
+- `tmp/check_db.py`：**62 项**通过 —— schema 3、`wall_state` 幂等创建、Lv.1/Lv.10/Lv.200 血量、钢材 20×等级、10 级节点、稀土 2/4/…/38、Lv.199 不需要第 20 次突破、删号级联。
+- `tmp/check_api.py`：**88 项**通过 —— `/api/me` 城墙字段、Lv.1 消耗 20 钢材、Lv.10 阻断、稀土突破后等级不变、扣 2 稀土、Lv.11、Lv.190 消耗 38、Lv.199→200 消耗 3980、满级 422、重新登录保持。
+- `tmp/check-wall.js`：**62 项**通过 —— 血量换算、钢材升级、10 级阻断与突破、材料不足、满级、单一动作卡 / 按钮几何、普通等级只显示强化、节点只显示突破、突破按钮触发请求、未登录、测试场 9999、401 / 网络失败 / 登出。
+- `tmp/check-accounts.js`：**139 项**通过 —— 城墙加载 / 登出清理、钢材 / 稀土从 0 开始、11 项资源网格。
+- `tmp/check-equipment.js`：**76 项**通过；`tmp/check-attributes.js`、`tmp/check-wall-hp.js`、`tmp/smoke-whirlwind.js` 与既有脚本通过。
+- 截图 `tmp/wall-screen.png`（突破节点）、`tmp/wall-normal-screen.png`（普通强化）、`tmp/account-screen.png`、`tmp/attributes-screen.png` 核对。
+
+### 15.5 验收标准
+
+- 新账户 `/api/me` 返回城墙 Lv.1、`maxLevel 200`、血量加成 0、下一级钢材 20、首次突破 Lv.10 / 2 稀土。
+- 钢材升级扣 `20 × 当前等级`，等级 +1、血量 +200；属性面板防线血量同步。
+- Lv.10 未突破时钢材升级 422；稀土突破扣 2、等级与血量不变；突破后可升到 Lv.11。
+- 每 10 级节点依次消耗 2/4/…/38 稀土；Lv.200 满级，满级后两种操作均 422。
+- 未登录、材料不足、未到节点、未突破、满级、401、网络失败均有正确提示且不产生错误扣减。
+- 属性面板可进入城墙界面；测试场 9999 不被覆盖；本轮不新增资源产出、不改战斗公式、不改装备与关卡数据。

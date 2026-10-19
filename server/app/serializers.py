@@ -1,7 +1,7 @@
 """响应体序列化。"""
 from __future__ import annotations
 
-from . import equipment, models, times
+from . import equipment, models, times, wall
 
 
 def account_payload(account: models.Account) -> dict:
@@ -35,3 +35,7 @@ def resource_payload(rows) -> dict:
 
 def equipment_payload(rows) -> dict:
     return equipment.payload(rows)
+
+
+def wall_payload(row) -> dict:
+    return wall.payload(row)

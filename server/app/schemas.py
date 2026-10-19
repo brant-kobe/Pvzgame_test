@@ -27,3 +27,7 @@ class ResourceChange(BaseModel):
 
 class EquipmentUpgrade(BaseModel):
     slotId: str = ""
+
+
+class WallUpgrade(BaseModel):
+    action: str = ""

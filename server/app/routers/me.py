@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .. import config, equipment, models, security, times
+from .. import config, equipment, models, security, times, wall
 from ..database import get_db
 from ..errors import ApiError
-from ..schemas import EquipmentUpgrade, PasswordConfirm, ProgressReport, ResourceChange
-from ..serializers import account_payload, equipment_payload, level_payload, progress_payload, resource_payload
+from ..schemas import EquipmentUpgrade, PasswordConfirm, ProgressReport, ResourceChange, WallUpgrade
+from ..serializers import account_payload, equipment_payload, level_payload, progress_payload, resource_payload, wall_payload
 
 router = APIRouter()
 
@@ -27,11 +27,13 @@ def _resource_rows(db: Session, account_id: int):
 @router.get("")
 def me(account: models.Account = Depends(security.current_account), db: Session = Depends(get_db)) -> dict:
     equipment_rows = equipment.ensure_rows(db, account.id)
+    wall_row = wall.ensure_state(db, account.id)
     return {
         "account": account_payload(account),
         "progress": progress_payload(_progress_rows(db, account.id)),
         "resources": resource_payload(_resource_rows(db, account.id)),
         "equipment": equipment_payload(equipment_rows),
+        "wall": wall_payload(wall_row),
     }
 
 
@@ -115,6 +117,49 @@ def upgrade_equipment(
         "resources": resource_payload(_resource_rows(db, account.id)),
         "slotId": row.slot_id,
         "level": row.level,
+    }
+
+
+@router.post("/wall/upgrade")
+def upgrade_wall(
+    payload: WallUpgrade,
+    account: models.Account = Depends(security.current_account),
+    db: Session = Depends(get_db),
+) -> dict:
+    action = (payload.action or "").strip()
+    if action not in ("level", "breakthrough"):
+        raise ApiError(422, "invalid_wall_action", "城墙操作不合法")
+    row = wall.ensure_state(db, account.id)
+    if row.level >= config.WALL_MAX_LEVEL:
+        raise ApiError(422, "wall_max_level", "城墙已满级")
+    resource_id = "steel" if action == "level" else "rareEarth"
+    if action == "level":
+        if wall.breakthrough_required(row):
+            raise ApiError(422, "wall_breakthrough_required", "需要先完成稀土突破")
+        cost = wall.steel_cost(row.level)
+        message = "钢材不足"
+    else:
+        if not wall.breakthrough_required(row):
+            raise ApiError(422, "wall_breakthrough_not_ready", "尚未到达突破等级")
+        cost = wall.rare_earth_cost(row.breakthroughs)
+        message = "稀土不足"
+    if cost is None:
+        raise ApiError(422, "wall_max_level", "城墙已满级")
+    resource = db.get(models.Resource, (account.id, resource_id))
+    if resource is None or resource.amount < cost:
+        raise ApiError(422, "not_enough_resources", message)
+    resource.amount -= cost
+    if action == "level":
+        row.level += 1
+    else:
+        row.breakthroughs += 1
+    db.commit()
+    return {
+        "wall": wall_payload(row),
+        "resources": resource_payload(_resource_rows(db, account.id)),
+        "action": action,
+        "level": row.level,
+        "breakthroughs": row.breakthroughs,
     }
 
 

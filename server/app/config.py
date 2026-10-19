@@ -24,7 +24,7 @@ PBKDF2_ALGORITHM = "sha256"
 PBKDF2_ITERATIONS = 200000
 PBKDF2_PREFIX = "pbkdf2_sha256"
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 RESOURCE_IDS = (
     "coin",
@@ -36,8 +36,17 @@ RESOURCE_IDS = (
     "blueprintPants",
     "blueprintShoes",
     "blueprintGloves",
+    "steel",
+    "rareEarth",
 )
 MAX_LEVEL_ID = 64
+
+WALL_MAX_LEVEL = 200
+WALL_HP_PER_LEVEL = 200
+WALL_STEEL_PER_LEVEL = 20
+WALL_BREAKTHROUGH_STEP = 10
+WALL_BREAKTHROUGH_BASE_COST = 2
+WALL_BREAKTHROUGH_STEP_COST = 2
 
 EQUIPMENT_SLOTS = ("arm", "clothes", "helmet", "pants", "shoes", "gloves")
 EQUIPMENT_ELEMENTS = ("physical", "fire", "ice", "electric", "wind", "energy")

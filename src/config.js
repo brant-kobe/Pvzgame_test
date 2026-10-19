@@ -182,14 +182,24 @@
       elementTitleY: 326,
       elementX: [56, 160, 264], elementY: [360, 392], elementOrder: ["physical", "fire", "ice", "electric", "wind", "energy"],
       noteY: 444,
-      equipment: { x: 44, y: 514, w: 128, h: 36 },
-      back: { x: 188, y: 514, w: 128, h: 36 }
+      equipment: { x: 34, y: 514, w: 96, h: 36 },
+      wall: { x: 132, y: 514, w: 96, h: 36 },
+      back: { x: 230, y: 514, w: 96, h: 36 }
     },
     equipmentUI: {
       panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
       titleY: 112, subtitleY: 136, resourceY: 153,
       cardX: [36, 184], cardY: [164, 276, 388], cardWidth: 140, cardHeight: 106,
       noteY: 506,
+      back: { x: 98, y: 514, w: 164, h: 36 }
+    },
+    wallUI: {
+      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
+      titleY: 112, subtitleY: 136, resourceY: 156,
+      mainCard: { x: 36, y: 172, w: 288, h: 108 },
+      actionCard: { x: 36, y: 294, w: 288, h: 166 },
+      actionButton: { x: 54, y: 410, w: 252, h: 34 },
+      noteY: 482,
       back: { x: 98, y: 514, w: 164, h: 36 }
     },
     accounts: { apiBase: "", healthPath: "/api/health", timeoutMs: 4000, usernameMin: 2, usernameMax: 16, passwordMin: 6, passwordMax: 64, legacyKey: "blockline.progress", maxRecords: 5, maxStatusNote: 26 },
@@ -202,7 +212,9 @@
       { id: "blueprintHelmet", name: "头盔图纸", color: "#ffd166" },
       { id: "blueprintPants", name: "裤子图纸", color: "#9ab0bc" },
       { id: "blueprintShoes", name: "鞋子图纸", color: "#c9a1ff" },
-      { id: "blueprintGloves", name: "手套图纸", color: "#ff9b52" }
+      { id: "blueprintGloves", name: "手套图纸", color: "#ff9b52" },
+      { id: "steel", name: "钢材", color: "#c8d6dd" },
+      { id: "rareEarth", name: "稀土", color: "#f2c14e" }
     ],
     equipment: {
       maxLevel: 100,
@@ -215,6 +227,7 @@
         { id: "gloves", name: "手套", short: "手", color: "#ff9b52", blueprintId: "blueprintGloves" }
       ]
     },
+    wall: { maxLevel: 200, hpPerLevel: 200, breakthroughStep: 10, rareEarthBase: 2 },
     bossHealth: { bars: 3, width: 108, barHeight: 9, offsetY: 12, headExtent: 1.78, track: "rgba(255, 107, 107, .42)" },
     ranges: { far: 480, mid: 320, near: 125 },
     rifleRange: "far",

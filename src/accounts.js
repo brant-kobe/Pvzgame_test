@@ -14,6 +14,11 @@
     equipmentBusySlot: null,
     equipmentError: "",
     equipmentNotice: "",
+    wall: null,
+    wallBusy: false,
+    wallAction: null,
+    wallError: "",
+    wallNotice: "",
     error: "",
     busy: false,
     lastReportSaved: false,
@@ -76,7 +81,11 @@
     state.equipment = null;
     state.equipmentBusy = false;
     state.equipmentBusySlot = null;
+    state.wall = null;
+    state.wallBusy = false;
+    state.wallAction = null;
     if (Game.equipment) Game.equipment.clear();
+    if (Game.wall) Game.wall.clear();
   }
 
   function applyMe(data) {
@@ -85,9 +94,11 @@
     state.sessionProgress = {};
     state.resources = data.resources || {};
     state.equipment = data.equipment || null;
+    state.wall = data.wall || null;
     state.status = state.account ? "ready" : "guest";
     state.error = "";
     if (Game.equipment) Game.equipment.applyAccount(state.equipment);
+    if (Game.wall) Game.wall.applyAccount(state.wall);
   }
 
   function applyResources(values) {
@@ -272,6 +283,39 @@
     });
   }
 
+  function upgradeWall(action) {
+    if (state.status !== "ready") return Promise.resolve({ ok: false, error: "登录后才能强化城墙" });
+    if (state.wallBusy) return Promise.resolve({ ok: false, error: "正在处理城墙操作" });
+    state.wallBusy = true;
+    state.wallAction = action;
+    state.wallError = "";
+    state.wallNotice = "";
+    return request("/api/me/wall/upgrade", { method: "POST", body: { action: action } }).then(function (result) {
+      state.wallBusy = false;
+      state.wallAction = null;
+      if (result.status === 200 && result.data && result.data.wall) {
+        state.wall = result.data.wall;
+        applyResources(result.data.resources || {});
+        state.wallNotice = action === "breakthrough" ? "稀土突破成功" : "城墙升级成功 · Lv." + (result.data.level || 0);
+        if (Game.wall) Game.wall.applyAccount(state.wall);
+        return { ok: true, action: action, level: result.data.level, breakthroughs: result.data.breakthroughs };
+      }
+      if (result.status === 401) {
+        state.status = "guest";
+        forgetAccount();
+        state.wallError = "登录已过期";
+        return { ok: false, error: state.wallError, status: 401 };
+      }
+      state.wallError = errorMessage(result, result.networkError ? "未连接数据库" : "城墙操作失败");
+      return { ok: false, error: state.wallError, status: result.status };
+    }, function () {
+      state.wallBusy = false;
+      state.wallAction = null;
+      state.wallError = "未连接数据库";
+      return { ok: false, error: state.wallError };
+    });
+  }
+
   function completedMap() {
     var map = {};
     if (state.status !== "ready") {
@@ -365,6 +409,8 @@
     applyResources: applyResources,
     upgradeEquipment: upgradeEquipment,
     getEquipment: function () { return state.equipment; },
+    upgradeWall: upgradeWall,
+    getWall: function () { return state.wall; },
     getProgress: function () { return { completed: completedMap() }; },
     isCompleted: function (levelId) { return !!completedMap()[levelId]; },
     getRecord: recordOf,

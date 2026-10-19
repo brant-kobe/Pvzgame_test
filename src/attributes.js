@@ -4,6 +4,7 @@
   var C = Game.config;
 
   var modifiers = {};
+  var wallHpExtra = 0;
 
   function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
   function finite(value) { return typeof value === "number" && isFinite(value) ? value : 0; }
@@ -17,7 +18,7 @@
       elements[id] = Math.max(0, base.elementAttack[id] + extra);
     });
     var cooldown = clamp(base.cooldownReduction + finite(mod.cooldownReduction), 0, caps.cooldownReduction);
-    var wallBonus = Math.max(0, base.wallHpBonus + finite(mod.wallHpBonus));
+    var wallBonus = Math.max(0, base.wallHpBonus + finite(mod.wallHpBonus) + finite(wallHpExtra));
     var crit = clamp(base.critRate + finite(mod.critRate), 0, caps.critRate);
     var critDamage = clamp(base.critDamage + finite(mod.critDamage), 1, caps.critDamage);
     var status = clamp(base.statusDurationMultiplier + finite(mod.statusDurationMultiplier), 1, caps.statusDurationMultiplier);
@@ -53,6 +54,11 @@
       modifiers = {};
       current = compute();
     },
+    setWallHpBonus: function (value) {
+      wallHpExtra = Math.max(0, finite(value));
+      current = compute();
+    },
+    getWallHpBonus: function () { return wallHpExtra; },
     applyPlayer: function (p) {
       if (!p) return;
       p.attackMultiplier = current.attack / 100;

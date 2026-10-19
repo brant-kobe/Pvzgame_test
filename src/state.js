@@ -43,6 +43,11 @@
     Game.accounts.state.equipmentNotice = "";
     Game.state.screen = "equipment";
   };
+  Game.openWall = function () {
+    Game.accounts.state.wallError = "";
+    Game.accounts.state.wallNotice = "";
+    Game.state.screen = "wall";
+  };
   Game.backToAttributes = function () { Game.state.screen = "attributes"; };
   Game.backToMenu = function () { Game.state.levelPreview = null; Game.state.screen = "menu"; };
   Game.getTestEnemyIds = function () { return Object.keys(C.enemies); };
@@ -129,6 +134,10 @@
     if (Game.state.screen !== "equipment") return Promise.resolve({ ok: false });
     return Game.accounts.upgradeEquipment(slotId);
   };
+  Game.upgradeWall = function (action) {
+    if (Game.state.screen !== "wall") return Promise.resolve({ ok: false });
+    return Game.accounts.upgradeWall(action);
+  };
   Game.isLevelUnlocked = function (levelId) {
     var level = C.levels.find(function (item) { return item.id === levelId; });
     if (!level) return false;
@@ -151,6 +160,10 @@
   Game.getEquipmentUpgradeRect = function (index) {
     var card = Game.getEquipmentCardRect(index);
     return { x: card.x + 10, y: card.y + 80, w: card.w - 20, h: 20 };
+  };
+  Game.getWallActionButtonRect = function () {
+    var rect = C.wallUI.actionButton;
+    return { x: rect.x, y: rect.y, w: rect.w, h: rect.h };
   };
   Game.getLevelBriefPanel = function () {
     var geo = C.levelSelect, roster = Game.getLevelRoster(Game.state.levelPreview);

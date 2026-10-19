@@ -272,6 +272,7 @@
     }
     if (S.screen === "attributes") {
       if (pointInRect(point, C.attributesUI.equipment)) Game.openEquipment();
+      else if (pointInRect(point, C.attributesUI.wall)) Game.openWall();
       else if (pointInRect(point, C.attributesUI.back)) Game.backToMenu();
       return;
     }
@@ -280,6 +281,17 @@
       if (Game.accounts.getStatus() === "ready") {
         for (var ei = 0; ei < C.equipment.slots.length; ei++) {
           if (pointInRect(point, Game.getEquipmentUpgradeRect(ei))) { Game.upgradeEquipment(C.equipment.slots[ei].id); return; }
+        }
+      }
+      return;
+    }
+    if (S.screen === "wall") {
+      if (pointInRect(point, C.wallUI.back)) { Game.backToAttributes(); return; }
+      if (Game.accounts.getStatus() === "ready") {
+        var wallView = Game.wall.getView();
+        if ((wallView.canLevel || wallView.canBreakthrough) && pointInRect(point, Game.getWallActionButtonRect())) {
+          Game.upgradeWall(wallView.canBreakthrough ? "breakthrough" : "level");
+          return;
         }
       }
       return;
