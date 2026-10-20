@@ -38,7 +38,7 @@
 
 - 针对玩家本人的投掷攻击、更复杂的敌人行为与地图互动。
 - 音效、长期养成、商店、广告、排行榜和联网功能。
-- 资源板块：`resources` 表、`Game.accounts.addResource` 与账户中心的资源占位区已就绪，但资源恒为 0，产出与消耗规则待设计。
+- 资源板块：`resources` 表、`equipment_bag` 表与账户中心的资源区已就绪；关卡每局结算会发放金币、六种部位图纸、钢材、稀土、宝石与装备（见第 17 节），钻石与零件仍无产出。
 - 账户与数据层（FastAPI + SQLAlchemy + SQLite）**已按第 12 节实施完毕**。
 
 ### 单局循环
@@ -377,7 +377,7 @@
 - 测试场：从首页进入自由战斗模式，桌面端调试面板位于战场画布右侧的独立区域，小屏设备上改为居中浮层；**僵尸选择器按小怪、精英、首领从上往下分成三行**，每行是一条**横向可拖动的列表**，把该分类下的全部僵尸（含 `codexHidden` 的派生单位）铺成不换行的一排并可左右拖动，点击即选中、当前选中项高亮，`←/→` 仍可逐个切换；可生成 1 只或按首关首波数量生成一波；可循环选择并单独解锁核心技能、应用所选技能专属词条，或清空所有技能与词条并恢复初始构筑；另支持清空敌人、恢复城墙/玩家状态和关闭/开启步枪。面板可收起，并支持 `H` 切换显示；测试场不推进正式波次、不写入关卡通关进度。
 - 升级界面：三张居中横向词条卡，背景减暗并暂停战斗。
 - Boss HUD：顶部的首领横幅（只画「BOSS · 尸潮领主」，没有阶段提示文案）；血条本身绘制在首领头顶，是一条血条配「×N」剩余条数计数。
-- 结算界面：胜利/失败、通关时间、击杀数、最终等级，以及胜利时的「已解锁：下一关名称」；**没有词条回顾**。账户系统实施后另加一行成绩保存提示（未登录 / 未连接数据库时显示「成绩未保存」）。
+- 结算界面：胜利 / 失败 / 撤离、用时、击杀数、最终等级，以及胜利时的「已解锁：下一关名称」；**没有词条回顾**。账户系统实施后另加成绩保存提示；第 17 节接入奖励后再加「本局奖励」五类行（金币 / 钢材·稀土 / 装备图纸 / 宝石 / 装备）与奖励保存提示，暂停菜单的「退出关卡」进入同一模板的「撤离战场」页。
 - 账户界面（已实施）：首页菜单底部的「账户：未登录 / 用户名」按钮进入，内容为用户名与注册时间、通关进度与每关最佳用时 / 击杀、资源占位区，以及「导入本机旧进度」「注销登录」「删除账户」（删除需再输密码）。
 - 登录界面（已实施）：在 Canvas 上绘制的登录 / 注册切换界面，表单值由 `#account-dialog` 输入浮层承载（用户名 + `type="password"` 密码框），风格与测试场 DOM 面板一致，不引入前端框架。
 - 顶部账户横幅（已实施）：**只在菜单、关卡选择与结算界面显示**，战斗中不画以免遮挡战场；未连接数据库时提示「未连接数据库 · 本局进度不会保存」，未登录时提示「未登录 · 进度不会保存」。结算界面另有一行状态：已登录显示「成绩已保存到账户 · 用户名」，否则显示「成绩未保存 · 未登录 / 未连接数据库」。
@@ -392,6 +392,9 @@
 - 满级本身不结算；必须最后一波计划投放全部完成、首领（若有）已登场并被击杀、场上敌人与待生成分裂体全部清零后才胜利，且此时已满级（不足则先补足）。
 - 首领登场后本波小怪继续投放；当前波计划投放完成即推进下一波，首领存活不阻塞后续波次投放；末波投放完毕后仍须清空全场才能胜利。
 - 满级后城墙失守仍判失败；关卡不再有解锁门槛，失败只会中断当前这一局。
+- 每局按「达到的最高等级 + 是否通关」只发最高一档奖励：Lv.1 结算 1 金币；Lv.2 结算 10 金币 + 1 颗灰色宝石；Lv.5 结算 100 金币、1–3 钢材、30% 概率 1 稀土、2–5 颗随机品质宝石、3–10 张随机部位图纸与 1 件随机装备；通关再加 200 金币与 1 件装备。
+- 暂停菜单退出进入撤离结算页；未登录 / 离线不写库并提示奖励不会保存；测试场不结算奖励。
+- 奖励装备进入装备背包，换装只交换元素、强化等级不变，同部位同元素重复掉落全部保留。
 - 后续增加核心技能时，无需改写步枪和词条的基础系统。
 
 ## 11. 本次迭代验收记录
@@ -530,6 +533,8 @@
   投放量 12/14/18/24/30/42/54/66/82/98/114/132，常规小怪合计 **686 只**，投放阶段约 298 秒。数值上关卡 `hpScale` 定到 **2.35**（第 10 关 2.2），后七波用与第 7、8 关相同的 1.2/1.35/1.5/1.65/1.8/1.95/2.1；末波火焰僵尸 227 / 雪人僵尸 257 / 雷电僵尸 237 血，第 4 波雷电精英 **964**（超过第 10 关雪人精英 946，是目前最硬的精英；它免疫电系与麻痹，硬度来自生命 + 免疫）、第 7 波首领 **9518**（第 10 关 8910，只涨 6.8%）。等效血量预算 **129405**，约为第 10 关的 **1.23 倍**，落在 1.1～1.4 的常规区间内，是目前预算最高的一关；单只等效血量 189 同样是全关卡最高。经验按 **`xpScale 0.2`** 校准（第 10 关 0.22），`tmp/check-xp.js` 实测满级落在第 11/12 波。
   验证：新增 `tmp/check-level11.js` 共 **97** 项断言（关卡配置与副标题 11 字 / 简介 30 字 / 简介互不重复、12 波且与第 7、8 关同组波次倍率、阵容只含三种指定小怪且没有空阵容、三种小怪覆盖 12 / 11 / 10 波与「火焰最先、雪人次之、雷电最后」的登场顺序、第 4 波雷电精英与唯一的第 7 波首领、首领波之后还有 5 波、逐波投放递增与间隔收紧（1.5 → 0.3 秒）、等效血量预算 129405 与 1.23 倍说明、逐波血量加成单调不降且与第 8 关逐波完全一致、实际生成血量逐条等于公式值（1 波 108/122/113、12 波 227/257/237）、雷电精英 964 血且超过第 10 关雪人精英、首领 9518 且涨幅不到 20%、关卡内电系 ×0.5 与精英 ×0、麻痹减半与精英免疫而眩晕 / 减速 / 点燃照常、火焰免疫燃烧冻结与雪人冻结减半、11 行列表几何与绘制（行高 37.27、末行底边 554、序号「11」与「10」、名称与问号都落在行内、10 条分隔线）、简介面板列出火焰 / 雪人 / 雷电 / 雷电精英 / 尸潮领主五行且不越界、经验折算 1944 与满级落在第 11/12 波、首领波等级与第 10 关相差不超过 1、以及整局模拟通关并满级）。
   既有脚本同步改为按新关卡数推导：`tmp/check-level-preview.js`（关卡总数 10 → 11，并把「点面板外的关卡行」一类的点击用例改用最后一行，因为面板下沿比原来更靠上）、`tmp/check-level10.js`（关卡总数 11、第 10 关改为倒数第二、列表 11 行、行高 41 → **410 / 11 = 37.27**、`getContinueLevel` 回落到第 11 关、已通关 11 行、分隔线 10 条）、`tmp/check-level9.js`（关卡总数 11、第 9 关改为倒数第三、行高 37.27）、`tmp/check-level8.js`（关卡总数 11、第 8 关改为「后面还有第 9～11 关」、行高 37.27、行高下限断言 40 → 36）、`tmp/check-elements.js` 与 `tmp/check-unlock.js`（关卡数量 10 → 11）、`tmp/smoke-whirlwind.js`（行高下限断言 40 → 36，文案改为「序号 / 名称 / 问号」）。`tmp/check-hp-budget.js` 打印「对比上一关」新增第 11 关的 **1.23**（第 2～11 关依次为 3.60 / 1.87 / 1.58 / 1.23 / 1.38 / 1.27 / 0.96 / 1.22 / 1.18 / 1.23），`tmp/check-level.js 11`（12/12 波）与 `tmp/check-xp.js` 都通过。当轮全量回归 33 个脚本 0 失败（check-level11 97 / check-level10 76 / check-level9 77 / check-level8 66 / smoke-whirlwind 527 / check-level-preview 55 / 其余脚本未受影响），`node --check` 与 `git diff --check` 通过；画面用 `tmp/trace-level-select.js`（11 行列表）+ `tmp/draw-level-select.py` 回放核对，并额外回放了第 11 关的简介面板。
+- 接入**关卡资源奖励**与**装备背包**，资源系统第一次有了正式产出。每局结束（胜利 / 失败 / 撤离）按「本局达到的最高等级 + 是否通关」**只发最高一档**：未升级 1 金币；Lv.2 发 10 金币 + 1 颗灰色宝石；Lv.5 发 100 金币、1–3 钢材、30% 概率 1 稀土、2–5 颗宝石（灰 50% / 绿 30% / 蓝 15% / 紫 5%）、3–10 张随机部位图纸与 1 件随机装备；通关再加 200 金币与 1 件装备（共 300 金币、2 件装备）。奖励由新增的 `server/app/rewards.py` 在一次事务里计算并落库，随机数走可注入的 `rng`（缺省 `secrets.SystemRandom()`）；新增 `POST /api/me/rewards` 与 `POST /api/me/equipment/equip`，`GET /api/me` 增加 `equipmentBag`；`EquipmentItem` 表 `equipment_bag` 把 schema 升到 **5**。装备掉落只含部位与元素，**强化等级属于部位**，换装只交换 `element_id`、不损失等级；同部位同元素重复掉落全部保留，不自动折算。前端新增 `Game.settleRewards` / `Game.quitLevel` / 结算页 `retreat` 态与「本局奖励」五行，暂停菜单「退出关卡」改为进入「撤离战场」；新增 `drawEquipmentBag` 背包界面（六部位页签 + 六元素行 + 装备按钮），装备界面底部改为「装备背包 / 返回属性」。结算面板几何收进 `config.resultUI`，背包几何收进 `config.equipmentBagUI`，输入与绘制共用同一份。
+  验证：`tmp/check_db.py` 88 → **134** 项、`tmp/check_api.py` 115 → **155** 项、新增 `tmp/check-rewards.js` **65** 项、`tmp/check-accounts.js` 147 → **164** 项、`tmp/check-equipment.js` 76 → **109** 项；38 个前端 `check-*.js` 与 `tmp/smoke-whirlwind.js` 全部通过，`node --check`、`git diff --check`、`compileall` 通过；`tmp/check-migrate-gems.py` 在真实库副本上确认补建 `equipment_bag` 并写入 schema 5；画面用 `tmp/trace-draw.js account result` / `account equipmentBag` + `tmp/replay-draw.py` 回放出 `tmp/account-result.png` 与 `tmp/equipment-bag.png` 核对。文档同步 README 的装备 / 城墙 / 宝石条目与限制段、DEVELOPMENT_PLAN 的第 9/10/11/12/14 节与新增第 17 节、AGENTS 的奖励 / 背包约定，并把 AGENTS.md 重新压回 64 KB 指令预算内。
 - 已使用 `node --check` 检查 `src/` 下全部 JavaScript 文件。
 - 已使用 `git diff --check` 检查补丁空白字符。
 - Windows Git 出现的 `LF will be replaced by CRLF` 仅为换行符转换提示，不影响运行。
@@ -562,15 +567,16 @@ server/
     __init__.py           # create_app()：中间件、路由装配、静态挂载
     config.py             # 数据库 URL、会话时长、用户名/密码规则、端口、允许的 Origin
     database.py           # engine / SessionLocal / Base / get_db 依赖 / SQLite PRAGMA
-    models.py             # Account / Session / LevelProgress / Resource / Equipment / WallState
+    models.py             # Account / Session / LevelProgress / Resource / Equipment / EquipmentItem / WallState / Gem
     schemas.py            # Pydantic 请求与响应模型
     security.py           # pbkdf2 哈希与校验、会话签发、current_account 依赖
-    equipment.py          # 六部位装备领域逻辑、成长与升级消耗
+    equipment.py          # 六部位装备领域逻辑、成长、升级消耗、装备背包与换装
+    rewards.py            # 关卡奖励：档位、随机掉落与一次事务落库
     wall.py               # 城墙等级、血量成长与稀土突破
     routers/
       health.py           # GET /api/health
       auth.py             # /api/auth/register|login|logout
-      me.py               # /api/me、progress、resources、equipment/upgrade、wall/upgrade
+      me.py               # /api/me、progress、rewards、resources、equipment/upgrade|equip、wall/upgrade、gems
     web.py                # GET / → index.html；挂载 /src /styles /assets /pictures
 data/
   blockline.db            # 运行时生成（已加入 .gitignore）
@@ -587,10 +593,11 @@ data/
 | `sessions` | `token_hash`（主键）、`account_id`（级联删除）、`created_at`、`expires_at` | 登录态落库，服务重启不掉线 |
 | `level_progress` | `account_id` + `level_id`（联合主键）、`completed_at`、`best_time`、`best_kills`、`attempts`、`wins` | **通关 + 每关统计**，`best_*` 取更优、`attempts` / `wins` 累加 |
 | `resources` | `account_id` + `resource_id`（联合主键）、`amount` | 金币 / 钻石 / 零件 / 六种部位图纸 / 钢材 / 稀土；目录来自 `config.resources` |
-| `equipment` | `account_id` + `slot_id`（联合主键）、`element_id`、`level` | 六部位装备的固定随机元素与等级；`level` 默认 1、上限 100 |
+| `equipment` | `account_id` + `slot_id`（联合主键）、`element_id`、`level` | 六部位**已装备**的固定随机元素与等级；`level` 默认 1、上限 100 |
+| `equipment_bag` | `id`（自增主键）、`account_id`、`slot_id`、`element_id` | 装备背包：掉落装备只含部位与元素，无等级；**不设唯一约束**，同部位同元素可重复 |
 | `wall_state` | `account_id`（主键）、`level`、`breakthroughs` | 城墙等级 1～200 与已完成稀土突破次数 0～19 |
 | `gems` | `id`（自增主键）、`account_id`、`part_id`、`quality`、`affix_id`、`slot_index` | 部位绑定宝石；`slot_index` 0～5 已镶嵌、`NULL` 背包；唯一约束 `(account_id, part_id, slot_index)` |
-| `schema_version` | `version` | 供以后手写迁移脚本判断版本；当前为 4 |
+| `schema_version` | `version` | 供以后手写迁移脚本判断版本；当前为 5 |
 
 - SQLAlchemy 2.0 类型化声明式模型；SQLite 连接统一设 `foreign_keys=ON`、`journal_mode=WAL`、`busy_timeout=5000`。
 - 建表用 `Base.metadata.create_all()` 配合 `schema_version` 记录版本；**暂不引入 Alembic**（本地单机、单库），将来真需要版本化迁移时再补。
@@ -609,8 +616,10 @@ data/
 | POST | `/api/auth/logout` | 删除当前会话并清 Cookie |
 | GET | `/api/me` | 账户信息 + 全部关卡记录 + 资源 + 六部位装备 + 城墙状态 + 全部宝石（登录后启动拉一次） |
 | POST | `/api/me/progress` | `{levelId, time, kills, win}` → upsert，维护 `best_*` / `attempts` / `wins` |
-| GET / POST | `/api/me/resources` | 读取 / `{resourceId, delta}` 增减（资源产出未接入，仅用于调试注入） |
+| POST | `/api/me/rewards` | `{levelId, level, win}` → 按到达等级与通关结算资源 / 宝石 / 装备并落库，返回奖励明细与最新账户数据 |
+| GET / POST | `/api/me/resources` | 读取 / `{resourceId, delta}` 增减（正式产出走关卡奖励，这里保留调试注入） |
 | POST | `/api/me/equipment/upgrade` | `{slotId}` → 校验满级与材料，扣金币 + 部位图纸，等级 +1 |
+| POST | `/api/me/equipment/equip` | `{itemId}` → 背包装备与已装备部位交换元素，等级不变 |
 | POST | `/api/me/wall/upgrade` | `{action: "level"|"breakthrough"}` → 钢材升级或稀土突破 |
 | POST | `/api/me/gems/socket` | `{gemId}` → 放进该部位第一个空槽 |
 | POST | `/api/me/gems/unsocket` | `{gemId}` → 从槽位回到背包 |
@@ -764,30 +773,32 @@ git diff --check
 
 装备是角色属性的第一个长期养成来源，只负责把六件装备的数值汇总成 `Game.attributes` 的修正；战斗公式、技能与关卡数据不改。
 
-- 六个部位：**手臂 / 衣服 / 头盔 / 裤子 / 鞋子 / 手套**，每个部位各一件，始终生效；没有背包、穿戴 / 卸下、替换或出售。
+- 六个部位：**手臂 / 衣服 / 头盔 / 裤子 / 鞋子 / 手套**，每个部位各一件已装备、始终生效。第 17 节新增**装备背包**：掉落装备只决定部位与元素，可以在背包里换装；**强化等级属于部位**，换装只交换元素、不损失等级；同部位同元素重复掉落全部保留，不自动折算、没有出售或分解。
 - 新账户六个部位均为 **Lv.1**；元素在首次创建时随机分配，六系洗牌保证不重复，之后升级不改变元素。
 - 等级上限 **100**。每件装备的攻击与元素成长相同：`10 + 5 × (level - 1)`，即 Lv.1 +10、Lv.50 +255、Lv.100 +505。六件满级合计攻击 +3030；六系各一件时每系 +505。
 - 升级消耗按当前等级计算：
   - 金币：`80 + 40 × (currentLevel - 1)`
   - 专属图纸：`10 × currentLevel`
   - 只扣该部位自己的图纸。Lv.1→2 为 80 金币 + 10 图纸，Lv.2→3 为 120 + 20，Lv.99→100 为 4000 + 990；单件满级累计 201,960 金币 + 495,000 图纸。
-- **资源产出本轮不实现**：金币与图纸在游戏内不会发放；现有 `/api/me/resources` 保留作调试 / 测试注入。装备界面会显示「产出待接入」。
+- **资源产出已由第 17 节接入**：金币与图纸由关卡结算发放；`/api/me/resources` 保留作调试 / 测试注入，装备界面提示已改为「关卡奖励产出」。
 
 ### 14.2 后端
 
 - 新增 `equipment` 表：`account_id`（级联删除）、`slot_id`、`element_id`、`level`，联合主键 `(account_id, slot_id)`。
-- `schema_version` 从 1 升到 **2**；`create_all()` 给现有库补建新表，旧账户在下次 `/api/me` 时补齐缺失部位。
-- 新增 `server/app/equipment.py`：`ensure_rows`、`attack_bonus`、`element_bonus`、`cost_for`、`payload`。随机元素用 `secrets.SystemRandom().sample`，六部位洗牌；`ensure_rows` 幂等，并对并发唯一键冲突回滚重读。
-- `GET /api/me` 增加 `equipment`；`POST /api/me/equipment/upgrade` 由服务端校验部位、满级与材料，在同一事务内扣除金币 + 专属图纸并升级。错误码：`unknown_equipment_slot` / `max_equipment_level` / `not_enough_resources`。
+- 新增 `equipment_bag` 表：`id`（自增主键）、`account_id`（级联删除、索引）、`slot_id`、`element_id`；无唯一约束，同部位同元素可重复。
+- `schema_version` 从 1 升到 **2**；`create_all()` 给现有库补建新表，旧账户在下次 `/api/me` 时补齐缺失部位（装备背包在第 17 节随 schema 5 补建）。
+- 新增 `server/app/equipment.py`：`ensure_rows`、`attack_bonus`、`element_bonus`、`cost_for`、`payload`，以及背包的 `bag_rows` / `bag_payload` / `create_bag_item` / `equip`。随机元素用 `secrets.SystemRandom().sample`，六部位洗牌；`ensure_rows` 幂等，并对并发唯一键冲突回滚重读；`equip` 只交换 `element_id`、不动 `level`。
+- `GET /api/me` 增加 `equipment` 与 `equipmentBag`；`POST /api/me/equipment/upgrade` 由服务端校验部位、满级与材料，在同一事务内扣除金币 + 专属图纸并升级；`POST /api/me/equipment/equip` 校验背包归属并换装。错误码：`unknown_equipment_slot` / `max_equipment_level` / `not_enough_resources` / `unknown_equipment_item`。
 - 接口返回每个部位的 `attackBonus`、`elementBonus`、`blueprintId`、`nextCost`；**前端不维护第二份成长或价格公式**。
 
 ### 14.3 前端
 
-- 新增 `src/equipment.js`（`Game.equipment`）：`applyAccount` / `clear` / `getSlots` / `getSlot` / `getTotals`。它将六件装备的攻击求和、元素按属性分别求和后调用 `Game.attributes.setModifiers`，并在已有玩家对象时立即 `applyPlayer`；`clear()` 恢复基础属性。
+- 新增 `src/equipment.js`（`Game.equipment`）：`applyAccount` / `applyBag` / `clear` / `getSlots` / `getSlot` / `getBag` / `getBagPart` / `getTotals`。它将六件已装备的攻击求和、元素按属性分别求和后调用 `Game.attributes.setModifiers`，并在已有玩家对象时立即 `applyPlayer`；背包只保存部位与元素，不参与属性汇总；`clear()` 恢复基础属性并清空背包。
 - 加载顺序：`config → attributes → equipment → wall → accounts → utils → state → combat → update → sprites → render → input → main`。
 - `src/accounts.js` 缓存 `equipment`、`equipmentBusy`、`equipmentBusySlot`、`equipmentError`、`equipmentNotice`；`applyMe` 应用装备，`forgetAccount` 清空装备；`upgradeEquipment` 走异步接口，401 回 guest，网络失败保留缓存并提示。
 - `Game.openEquipment` / `Game.backToAttributes` / `Game.upgradeEquipment` 是界面切换与升级入口；卡片、按钮、返回按钮几何由 `Game.getEquipmentCardRect` / `Game.getEquipmentUpgradeRect` / `config.equipmentUI` 统一给出。
-- 属性面板底部为「装备 / 宝石 / 城墙 / 返回」四按钮；装备界面为 2 列 × 3 行、140×106 卡片，显示部位、`Lv.N / 100`、攻击、元素、金币与图纸消耗、强化按钮；底部状态行显示成功 / 错误或产出待接入提示。`drawHud` 在装备界面跳过。
+- 属性面板底部为「装备 / 宝石 / 城墙 / 返回」四按钮；装备界面为 2 列 × 3 行、140×106 卡片，显示部位、`Lv.N / 100`、攻击、元素、金币与图纸消耗、强化按钮；底部改为「装备背包 / 返回属性」双按钮，状态行显示成功 / 错误或「关卡奖励产出」。`drawHud` 在装备界面跳过。
+- 新增装备背包界面（`config.equipmentBagUI`）：六部位页签、摘要（部位等级 / 当前元素 / 背包件数）与六个固定元素行（名称、`×N`、已装备标记或「装备」按钮）；换装成功后在页面内提示并立即刷新属性。入口只有「属性 → 装备 → 装备背包」，战斗中不能换装。
 - 账户中心资源区最终为 4 列 × 3 行网格，展示金币、钻石、零件、六种图纸、钢材与稀土（城墙系统加入后从 3×3 扩展为 4×3）。
 
 ### 14.4 验证（装备阶段）
@@ -807,7 +818,7 @@ git diff --check
 - Lv.1→2 扣 80 金币 + 10 张对应图纸；Lv.2→3 扣 120 + 20；Lv.99→100 扣 4000 + 990。
 - 升级后等级、加成与 `nextCost` 同步，重新登录保持；失败不改变任何数据。
 - 属性面板可进入装备界面，六张卡片、`Lv.N / 100`、消耗、按钮、返回路径与提示完整可见。
-- 首页底部三个入口不变；本轮不新增资源产出、不改战斗公式、不改关卡与技能数据。
+- 首页底部三个入口不变；本轮不新增资源产出（第 17 节已接入关卡奖励）、不改战斗公式、不改关卡与技能数据。
 
 ## 15. 城墙材料系统（钢材 / 稀土 · 已实现）
 
@@ -819,12 +830,12 @@ git diff --check
 - **钢材**用于普通升级：消耗 `20 × 当前等级`。Lv.1→2 为 20，Lv.199→200 为 3980；单账号满级累计 398,000 钢材。
 - **稀土**用于突破：从 Lv.10 开始每 10 级一个节点（10/20/…/190），必须完成突破才能继续升到 11/21/…/191。第 N 次突破消耗 `2 × N` 稀土（2/4/…/38），Lv.200 封顶，共 19 次突破；单账号满级累计 380 稀土。
 - **突破没有任何加成**：等级与血量都不变，只增加 `breakthroughs` 并解除后续等级限制。
-- **资源产出本轮不实现**：钢材与稀土在游戏内不会发放；`/api/me/resources` 保留作调试 / 测试注入，城墙界面显示「产出待接入」。
+- **资源产出自第 17 节起接入**（本阶段当时不实现）：钢材与稀土改由关卡奖励发放，城墙界面提示为「关卡奖励产出」；`/api/me/resources` 继续保留作调试 / 测试注入。
 
 ### 15.2 后端
 
 - 新增 `wall_state` 表：`account_id`（主键、级联删除）、`level`、`breakthroughs`。
-- `schema_version` 从 2 升到 **3**（第 16 节宝石系统再升到 **4**）；`create_all()` 为现有库补建新表，旧账户在下次 `/api/me` 时创建 Lv.1 / 0 次突破。
+- `schema_version` 从 2 升到 **3**（第 16 节宝石系统再升到 **4**，第 17 节装备背包与奖励再升到 **5**）；`create_all()` 为现有库补建新表，旧账户在下次 `/api/me` 时创建 Lv.1 / 0 次突破。
 - 新增 `server/app/wall.py`：`ensure_state`、`hp_bonus`、`steel_cost`、`next_breakthrough_level`、`rare_earth_cost`、`breakthrough_required`、`payload`。
 - `GET /api/me` 增加 `wall`；`POST /api/me/wall/upgrade` 接收 `{action: "level"|"breakthrough"}`：
   - `level`：满级 / 未突破时拒绝；扣钢材并等级 +1。
@@ -859,7 +870,7 @@ git diff --check
 - Lv.10 未突破时钢材升级 422；稀土突破扣 2、等级与血量不变；突破后可升到 Lv.11。
 - 每 10 级节点依次消耗 2/4/…/38 稀土；Lv.200 满级，满级后两种操作均 422。
 - 未登录、材料不足、未到节点、未突破、满级、401、网络失败均有正确提示且不产生错误扣减。
-- 属性面板可进入城墙界面；测试场 9999 不被覆盖；本轮不新增资源产出、不改战斗公式、不改装备与关卡数据。
+- 属性面板可进入城墙界面；测试场 9999 不被覆盖；本轮不新增资源产出（第 17 节已接入关卡奖励）、不改战斗公式、不改装备与关卡数据。
 
 ## 16. 装备宝石系统（6 部位 × 6 槽位 · 已实现）
 
@@ -929,3 +940,56 @@ git diff --check
 - 只有已镶嵌宝石计入属性；背包宝石不影响攻击 / 元素 / 冷却 / 防线 / 暴击 / 暴伤 / 负面时间。
 - 红色宝石不能继续合成；不足 5 颗、不同部位、不同品质均不能合成。
 - 未登录、401、网络失败、busy 均有正确提示且不产生错误扣减。
+
+## 17. 关卡资源奖励与装备背包（已实现）
+
+### 17.1 定位与规则
+
+资源系统（金币 / 六种部位图纸 / 钢材 / 稀土 / 宝石 / 装备）的**正式产出**第一次接入关卡：每局结束（胜利 / 失败 / 撤离）按「本局达到的最高等级 + 是否通关」结算一次，**只发最高一档**，不逐档累加。
+
+| 档 | 条件 | 金币 | 其它 |
+| --- | --- | ---: | --- |
+| 0 | 本局没有升级（Lv.1） | 1 | — |
+| 1 | 达到 Lv.2、未到 Lv.5 | 10 | 1 颗灰色宝石（`quality 0`，随机部位与词条、未镶嵌） |
+| 2 | 达到 Lv.5、未通关 | 100 | 钢材 1–3；30% 概率 1 稀土；宝石 2–5 颗（每颗品质权重 灰 50% / 绿 30% / 蓝 15% / 紫 5%，部位与词条随机）；图纸合计 3–10 张（每张独立随机到六种部位之一）；装备 1 件（随机部位 + 随机元素，进背包） |
+| 3 | 通关 | 300（100 + 200） | 第 2 档全部 + 1 件装备（合计 2 件） |
+
+- 失败与撤离按已到达档次发奖；每局可重复获得；**不按关卡编号缩放**，无首通加成、无每日上限。
+- 宝石是 `gems` 表的背包行（未镶嵌、随机部位与随机词条），不是资源 `gem`（钻石）；奖励不会掉红色品质。
+- 装备掉落只含部位与元素，写入 `equipment_bag`；**强化等级属于部位**，换装只交换 `element_id`；同部位同元素重复掉落全部保留，不自动折算、没有出售 / 分解。
+- 未登录 / 离线 / 测试场不结算：不请求接口、不写库，结算页提示奖励不会保存；奖励由服务端唯一计算，客户端只展示返回值。
+
+### 17.2 后端
+
+- `server/app/config.py`：`SCHEMA_VERSION` 4 → **5**，新增 `MAX_PLAYER_LEVEL` 与 `REWARD_*` 常量（金币 / 钢材区间 / 稀土概率 / 宝石数量与品质权重 / 图纸区间 / 装备件数）。
+- `server/app/models.py`：新增 `EquipmentItem`（表 `equipment_bag`，`id` / `account_id` / `slot_id` / `element_id`，无唯一约束）。
+- `server/app/rewards.py`：`tier_for(level, win)`、`gem_quality_for(roll)`、`grant(db, account_id, level_id, level, win, rng=None)`。`level` 收敛到 1～15；`win` 且未满级返回 `422 invalid_reward_state`；随机数统一走可注入的 `rng`（缺省 `secrets.SystemRandom()`），便于数据层测试；资源按行累加、宝石与装备逐件创建，全部改完一次 `commit`，失败由会话关闭回滚。
+- `server/app/gems.py`：抽出可注入的 `random_affix(rng)` 与 `create(db, ...)`，`grant` 与奖励共用。
+- `server/app/equipment.py`：`bag_rows` / `bag_item_payload` / `bag_payload` / `create_bag_item` / `equip`；`equip` 校验归属后交换两行的 `element_id` 并提交，**不改 `level`**。
+- 接口：`GET /api/me` 增加 `equipmentBag`；`POST /api/me/rewards`（`{levelId, level, win}`，校验 `levelId`，返回 `tier`、`rewards` 与最新资源 / 装备 / 背包 / 宝石）；`POST /api/me/equipment/equip`（`{itemId}`）。错误码：`invalid_level` / `invalid_reward_state` / `unknown_equipment_item`。
+
+### 17.3 前端
+
+- `src/accounts.js`：缓存 `equipmentBag`；新增 `claimRewards(levelId, level, win)`（成功合并资源、替换装备 / 背包 / 宝石缓存并调用各自属性层，401 → guest、网络 → offline）与 `equipEquipment(itemId)`（busy 防重、成功刷新装备与背包、提示「已换装」）。
+- `src/equipment.js`：`applyBag` / `getBag` / `getBagPart` / `clear` 清空背包；`getBagPart` 按「部位 × 元素」聚合数量与最早一件的 id，只有已装备元素计入属性。
+- `src/state.js`：`session.reward`（`pending` / `done` / `unsaved` / `failed`）；`Game.settleRewards(win)` 在 `winLevel` / `loseLevel` / `quitLevel` 后触发一次；`Game.quitLevel` 切到新界面 `retreat` 并结算；新增 `Game.openEquipmentBag` / `selectEquipmentBagPart` / `backToEquipment` / `equipEquipmentItem` 与三个背包几何函数。
+- `src/config.js`：`resultUI` 统一结算面板与奇偶按钮几何；`rewardTiers` 四档名；`equipmentUI.bag` + 底部双按钮；`equipmentBagUI` 页签、六行、装备按钮与返回。
+- `src/render.js`：`drawResult` 改为胜利 / 失败 / 撤离三态，新增「本局奖励」区（金币 / 钢材·稀土 / 图纸 / 宝石 / 装备五行，按品质与部位聚合）与成绩、奖励两行保存提示；新增 `drawEquipmentBag`；装备界面底部改为「装备背包 / 返回属性」，两处「产出待接入」改为「关卡奖励产出」。
+- `src/input.js`：暂停菜单「退出关卡」改调 `Game.quitLevel`；结算界面按 `config.resultUI` 判定按钮并包含 `retreat`；装备界面与背包界面的页签 / 装备 / 返回点击均使用状态层几何。
+
+### 17.4 验证
+
+- `tmp/check_db.py` **134** 项：schema 5、`equipment_bag` 建表、重复背包行、`equip` 交换且等级不变、未知装备 422、级联删除、`tier_for` 与 `gem_quality_for` 边界、四档金币与数量范围、档 3 两件装备、未满级领通关档 422、等级收敛到 15、重复发奖累加。
+- `tmp/check_api.py` **155** 项：schemaVersion 5、新账户背包为空、非法关卡 422、未满级通关 422、档 0/1/2/3 的金币与数量范围、宝石未镶嵌、装备进背包、换装改变元素且等级不变、旧元素回背包、未知装备 422、累计金币 511、重新登录持久化、静态资源仍可访问。
+- `tmp/check-rewards.js` **65** 项：游客不发请求、撤离档 0、失败档 1、Lv.5 档 2、通关档 3、`resultUI` 几何与「旧坐标不响应」、401 / 网络失败提示、测试场不结算、重新开始清空奖励、奖励装备换装与重复件保留。
+- `tmp/check-accounts.js` **164** 项、`tmp/check-equipment.js` **109** 项、`tmp/check-gems.js` **122** 项、`tmp/check-wall.js` **63** 项通过；全量 38 个前端 `check-*.js` 与 `tmp/smoke-whirlwind.js` 0 失败，`node --check`、`git diff --check`、`compileall` 通过。
+- 画面用 `tmp/trace-draw.js account result` 与 `account equipmentBag` + `tmp/replay-draw.py` 回放核对（`tmp/account-result.png`、`tmp/equipment-bag.png`）；`tmp/check-migrate-gems.py` 在真实库副本上确认补建 `equipment_bag` 与写入 schema 5。
+
+### 17.5 验收标准
+
+- 进入关卡后立刻从暂停菜单退出：切到「撤离战场」，显示「参与奖励 / 金币 +1」，账户金币 +1，不写关卡进度。
+- Lv.2 失败 / 撤离：10 金币 + 1 颗灰色宝石进背包；Lv.5 失败 / 撤离：100 金币、1–3 钢材、30% 稀土、2–5 宝石、3–10 图纸与 1 件装备；通关：300 金币、2 件装备。
+- 奖励只发最高档，不重复累加；每局可重复，失败与撤离按已到达档次发奖。
+- 未登录 / 离线时结算页提示奖励不会保存且不产生请求；测试场不结算。
+- 背包里的装备按部位 × 元素聚合显示数量，换装只交换元素、强化等级不变，重复件全部保留；换装后装备卡与属性面板同步。
+- 服务端事务失败不会留下半套奖励；`equipment` 的 `level` 只在强化接口里变化。

@@ -278,10 +278,27 @@
       return;
     }
     if (S.screen === "equipment") {
+      if (pointInRect(point, C.equipmentUI.bag)) { Game.openEquipmentBag(); return; }
       if (pointInRect(point, C.equipmentUI.back)) { Game.backToAttributes(); return; }
       if (Game.accounts.getStatus() === "ready") {
         for (var ei = 0; ei < C.equipment.slots.length; ei++) {
           if (pointInRect(point, Game.getEquipmentUpgradeRect(ei))) { Game.upgradeEquipment(C.equipment.slots[ei].id); return; }
+        }
+      }
+      return;
+    }
+    if (S.screen === "equipmentBag") {
+      if (pointInRect(point, C.equipmentBagUI.back)) { Game.backToEquipment(); return; }
+      if (Game.accounts.getStatus() !== "ready" || Game.accounts.state.equipmentBagBusy) return;
+      for (var bi = 0; bi < C.equipment.slots.length; bi++) {
+        if (pointInRect(point, Game.getEquipmentBagTabRect(bi))) { Game.selectEquipmentBagPart(C.equipment.slots[bi].id); return; }
+      }
+      var bagView = Game.equipment.getBagPart(S.equipmentBagPart);
+      for (bi = 0; bi < bagView.rows.length; bi++) {
+        var bagRow = bagView.rows[bi];
+        if (bagRow.count > 0 && !bagRow.equipped && bagRow.itemId && pointInRect(point, Game.getEquipmentBagButtonRect(bi))) {
+          Game.equipEquipmentItem(bagRow.itemId);
+          return;
         }
       }
       return;
@@ -376,14 +393,12 @@
     }
     if (S.screen === "paused") {
       if (point.x >= center - 82 && point.x <= center + 82 && point.y >= 326 && point.y <= 370) Game.resume();
-      else if (point.x >= center - 82 && point.x <= center + 82 && point.y >= 382 && point.y <= 422) Game.exitToMenu();
+      else if (point.x >= center - 82 && point.x <= center + 82 && point.y >= 382 && point.y <= 422) Game.quitLevel();
       return;
     }
-    if (S.screen === "victory" || S.screen === "defeat") {
-      if (point.y >= 305 && point.y <= 349) {
-        if (point.x >= 42 && point.x <= 172) { Game.start(S.selectedLevel); return; }
-        if (point.x >= 188 && point.x <= 318) { Game.exitToMenu(); return; }
-      }
+    if (S.screen === "victory" || S.screen === "defeat" || S.screen === "retreat") {
+      if (pointInRect(point, C.resultUI.restart)) { Game.start(S.selectedLevel); return; }
+      if (pointInRect(point, C.resultUI.back)) { Game.exitToMenu(); return; }
       return;
     }
     if (S.screen === "testArena") {

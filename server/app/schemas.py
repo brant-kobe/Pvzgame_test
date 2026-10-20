@@ -29,6 +29,16 @@ class EquipmentUpgrade(BaseModel):
     slotId: str = ""
 
 
+class EquipmentEquip(BaseModel):
+    itemId: int = 0
+
+
+class RewardClaim(BaseModel):
+    levelId: int = 0
+    level: int = 1
+    win: bool = False
+
+
 class WallUpgrade(BaseModel):
     action: str = ""
 

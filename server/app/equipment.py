@@ -1,4 +1,4 @@
-"""装备领域逻辑：六部位默认数据、随机元素、成长与升级消耗。"""
+"""装备领域逻辑：六部位默认数据、随机元素、成长、升级消耗、背包与换装。"""
 from __future__ import annotations
 
 import secrets
@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import config, models
+from .errors import ApiError
 
 
 def _rows_by_slot(db: Session, account_id: int) -> dict[str, models.Equipment]:
@@ -71,3 +72,48 @@ def slot_payload(row: models.Equipment) -> dict:
 
 def payload(rows) -> dict:
     return {row.slot_id: slot_payload(row) for row in rows if row.slot_id in config.EQUIPMENT_BLUEPRINTS}
+
+
+def bag_rows(db: Session, account_id: int) -> list[models.EquipmentItem]:
+    statement = select(models.EquipmentItem).where(models.EquipmentItem.account_id == account_id).order_by(models.EquipmentItem.id)
+    return list(db.execute(statement).scalars().all())
+
+
+def bag_item_payload(row: models.EquipmentItem) -> dict:
+    return {
+        "id": row.id,
+        "slotId": row.slot_id,
+        "element": row.element_id,
+    }
+
+
+def bag_payload(items) -> list[dict]:
+    return [bag_item_payload(row) for row in items]
+
+
+def create_bag_item(db: Session, account_id: int, slot_id: str, element_id: str) -> models.EquipmentItem:
+    row = models.EquipmentItem(account_id=account_id, slot_id=slot_id, element_id=element_id)
+    db.add(row)
+    return row
+
+
+def equip(db: Session, account_id: int, item_id: int) -> dict:
+    item = db.get(models.EquipmentItem, int(item_id))
+    if item is None or item.account_id != account_id:
+        raise ApiError(422, "unknown_equipment_item", "装备不存在")
+    if item.slot_id not in config.EQUIPMENT_SLOTS:
+        raise ApiError(422, "unknown_equipment_item", "装备不存在")
+    rows = ensure_rows(db, account_id)
+    row = next((entry for entry in rows if entry.slot_id == item.slot_id), None)
+    if row is None:
+        raise ApiError(422, "unknown_equipment_item", "装备不存在")
+    previous = row.element_id
+    row.element_id = item.element_id
+    item.element_id = previous
+    db.commit()
+    return {
+        "equipment": payload(rows),
+        "equipmentBag": bag_payload(bag_rows(db, account_id)),
+        "slotId": row.slot_id,
+        "element": row.element_id,
+    }

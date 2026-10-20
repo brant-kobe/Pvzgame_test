@@ -192,6 +192,17 @@
       titleY: 112, subtitleY: 136, resourceY: 153,
       cardX: [36, 184], cardY: [164, 276, 388], cardWidth: 140, cardHeight: 106,
       noteY: 506,
+      bag: { x: 36, y: 514, w: 134, h: 36 },
+      back: { x: 190, y: 514, w: 134, h: 36 }
+    },
+    equipmentBagUI: {
+      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
+      titleY: 112, subtitleY: 136,
+      partTabs: { x: 32, y: 152, w: 46, h: 28, gap: 4 },
+      summaryY: 200,
+      listX: 34, listY: 210, listWidth: 292, rowHeight: 38,
+      noteY: 476,
+      equip: { offsetX: 196, offsetY: 4, w: 88, h: 26 },
       back: { x: 98, y: 514, w: 164, h: 36 }
     },
     wallUI: {
@@ -234,6 +245,20 @@
       { id: "steel", name: "钢材", color: "#c8d6dd" },
       { id: "rareEarth", name: "稀土", color: "#f2c14e" }
     ],
+    rewardTiers: [
+      { id: 0, name: "参与奖励" },
+      { id: 1, name: "升级奖励" },
+      { id: 2, name: "5 级奖励" },
+      { id: 3, name: "通关奖励" }
+    ],
+    resultUI: {
+      panelX: 24, panelY: 80, panelWidth: 312, panelHeight: 404,
+      titleY: 124, subtitleY: 152, statsY: 178,
+      rewardTitleY: 208, rewardRowY: 232, rewardRowStep: 22,
+      nextLevelY: 344, progressHintY: 366, rewardHintY: 388,
+      restart: { x: 42, y: 420, w: 130, h: 44 },
+      back: { x: 188, y: 420, w: 130, h: 44 }
+    },
     equipment: {
       maxLevel: 100,
       slots: [

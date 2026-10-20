@@ -1,4 +1,4 @@
-"""数据表模型：账户、登录会话、关卡进度、资源、装备、城墙与宝石。"""
+"""数据表模型：账户、登录会话、关卡进度、资源、装备、装备背包、城墙与宝石。"""
 from __future__ import annotations
 
 from datetime import datetime
@@ -66,6 +66,15 @@ class WallState(Base):
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), primary_key=True)
     level: Mapped[int] = mapped_column(Integer, default=1)
     breakthroughs: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class EquipmentItem(Base):
+    __tablename__ = "equipment_bag"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    slot_id: Mapped[str] = mapped_column(String(16))
+    element_id: Mapped[str] = mapped_column(String(16))
 
 
 class Gem(Base):

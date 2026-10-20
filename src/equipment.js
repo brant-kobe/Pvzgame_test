@@ -3,7 +3,7 @@
   "use strict";
   var C = Game.config;
 
-  var state = { data: null };
+  var state = { data: null, bag: [] };
 
   function slots() { return C.equipment.slots || []; }
   function finite(value) { return typeof value === "number" && isFinite(value) ? value : 0; }
@@ -53,8 +53,62 @@
     applyModifiers();
   }
 
+  function normalizeBag(items) {
+    if (Object.prototype.toString.call(items) !== "[object Array]") return [];
+    var validSlots = {}, validElements = {}, seen = {}, out = [];
+    slots().forEach(function (slot) { validSlots[slot.id] = true; });
+    Object.keys(C.elements).forEach(function (id) { validElements[id] = true; });
+    items.forEach(function (row) {
+      if (!row || typeof row !== "object") return;
+      var id = Math.max(0, Math.round(finite(row.id)));
+      if (!id || !validSlots[row.slotId] || !validElements[row.element] || seen[id]) return;
+      seen[id] = true;
+      out.push({ id: id, slotId: row.slotId, element: row.element });
+    });
+    out.sort(function (a, b) { return a.id - b.id; });
+    return out;
+  }
+
+  function applyBag(items) { state.bag = normalizeBag(items); }
+
+  function getBag() { return state.bag.slice(); }
+
+  function getBagPart(partId) {
+    var slot = getSlot(partId);
+    if (!slot) slot = getSlots()[0];
+    var id = slot ? slot.id : "arm", equipped = slot ? slot.element : null;
+    var counts = {}, firstIds = {}, total = 0, rows = [];
+    Object.keys(C.elements).forEach(function (element) { counts[element] = 0; });
+    state.bag.forEach(function (item) {
+      if (item.slotId !== id) return;
+      counts[item.element] += 1;
+      total += 1;
+      if (!firstIds[item.element]) firstIds[item.element] = item.id;
+    });
+    Object.keys(C.elements).forEach(function (element) {
+      var info = C.elements[element];
+      rows.push({ element: element, name: info.name, color: info.color, count: counts[element], itemId: firstIds[element] || null, equipped: equipped === element });
+    });
+    return {
+      partId: id,
+      name: slot ? slot.name : "",
+      short: slot ? slot.short : "",
+      color: slot ? slot.color : C.colors.cyan,
+      level: slot ? slot.level : 0,
+      maxLevel: slot ? slot.maxLevel : C.equipment.maxLevel,
+      attackBonus: slot ? slot.attackBonus : 0,
+      elementBonus: slot ? slot.elementBonus : 0,
+      equipped: equipped,
+      equippedName: equipped && C.elements[equipped] ? C.elements[equipped].name : "",
+      counts: counts,
+      total: total,
+      rows: rows
+    };
+  }
+
   function clear() {
     state.data = null;
+    state.bag = [];
     if (!Game.attributes) return;
     Game.attributes.clearModifiers();
     if (Game.state && Game.state.player) Game.attributes.applyPlayer(Game.state.player);
@@ -111,9 +165,12 @@
   Game.equipment = {
     state: state,
     applyAccount: applyAccount,
+    applyBag: applyBag,
     clear: clear,
     getSlots: getSlots,
     getSlot: getSlot,
+    getBag: getBag,
+    getBagPart: getBagPart,
     getTotals: getTotals
   };
 })(window.Game = window.Game || {});

@@ -61,8 +61,14 @@ def payload(items) -> list[dict]:
     return [gem_payload(row) for row in items]
 
 
-def random_affix() -> str:
-    return secrets.SystemRandom().choice(config.GEM_AFFIX_IDS)
+def random_affix(rng=None) -> str:
+    return (rng or secrets.SystemRandom()).choice(config.GEM_AFFIX_IDS)
+
+
+def create(db: Session, account_id: int, part_id: str, quality: int, affix_id: str | None = None, rng=None) -> models.Gem:
+    row = models.Gem(account_id=account_id, part_id=part_id, quality=_quality(quality), affix_id=affix_id or random_affix(rng), slot_index=None)
+    db.add(row)
+    return row
 
 
 def first_free_slot(items, part_id: str) -> int | None:
@@ -121,8 +127,7 @@ def synthesize(db: Session, account_id: int, part_id: str, quality: int) -> dict
     consumed = [row.id for row in candidates]
     for row in candidates:
         db.delete(row)
-    created = models.Gem(account_id=account_id, part_id=part_id, quality=quality + 1, affix_id=random_affix(), slot_index=None)
-    db.add(created)
+    created = create(db, account_id, part_id, quality + 1)
     try:
         db.commit()
     except IntegrityError:
@@ -142,8 +147,6 @@ def grant(db: Session, account_id: int, part_id: str, quality: int, count: int) 
         raise ApiError(422, "invalid_gem_count", "单次注入数量需要为 1 到 100")
     created = []
     for _ in range(count):
-        row = models.Gem(account_id=account_id, part_id=part_id, quality=quality, affix_id=random_affix(), slot_index=None)
-        db.add(row)
-        created.append(row)
+        created.append(create(db, account_id, part_id, quality))
     db.commit()
     return {"gems": payload(rows(db, account_id)), "granted": payload(created)}

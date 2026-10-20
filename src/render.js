@@ -99,12 +99,13 @@
     if (S.screen === "account") Game.drawAccount();
     if (S.screen === "attributes") Game.drawAttributes();
     if (S.screen === "equipment") Game.drawEquipment();
+    if (S.screen === "equipmentBag") Game.drawEquipmentBag();
     if (S.screen === "wall") Game.drawWallPanel();
     if (S.screen === "gems") Game.drawGemsPanel();
     if (S.screen === "upgrade") Game.drawUpgrade();
     if (S.screen === "paused") Game.drawPause();
-    if (S.screen === "victory" || S.screen === "defeat") Game.drawResult();
-    if (S.screen === "menu" || S.screen === "levelSelect" || S.screen === "victory" || S.screen === "defeat") Game.drawAccountBanner();
+    if (S.screen === "victory" || S.screen === "defeat" || S.screen === "retreat") Game.drawResult();
+    if (S.screen === "menu" || S.screen === "levelSelect" || S.screen === "victory" || S.screen === "defeat" || S.screen === "retreat") Game.drawAccountBanner();
     if (Game.syncAccountDialog) Game.syncAccountDialog();
   };
 
@@ -1617,9 +1618,43 @@
       U.roundedRect(ctx, button.x, button.y, button.w, button.h, 7, enabled ? (slot.affordable ? C.colors.green : C.colors.yellow) : "rgba(38, 56, 66, .9)", enabled ? "rgba(255, 255, 255, .2)" : "rgba(153, 205, 218, .16)");
       text(label, button.x + button.w / 2, button.y + 14, "bold 10px Segoe UI, Microsoft YaHei", enabled ? "#071217" : C.colors.muted, "center");
     });
-    var message = state.equipmentError || state.equipmentNotice || "材料：金币 + 部位专属图纸 · 产出待接入";
+    var message = state.equipmentError || state.equipmentNotice || "材料：金币 + 部位专属图纸 · 关卡奖励产出";
     text(String(message).slice(0, 34), center, ui.noteY, "9px Segoe UI, Microsoft YaHei", state.equipmentError ? C.colors.red : (state.equipmentNotice ? C.colors.green : C.colors.muted), "center");
+    var bagCount = Game.equipment.getBag().length;
+    Game.button(ui.bag.x, ui.bag.y, ui.bag.w, ui.bag.h, bagCount ? "装备背包 · " + bagCount : "装备背包", "#4b7180");
     Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回属性", "#4b7180");
+  };
+  Game.drawEquipmentBag = function () {
+    var ui = C.equipmentBagUI, state = Game.accounts.state, center = C.width / 2;
+    var ready = Game.accounts.getStatus() === "ready";
+    var view = Game.equipment.getBagPart(S.equipmentBagPart);
+    Game.overlay();
+    panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .96)", "rgba(153, 205, 218, .22)", 20);
+    badge("EQUIPMENT  ·  BAG", 105, 70, 150, C.colors.cyan);
+    text("装备背包", center, ui.titleY, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    text("换装只改元素 · 强化等级保留在部位", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    C.equipment.slots.forEach(function (slot, index) {
+      var rect = Game.getEquipmentBagTabRect(index), active = slot.id === view.partId;
+      U.roundedRect(ctx, rect.x, rect.y, rect.w, rect.h, 8, active ? "rgba(104, 216, 255, .22)" : "rgba(13, 34, 46, .9)", active ? C.colors.cyan : "rgba(153, 205, 218, .18)");
+      text(slot.short, rect.x + rect.w / 2, rect.y + 18, "bold 12px Segoe UI, Microsoft YaHei", active ? C.colors.text : C.colors.muted, "center");
+    });
+    var summary = view.name + " Lv." + view.level + " · 当前 " + (view.equippedName || "未装备") + " · 背包 " + view.total + " 件";
+    text(ready ? summary : "登录后可查看装备背包", 34, ui.summaryY, "11px Segoe UI, Microsoft YaHei", ready ? C.colors.text : C.colors.muted);
+    view.rows.forEach(function (row, index) {
+      var rect = Game.getEquipmentBagRowRect(index), button = Game.getEquipmentBagButtonRect(index);
+      var dim = !row.count && !row.equipped;
+      U.roundedRect(ctx, rect.x, rect.y, rect.w, rect.h, 10, row.equipped ? "rgba(27, 63, 78, .96)" : "rgba(13, 34, 46, .88)", row.equipped ? "rgba(99, 230, 160, .36)" : "rgba(153, 205, 218, .14)");
+      dot(rect.x + 16, rect.y + rect.h / 2, 5, dim ? "rgba(154, 176, 188, .4)" : row.color);
+      text(row.name, rect.x + 30, rect.y + rect.h / 2 + 4, "bold 12px Segoe UI, Microsoft YaHei", dim ? "rgba(154, 176, 188, .55)" : row.color);
+      text("×" + row.count, rect.x + 170, rect.y + rect.h / 2 + 4, "11px Segoe UI, Microsoft YaHei", dim ? "rgba(154, 176, 188, .55)" : C.colors.text);
+      var enabled = ready && !state.equipmentBagBusy && row.count > 0 && !row.equipped;
+      U.roundedRect(ctx, button.x, button.y, button.w, button.h, 7, enabled ? C.colors.cyan : "rgba(38, 56, 66, .9)", enabled ? "rgba(255, 255, 255, .2)" : "rgba(153, 205, 218, .16)");
+      var label = row.equipped ? "已装备" : (row.count ? (state.equipmentBagBusy ? "换装中…" : "装备") : "—");
+      text(label, button.x + button.w / 2, button.y + 18, "bold 10px Segoe UI, Microsoft YaHei", enabled ? "#071217" : C.colors.muted, "center");
+    });
+    var message = state.equipmentBagError || state.equipmentBagNotice || "掉落装备会进入背包，同部位同元素可以重复持有";
+    text(String(message).slice(0, 30), center, ui.noteY, "9px Segoe UI, Microsoft YaHei", state.equipmentBagError ? C.colors.red : (state.equipmentBagNotice ? C.colors.green : C.colors.muted), "center");
+    Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回装备", "#4b7180");
   };
   function drawSteelIcon(cx, cy, size) {
     var s = size, w = s * .44, h = s * .28;
@@ -1734,7 +1769,7 @@
     if (ready) drawMaterialIcon(material, button.x + 22, button.y + 17, 16);
     text(label, button.x + button.w / 2 + (ready ? 8 : 0), button.y + 22, "bold 11px Segoe UI, Microsoft YaHei", enabled ? "#071217" : C.colors.muted, "center");
 
-    var message = state.wallError || state.wallNotice || (rare ? "突破后继续用钢材强化 · 产出待接入" : "材料：钢材 + 稀土 · 产出待接入");
+    var message = state.wallError || state.wallNotice || (rare ? "突破后继续用钢材强化 · 关卡奖励产出" : "材料：钢材 + 稀土 · 关卡奖励产出");
     text(String(message).slice(0, 34), center, ui.noteY, "9px Segoe UI, Microsoft YaHei", state.wallError ? C.colors.red : (state.wallNotice ? C.colors.green : C.colors.muted), "center");
     Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回属性", "#4b7180");
   };
@@ -2053,23 +2088,66 @@
     Game.button(C.width / 2 - 82, 561, 164, 36, "返回技能列表", color);
   }
   Game.drawUpgrade = function () { Game.overlay(); panel(16, 76, C.width - 32, 414, "rgba(10, 35, 49, .94)", "rgba(153, 205, 218, .18)", 20); text("等级提升！", C.width / 2, 119, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center"); text("选择一项强化，战斗将继续", C.width / 2, 143, "12px Segoe UI, Microsoft YaHei", C.colors.text, "center"); var cardW = 98, gap = 8, start = (C.width - cardW * 3 - gap * 2) / 2; S.upgradeCards.forEach(function (trait, i) { var x = start + i * (cardW + gap), y = 190, level = S.player.traits[trait.id] || 0, rare = trait.rarity === "稀有"; panel(x, y, cardW, 218, rare ? "#263352" : "#163b4d", rare ? "rgba(201,161,255,.45)" : "rgba(104,216,255,.28)", 14); text(trait.icon, x + cardW / 2, y + 50, "bold 31px Segoe UI, Microsoft YaHei", rare ? C.colors.purple : C.colors.cyan, "center"); text(trait.name, x + cardW / 2, y + 82, "bold 14px Segoe UI, Microsoft YaHei", C.colors.text, "center"); text(trait.rarity + " · Lv." + (level + 1) + "/" + trait.max, x + cardW / 2, y + 104, "bold 11px Segoe UI, Microsoft YaHei", rare ? C.colors.purple : C.colors.green, "center"); ctx.fillStyle = C.colors.muted; ctx.font = "11px Segoe UI, Microsoft YaHei"; ctx.textAlign = "center"; U.wrapText(ctx, trait.desc, x + cardW / 2, y + 135, 78, 16); U.roundedRect(ctx, x + 17, y + 181, 64, 27, 8, "#245f73"); text("选择", x + cardW / 2, y + 199, "bold 11px Segoe UI, Microsoft YaHei", C.colors.text, "center"); }); };
+  function rewardSlotName(slotId) {
+    var slot = (C.equipment.slots || []).filter(function (item) { return item.id === slotId; })[0];
+    return slot ? slot.name : slotId;
+  }
+  function rewardElementName(elementId) {
+    return C.elements[elementId] ? C.elements[elementId].name : elementId;
+  }
+  function rewardRows(reward) {
+    var rows = [], resources = reward.resources || {}, steel = resources.steel || 0, rare = resources.rareEarth || 0, blueprints = 0;
+    if (resources.coin) rows.push({ text: "金币 +" + resources.coin, color: C.colors.yellow });
+    if (steel || rare) rows.push({ text: "钢材 +" + steel + (rare ? " · 稀土 +" + rare : ""), color: "#c8d6dd" });
+    (C.resources || []).forEach(function (item) { if (item.id.indexOf("blueprint") === 0) blueprints += resources[item.id] || 0; });
+    if (blueprints) rows.push({ text: "装备图纸 +" + blueprints + "（随机部位）", color: C.colors.cyan });
+    var gems = reward.gems || [];
+    if (gems.length) {
+      var counts = [0, 0, 0, 0, 0], labels = [];
+      gems.forEach(function (gem) { counts[U.clamp(Math.round(gem.quality || 0), 0, 4)] += 1; });
+      (C.gems.qualities || []).forEach(function (quality) { if (counts[quality.id]) labels.push(quality.short + " " + counts[quality.id]); });
+      rows.push({ text: "宝石 +" + gems.length + "（" + labels.join(" · ") + "）", color: C.colors.purple });
+    }
+    var equipment = reward.equipment || [];
+    if (equipment.length) {
+      var names = equipment.map(function (item) { return rewardSlotName(item.slotId) + "·" + rewardElementName(item.element); });
+      rows.push({ text: "装备 +" + equipment.length + "（" + names.join("、") + "）", color: C.colors.green });
+    }
+    return rows;
+  }
   Game.drawResult = function () {
     Game.overlay();
-    panel(30, 120, C.width - 60, 250, "rgba(10, 35, 49, .9)", "rgba(153, 205, 218, .18)", 20);
-    var win = S.screen === "victory", session = S.session, accountState = Game.accounts.state;
-    text(win ? "关卡胜利" : "战斗失败", C.width / 2, 185, "bold 31px Segoe UI, Microsoft YaHei", win ? C.colors.green : C.colors.red, "center");
-    text(win ? "尸潮已被肃清" : "尸潮突破了防线", C.width / 2, 217, "15px Segoe UI, Microsoft YaHei", C.colors.text, "center");
-    text("用时 " + U.formatTime(session.elapsed) + "  ·  击杀 " + session.kills + "  ·  等级 " + S.player.level, C.width / 2, 253, "13px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    var ui = C.resultUI, win = S.screen === "victory", retreat = S.screen === "retreat", session = S.session, accountState = Game.accounts.state;
+    panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .94)", "rgba(153, 205, 218, .18)", 20);
+    text(win ? "关卡胜利" : (retreat ? "撤离战场" : "战斗失败"), C.width / 2, ui.titleY, "bold 30px Segoe UI, Microsoft YaHei", win ? C.colors.green : (retreat ? C.colors.cyan : C.colors.red), "center");
+    text(win ? "尸潮已被肃清" : (retreat ? "已带着战利品撤离" : "尸潮突破了防线"), C.width / 2, ui.subtitleY, "14px Segoe UI, Microsoft YaHei", C.colors.text, "center");
+    text("用时 " + U.formatTime(session.elapsed) + "  ·  击杀 " + session.kills + "  ·  等级 " + S.player.level, C.width / 2, ui.statsY, "13px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    var reward = session.reward, rows = reward ? rewardRows(reward) : [], tier = reward ? C.rewardTiers[reward.tier] : null;
+    text("本局奖励", ui.panelX + 18, ui.rewardTitleY, "bold 12px Segoe UI, Microsoft YaHei", C.colors.cyan);
+    if (tier) text(tier.name, ui.panelX + ui.panelWidth - 18, ui.rewardTitleY, "bold 11px Segoe UI, Microsoft YaHei", C.colors.yellow, "right");
+    if (!reward || reward.status === "pending") {
+      text("正在结算…", C.width / 2, ui.rewardRowY + 6, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    } else if (reward.status === "unsaved" || reward.status === "failed") {
+      text(String(reward.note || (reward.status === "unsaved" ? "未登录 · 奖励不会保存" : "奖励领取失败")).slice(0, 30), C.width / 2, ui.rewardRowY + 6, "11px Segoe UI, Microsoft YaHei", reward.status === "unsaved" ? C.colors.yellow : C.colors.red, "center");
+    } else {
+      rows.forEach(function (row, index) {
+        var y = ui.rewardRowY + index * ui.rewardRowStep;
+        dot(ui.panelX + 22, y - 3, 3, row.color);
+        text(row.text, ui.panelX + 32, y, "12px Segoe UI, Microsoft YaHei", row.color);
+      });
+    }
     if (win) {
       var next = C.levels.find(function (item) { return item.id === session.level + 1; });
-      text(next ? "已解锁：" + next.name : "已通关全部开放关卡", C.width / 2, 275, "12px Segoe UI, Microsoft YaHei", C.colors.green, "center");
+      text(next ? "已解锁：" + next.name : "已通关全部开放关卡", C.width / 2, ui.nextLevelY, "12px Segoe UI, Microsoft YaHei", C.colors.green, "center");
     }
     var hint = "成绩未保存", hintColor = C.colors.muted;
-    if (session.testArena) hint = "测试场不记录成绩";
+    if (retreat) hint = "中途撤离 · 本局不计入成绩";
+    else if (session.testArena) hint = "测试场不记录成绩";
     else if (accountState.lastReportSaved) { hint = "成绩已保存到账户 · " + Game.accounts.getUsername(); hintColor = C.colors.green; }
     else hint = "成绩未保存 · " + (accountState.lastReportReason || Game.accounts.getStatusNote() || "未登录");
-    text(hint, C.width / 2, 293, "11px Segoe UI, Microsoft YaHei", hintColor, "center");
-    Game.button(42, 305, 130, 44, "重新开始", win ? C.colors.green : C.colors.yellow);
-    Game.button(188, 305, 130, 44, "返回首页", "#4b7180");
+    text(hint, C.width / 2, ui.progressHintY, "11px Segoe UI, Microsoft YaHei", hintColor, "center");
+    if (reward && reward.status === "done") text("奖励已存入账户 · " + Game.accounts.getUsername(), C.width / 2, ui.rewardHintY, "11px Segoe UI, Microsoft YaHei", C.colors.green, "center");
+    Game.button(ui.restart.x, ui.restart.y, ui.restart.w, ui.restart.h, "重新开始", win ? C.colors.green : C.colors.yellow);
+    Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回首页", "#4b7180");
   };
 })(window.Game = window.Game || {});

@@ -10,10 +10,14 @@
     sessionProgress: {},
     resources: {},
     equipment: null,
+    equipmentBag: [],
     equipmentBusy: false,
     equipmentBusySlot: null,
     equipmentError: "",
     equipmentNotice: "",
+    equipmentBagBusy: false,
+    equipmentBagError: "",
+    equipmentBagNotice: "",
     wall: null,
     wallBusy: false,
     wallAction: null,
@@ -86,6 +90,10 @@
     state.equipment = null;
     state.equipmentBusy = false;
     state.equipmentBusySlot = null;
+    state.equipmentBag = [];
+    state.equipmentBagBusy = false;
+    state.equipmentBagError = "";
+    state.equipmentBagNotice = "";
     state.wall = null;
     state.wallBusy = false;
     state.wallAction = null;
@@ -103,11 +111,12 @@
     state.sessionProgress = {};
     state.resources = data.resources || {};
     state.equipment = data.equipment || null;
+    state.equipmentBag = data.equipmentBag || [];
     state.wall = data.wall || null;
     state.gems = data.gems || [];
     state.status = state.account ? "ready" : "guest";
     state.error = "";
-    if (Game.equipment) Game.equipment.applyAccount(state.equipment);
+    if (Game.equipment) { Game.equipment.applyAccount(state.equipment); Game.equipment.applyBag(state.equipmentBag); }
     if (Game.wall) Game.wall.applyAccount(state.wall);
     if (Game.gems) Game.gems.applyAccount(state.gems);
   }
@@ -258,6 +267,66 @@
         return { ok: true };
       }
       return { ok: false, status: result.status };
+    });
+  }
+
+  function claimRewards(levelId, level, win) {
+    if (state.status !== "ready") return Promise.resolve({ ok: false, reason: state.status, error: statusNote() });
+    return request("/api/me/rewards", { method: "POST", body: { levelId: levelId, level: level, win: !!win } }).then(function (result) {
+      if (result.status === 200 && result.data && result.data.rewards) {
+        applyResources(result.data.resources || {});
+        state.equipment = result.data.equipment || state.equipment;
+        state.equipmentBag = result.data.equipmentBag || [];
+        state.gems = result.data.gems || [];
+        if (Game.equipment) { Game.equipment.applyAccount(state.equipment); Game.equipment.applyBag(state.equipmentBag); }
+        if (Game.gems) Game.gems.applyAccount(state.gems);
+        return { ok: true, tier: result.data.tier, rewards: result.data.rewards };
+      }
+      if (result.status === 401) {
+        state.status = "guest";
+        forgetAccount();
+        return { ok: false, reason: "guest", error: "登录已过期" };
+      }
+      if (result.networkError) {
+        state.status = "offline";
+        return { ok: false, reason: "offline", error: "未连接数据库" };
+      }
+      return { ok: false, error: errorMessage(result, "奖励领取失败"), status: result.status };
+    }, function () {
+      state.status = "offline";
+      return { ok: false, reason: "offline", error: "未连接数据库" };
+    });
+  }
+
+  function equipEquipment(itemId) {
+    if (state.status !== "ready") return Promise.resolve({ ok: false, error: "登录后才能换装" });
+    if (state.equipmentBagBusy) return Promise.resolve({ ok: false, error: "正在换装" });
+    state.equipmentBagBusy = true;
+    state.equipmentBagError = "";
+    state.equipmentBagNotice = "";
+    return request("/api/me/equipment/equip", { method: "POST", body: { itemId: itemId } }).then(function (result) {
+      state.equipmentBagBusy = false;
+      if (result.status === 200 && result.data && result.data.equipment) {
+        state.equipment = result.data.equipment;
+        state.equipmentBag = result.data.equipmentBag || [];
+        if (Game.equipment) { Game.equipment.applyAccount(state.equipment); Game.equipment.applyBag(state.equipmentBag); }
+        var slot = (C.equipment.slots || []).filter(function (entry) { return entry.id === result.data.slotId; })[0];
+        var element = C.elements[result.data.element];
+        state.equipmentBagNotice = "已换装：" + (slot ? slot.name : "装备") + (element ? " · " + element.name : "");
+        return { ok: true, slotId: result.data.slotId, element: result.data.element };
+      }
+      if (result.status === 401) {
+        state.status = "guest";
+        forgetAccount();
+        state.equipmentBagError = "登录已过期";
+        return { ok: false, error: state.equipmentBagError, status: 401 };
+      }
+      state.equipmentBagError = errorMessage(result, result.networkError ? "未连接数据库" : "换装失败");
+      return { ok: false, error: state.equipmentBagError, status: result.status };
+    }, function () {
+      state.equipmentBagBusy = false;
+      state.equipmentBagError = "未连接数据库";
+      return { ok: false, error: state.equipmentBagError };
     });
   }
 
@@ -464,9 +533,12 @@
     removeAccount: removeAccount,
     reportRun: reportRun,
     addResource: addResource,
+    claimRewards: claimRewards,
     applyResources: applyResources,
     upgradeEquipment: upgradeEquipment,
     getEquipment: function () { return state.equipment; },
+    equipEquipment: equipEquipment,
+    getEquipmentBag: function () { return state.equipmentBag; },
     upgradeWall: upgradeWall,
     getWall: function () { return state.wall; },
     socketGem: socketGem,

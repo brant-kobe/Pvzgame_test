@@ -1,14 +1,14 @@
-"""当前账户：信息、关卡进度与资源。"""
+"""当前账户：信息、关卡进度、资源、装备背包与关卡奖励。"""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .. import config, equipment, gems, models, security, times, wall
+from .. import config, equipment, gems, models, rewards, security, times, wall
 from ..database import get_db
 from ..errors import ApiError
-from ..schemas import EquipmentUpgrade, GemGrant, GemSocket, GemSynthesis, PasswordConfirm, ProgressReport, ResourceChange, WallUpgrade
+from ..schemas import EquipmentEquip, EquipmentUpgrade, GemGrant, GemSocket, GemSynthesis, PasswordConfirm, ProgressReport, ResourceChange, RewardClaim, WallUpgrade
 from ..serializers import account_payload, equipment_payload, gems_payload, level_payload, progress_payload, resource_payload, wall_payload
 
 router = APIRouter()
@@ -37,6 +37,7 @@ def me(account: models.Account = Depends(security.current_account), db: Session 
         "progress": progress_payload(_progress_rows(db, account.id)),
         "resources": resource_payload(_resource_rows(db, account.id)),
         "equipment": equipment_payload(equipment_rows),
+        "equipmentBag": equipment.bag_payload(equipment.bag_rows(db, account.id)),
         "wall": wall_payload(wall_row),
         "gems": gems_payload(_gem_rows(db, account.id)),
     }
@@ -65,6 +66,17 @@ def report_progress(
             row.best_kills = int(payload.kills)
     db.commit()
     return {"level": level_payload(row)}
+
+
+@router.post("/rewards")
+def claim_rewards(
+    payload: RewardClaim,
+    account: models.Account = Depends(security.current_account),
+    db: Session = Depends(get_db),
+) -> dict:
+    if payload.levelId < 1 or payload.levelId > config.MAX_LEVEL_ID:
+        raise ApiError(422, "invalid_level", "关卡编号不合法")
+    return rewards.grant(db, account.id, payload.levelId, payload.level, payload.win)
 
 
 @router.get("/resources")
@@ -123,6 +135,15 @@ def upgrade_equipment(
         "slotId": row.slot_id,
         "level": row.level,
     }
+
+
+@router.post("/equipment/equip")
+def equip_equipment(
+    payload: EquipmentEquip,
+    account: models.Account = Depends(security.current_account),
+    db: Session = Depends(get_db),
+) -> dict:
+    return equipment.equip(db, account.id, payload.itemId)
 
 
 @router.post("/gems/socket")

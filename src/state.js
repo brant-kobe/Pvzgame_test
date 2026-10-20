@@ -2,7 +2,7 @@
 (function (Game) {
   "use strict";
   var C = Game.config;
-  Game.state = { screen: "menu", selectedLevel: 1, accountMode: "login", player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null, gemPart: "arm", gemPage: 0, gemSynthQuality: 0 };
+  Game.state = { screen: "menu", selectedLevel: 1, accountMode: "login", player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null, gemPart: "arm", gemPage: 0, gemSynthQuality: 0, equipmentBagPart: "arm" };
   Game.reset = function () {
     var s = Game.state;
     var level = C.levels.find(function (item) { return item.id === s.selectedLevel; });
@@ -18,10 +18,10 @@
     });
     s.player = { x: C.width / 2, y: C.height - 58, aimAngle: -Math.PI / 2, manualAimTimer: 0, maxHp: 100, hp: 100, damage: 28, fireInterval: .52, fireTimer: .05, magazineSize: C.magazineCapacity, ammo: C.magazineCapacity, reloadDuration: C.reloadDuration, reloadTimer: 0, rifleEnabled: true, burst: 0, burstShotsRemaining: 0, burstTimer: 0, burstAngle: -Math.PI / 2, spread: 0, pierce: 0, bulletRadius: 4, crit: C.attributes.base.critRate, critDamage: C.attributes.base.critDamage, burn: 0, freeze: 0, bulletType: "normal", skills: skills, skillOrder: [], level: 1, xp: 0, nextXp: C.xpBase, traits: {} };
     s.bullets = []; s.skillProjectiles = []; s.armoredCars = []; s.bombDrops = []; s.bombZones = []; s.electromagneticZones = []; s.tornadoes = []; s.drones = []; s.hailStorms = []; s.fuelShells = []; s.fuelPools = []; s.enemyShots = []; s.explosions = []; s.enemies = []; s.pendingSpawns = []; s.particles = []; s.texts = []; s.upgradeCards = []; s.skillRangePreview = null; s.levelPreview = null;
-    s.gemPage = 0; s.gemSynthQuality = 0;
+    s.gemPage = 0; s.gemSynthQuality = 0; s.equipmentBagPart = "arm";
     s.wall = { x: C.width / 2, y: C.height - 125, width: C.width - 30, height: 30, maxHp: C.wallMaxHp, hp: C.wallMaxHp };
     if (Game.attributes) { Game.attributes.applyPlayer(s.player); Game.attributes.applyWall(s.wall); }
-    s.session = { level: s.selectedLevel, waves: waves, xpScale: (level && level.xpScale) || 1, hpScale: (level && level.hpScale) || 1, elapsed: 0, wave: 1, spawnCount: 0, spawnTimer: .25, eliteSpawned: false, bossSpawned: false, kills: 0, message: "", messageTimer: 0 };
+    s.session = { level: s.selectedLevel, waves: waves, xpScale: (level && level.xpScale) || 1, hpScale: (level && level.hpScale) || 1, elapsed: 0, wave: 1, spawnCount: 0, spawnTimer: .25, eliteSpawned: false, bossSpawned: false, kills: 0, message: "", messageTimer: 0, reward: null };
   };
   Game.layoutWorld = function () {
     var s = Game.state;
@@ -43,6 +43,22 @@
     Game.accounts.state.equipmentError = "";
     Game.accounts.state.equipmentNotice = "";
     Game.state.screen = "equipment";
+  };
+  Game.openEquipmentBag = function () {
+    Game.accounts.state.equipmentBagError = "";
+    Game.accounts.state.equipmentBagNotice = "";
+    Game.selectEquipmentBagPart(Game.state.equipmentBagPart);
+    Game.state.screen = "equipmentBag";
+  };
+  Game.selectEquipmentBagPart = function (partId) {
+    var valid = (C.equipment.slots || []).some(function (slot) { return slot.id === partId; });
+    if (!valid) partId = (C.equipment.slots && C.equipment.slots[0] ? C.equipment.slots[0].id : "arm");
+    Game.state.equipmentBagPart = partId;
+  };
+  Game.backToEquipment = function () { Game.state.screen = "equipment"; };
+  Game.equipEquipmentItem = function (itemId) {
+    if (Game.state.screen !== "equipmentBag") return Promise.resolve({ ok: false });
+    return Game.accounts.equipEquipment(itemId);
   };
   Game.openWall = function () {
     Game.accounts.state.wallError = "";
@@ -105,6 +121,13 @@
   Game.exitTestArena = function () { Game.exitToMenu(); };
   Game.pause = function () { if (Game.state.screen === "playing") { Game.state.skillRangePreview = null; Game.state.screen = "paused"; } };
   Game.resume = function () { if (Game.state.screen === "paused") Game.state.screen = "playing"; };
+  Game.quitLevel = function () {
+    var s = Game.state;
+    if (s.screen !== "paused" || !s.session) return;
+    s.screen = "retreat";
+    s.session.message = "已撤离";
+    Game.settleRewards(false);
+  };
   Game.start = function (levelId) {
     var level = Game.config.levels.find(function (item) { return item.id === (levelId || Game.state.selectedLevel); });
     if (!level || !Game.isLevelUnlocked(level.id)) return;
@@ -124,12 +147,41 @@
     if (!session || session.testArena || !session.level) return null;
     return Game.accounts.reportRun(session.level, { time: session.elapsed, kills: session.kills, win: !!win });
   };
+  Game.settleRewards = function (win) {
+    var s = Game.state, session = s.session;
+    if (!session || session.testArena || !session.level || session.reward) return null;
+    var level = Math.max(1, Math.min(C.maxLevel, (s.player && s.player.level) || 1));
+    var reward = session.reward = { status: "pending", tier: -1, level: level, win: !!win, resources: {}, gems: [], equipment: [], note: "" };
+    if (!Game.accounts || !Game.accounts.claimRewards) {
+      reward.status = "failed";
+      reward.note = "账户服务不可用";
+      return null;
+    }
+    return Game.accounts.claimRewards(session.level, level, !!win).then(function (result) {
+      if (result && result.ok) {
+        reward.status = "done";
+        reward.tier = result.tier;
+        reward.resources = (result.rewards && result.rewards.resources) || {};
+        reward.gems = (result.rewards && result.rewards.gems) || [];
+        reward.equipment = (result.rewards && result.rewards.equipment) || [];
+        return result;
+      }
+      reward.reason = (result && result.reason) || "";
+      reward.note = reward.reason === "offline" ? "未连接数据库 · 奖励不会保存"
+        : reward.reason === "guest" ? ((result && result.error === "登录已过期") ? "登录已过期 · 奖励不会保存" : "未登录 · 奖励不会保存")
+          : reward.reason === "loading" ? "正在连接账户服务…"
+            : ((result && result.error) || "奖励未保存");
+      reward.status = reward.reason ? "unsaved" : "failed";
+      return result;
+    });
+  };
   Game.loseLevel = function (message) {
     var s = Game.state;
     if (s.screen !== "playing" || !s.session) return;
     s.session.message = message || "城墙失守";
     s.screen = "defeat";
     Game.reportRun(false);
+    Game.settleRewards(false);
   };
   Game.openLogin = function () { Game.state.accountMode = "login"; Game.state.screen = "login"; };
   Game.setAccountMode = function (mode) { Game.state.accountMode = mode === "register" ? "register" : "login"; };
@@ -201,6 +253,18 @@
   Game.getEquipmentUpgradeRect = function (index) {
     var card = Game.getEquipmentCardRect(index);
     return { x: card.x + 10, y: card.y + 80, w: card.w - 20, h: 20 };
+  };
+  Game.getEquipmentBagTabRect = function (index) {
+    var geo = C.equipmentBagUI.partTabs;
+    return { x: geo.x + index * (geo.w + geo.gap), y: geo.y, w: geo.w, h: geo.h };
+  };
+  Game.getEquipmentBagRowRect = function (index) {
+    var geo = C.equipmentBagUI;
+    return { x: geo.listX, y: geo.listY + index * geo.rowHeight, w: geo.listWidth, h: geo.rowHeight - 4 };
+  };
+  Game.getEquipmentBagButtonRect = function (index) {
+    var geo = C.equipmentBagUI, row = Game.getEquipmentBagRowRect(index);
+    return { x: row.x + geo.equip.offsetX, y: row.y + geo.equip.offsetY, w: geo.equip.w, h: geo.equip.h };
   };
   Game.getWallActionButtonRect = function () {
     var rect = C.wallUI.actionButton;
@@ -289,5 +353,6 @@
     s.screen = "victory";
     s.session.message = "关卡通关";
     Game.reportRun(true);
+    Game.settleRewards(true);
   };
 })(window.Game = window.Game || {});
