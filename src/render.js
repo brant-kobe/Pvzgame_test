@@ -1803,15 +1803,12 @@
     var ready = Game.accounts.getStatus() === "ready";
     var part = Game.gems.getPart(S.gemPart || "arm"), equip = Game.equipment.getSlot(part.partId);
     var page = Game.getGemPage(part.partId), pages = Game.getGemPageCount(part.partId);
-    var quality = Math.max(0, Math.min(C.gems.maxQuality, Math.round(S.gemSynthQuality || 0)));
-    var qualityInfo = C.gems.qualities[quality], count = part.counts[quality] || 0;
-    var maxed = quality >= C.gems.maxQuality, busy = state.gemBusy;
-    var canSynthesize = ready && !busy && !maxed && count >= C.gems.synthesisCost;
+    var busy = state.gemBusy;
     Game.overlay();
     panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .96)", "rgba(153, 205, 218, .22)", 20);
     badge("LOADOUT  ·  GEMS", 103, 70, 154, C.colors.green);
     text("宝石镶嵌", center, ui.titleY, "bold 25px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
-    text("六部位 × 六槽位 · 同部位 5 颗同品质合成", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text("六部位 × 六槽位 · 手动一键合成", center, ui.subtitleY, "11px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
 
     C.equipment.slots.forEach(function (slot, index) {
       var rect = Game.getGemPartTabRect(index), active = slot.id === part.partId;
@@ -1834,6 +1831,7 @@
         U.roundedRect(ctx, socketRect.x, socketRect.y, socketRect.w, socketRect.h, 10, "rgba(13, 34, 46, .96)", gem.color);
         drawGemIcon(socketRect.x + 18, socketRect.y + 17, 18, gem.color);
         text(gem.qualityShort, socketRect.x + 32, socketRect.y + 21, "bold 9px Segoe UI, Microsoft YaHei", gem.color);
+        if (gem.locked) text("🔒", socketRect.x + 78, socketRect.y + 20, "10px Segoe UI Emoji, Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
         text(String(gem.affix.text).slice(0, 12), socketRect.x + 8, socketRect.y + 40, "8px Segoe UI, Microsoft YaHei", C.colors.text);
       } else {
         U.roundedRect(ctx, socketRect.x, socketRect.y, socketRect.w, socketRect.h, 10, "rgba(7, 20, 28, .62)", "rgba(153, 205, 218, .18)");
@@ -1853,28 +1851,76 @@
       U.roundedRect(ctx, rowRect.x, rowRect.y, rowRect.w, rowRect.h - 2, 7, "rgba(13, 34, 46, .86)", item ? item.color : "rgba(153, 205, 218, .10)");
       if (item) {
         drawGemIcon(rowRect.x + 14, rowRect.y + 13, 12, item.color);
-        text(item.qualityName + " · " + item.affix.text, rowRect.x + 26, rowRect.y + 18, "9px Segoe UI, Microsoft YaHei", C.colors.text);
+        text((item.locked ? "🔒 " : "") + item.qualityName + " · " + item.affix.text, rowRect.x + 26, rowRect.y + 18, "9px Segoe UI Emoji, Segoe UI, Microsoft YaHei", C.colors.text);
         var action = !ready ? "未登录" : (!part.canSocket ? "已满" : (busy ? "处理中" : "镶嵌 ›"));
-        text(action, rowRect.x + rowRect.w - 10, rowRect.y + 18, "bold 9px Segoe UI, Microsoft YaHei", part.canSocket && ready ? item.color : C.colors.muted, "right");
+        text(action, rowRect.x + rowRect.w - 40, rowRect.y + 18, "bold 9px Segoe UI, Microsoft YaHei", part.canSocket && ready ? item.color : C.colors.muted, "right");
+        var lockRect = Game.getGemInventoryLockRect(row);
+        U.roundedRect(ctx, lockRect.x, lockRect.y, lockRect.w, lockRect.h, 6, item.locked ? "rgba(255, 209, 102, .18)" : "rgba(26, 57, 70, .94)", item.locked ? "rgba(255, 209, 102, .58)" : "rgba(153, 205, 218, .28)");
+        text(item.locked ? "🔒" : "锁", lockRect.x + lockRect.w / 2, lockRect.y + 13, item.locked ? "10px Segoe UI Emoji, Segoe UI, Microsoft YaHei" : "bold 9px Segoe UI, Microsoft YaHei", item.locked ? C.colors.yellow : C.colors.muted, "center");
       } else if (row === 0 && part.inventory.length === 0) {
         text(ready ? "暂无未镶嵌宝石" : "登录后显示宝石背包", rowRect.x + 16, rowRect.y + 18, "9px Segoe UI, Microsoft YaHei", C.colors.muted);
       }
     }
 
-    var synth = ui.synthesis;
+    var synth = ui.synthesis, summary = Game.getGemSynthesisSummary();
     panel(synth.x, synth.y, synth.w, synth.h, "rgba(13, 34, 46, .94)", "rgba(201, 161, 255, .22)", 12);
-    text("合成 · 仅消耗未镶嵌", synth.x + 14, synth.y + 16, "bold 10px Segoe UI, Microsoft YaHei", C.colors.text);
-    drawGemPager(Game.getGemSynthesisPrevRect(), "‹", !busy, C.colors.cyan);
-    drawGemPager(Game.getGemSynthesisNextRect(), "›", !busy, C.colors.cyan);
-    text(qualityInfo.name + " " + count + " / " + C.gems.synthesisCost, 140, synth.y + 50, "bold 11px Segoe UI, Microsoft YaHei", qualityInfo.color, "center");
-    var synthLabel = !ready ? "未登录" : (maxed ? "已最高" : (count < C.gems.synthesisCost ? "不足 5 颗" : (busy && state.gemAction === "synthesize" ? "合成中…" : "合成")));
+    text("一键合成", synth.x + 14, synth.y + 16, "bold 10px Segoe UI, Microsoft YaHei", C.colors.text);
+    text("可合成 " + summary.recipes + " 组 · 锁定 " + summary.locked + " 颗", synth.x + synth.w - 14, synth.y + 16, "9px Segoe UI, Microsoft YaHei", summary.recipes ? C.colors.green : C.colors.muted, "right");
+    var synthLabel = !ready ? "未登录" : (busy && state.gemAction === "synthesize" ? "合成中…" : (summary.recipes ? "一键合成" : "暂无可合成"));
+    var synthEnabled = ready && !busy && summary.recipes > 0;
     var button = Game.getGemSynthesisButtonRect();
-    U.roundedRect(ctx, button.x, button.y, button.w, button.h, 7, canSynthesize ? C.colors.green : "rgba(38, 56, 66, .9)", canSynthesize ? "rgba(255, 255, 255, .28)" : "rgba(153, 205, 218, .16)");
-    text(synthLabel, button.x + button.w / 2, button.y + 19, "bold 10px Segoe UI, Microsoft YaHei", canSynthesize ? "#071217" : C.colors.muted, "center");
+    U.roundedRect(ctx, button.x, button.y, button.w, button.h, 8, synthEnabled ? C.colors.green : "rgba(38, 56, 66, .9)", synthEnabled ? "rgba(255, 255, 255, .28)" : "rgba(153, 205, 218, .16)");
+    text(synthLabel, button.x + button.w / 2, button.y + 20, "bold 11px Segoe UI, Microsoft YaHei", synthEnabled ? "#071217" : C.colors.muted, "center");
 
-    var message = state.gemError || state.gemNotice || "同部位 5 颗同品质合成 · 红色为最高品质";
-    text(String(message).slice(0, 34), center, ui.noteY, "9px Segoe UI, Microsoft YaHei", state.gemError ? C.colors.red : (state.gemNotice ? C.colors.green : C.colors.muted), "center");
+    var message = state.gemError || state.gemNotice || "锁定与已镶嵌宝石不参与合成 · 合成前会确认";
+    text(String(message).slice(0, 36), center, ui.noteY, "9px Segoe UI, Microsoft YaHei", state.gemError ? C.colors.red : (state.gemNotice ? C.colors.green : C.colors.muted), "center");
     Game.button(ui.back.x, ui.back.y, ui.back.w, ui.back.h, "返回属性", "#4b7180");
+    if (S.gemSynthesisOpen) Game.drawGemSynthesis();
+  };
+
+  Game.drawGemSynthesis = function () {
+    var ui = C.gemSynthesisUI, center = C.width / 2, state = Game.accounts.state;
+    var ready = Game.accounts.getStatus() === "ready", busy = state.gemBusy;
+    var plan = Game.getGemSynthesisPlan(), page = Game.getGemSynthesisPage();
+    var pages = Game.getGemSynthesisPageCount(), focus = Game.gems.findGem(S.gemSynthesisFocus);
+    U.roundedRect(ctx, 0, 0, C.width, C.height, 0, "rgba(3, 9, 13, .78)");
+    panel(ui.panelX, ui.panelY, ui.panelWidth, ui.panelHeight, "rgba(10, 35, 49, .98)", "rgba(153, 205, 218, .24)", 20);
+    badge("SYNTHESIS  ·  GEMS", center - 77, ui.panelY + 14, 154, C.colors.purple);
+    text("一键合成", center, ui.titleY, "bold 24px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    text(plan.length ? "共 " + plan.length + " 组 · 确认后全部合成" : "当前没有可合成的宝石", center, ui.subtitleY, "10px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+
+    if (!plan.length) {
+      text("锁定或已镶嵌的宝石不会参与合成", center, 250, "10px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    }
+    var rows = ui.rows, start = page * rows;
+    for (var row = 0; row < rows; row++) {
+      var recipe = plan[start + row], rect = Game.getGemSynthesisRowRect(row);
+      if (!recipe) continue;
+      U.roundedRect(ctx, rect.x, rect.y, rect.w, rect.h, 9, "rgba(13, 34, 46, .94)", recipe.color);
+      text(recipe.partShort + " · " + recipe.qualityShort, rect.x + 8, rect.y + 20, "bold 10px Segoe UI, Microsoft YaHei", recipe.partColor);
+      for (var gemIndex = 0; gemIndex < recipe.gems.length; gemIndex++) {
+        var gem = recipe.gems[gemIndex], gemRect = Game.getGemSynthesisGemRect(row, gemIndex);
+        drawGemIcon(gemRect.x + gemRect.w / 2, gemRect.y + gemRect.h / 2, ui.gemSize, gem.color);
+        if (focus && focus.id === gem.id) U.roundedRect(ctx, gemRect.x, gemRect.y, gemRect.w, gemRect.h, 5, null, C.colors.yellow);
+      }
+      text("→ " + recipe.resultShort, rect.x + 166, rect.y + 21, "bold 11px Segoe UI, Microsoft YaHei", recipe.resultColor);
+      text("5 颗" + recipe.qualityName + " → 1 颗" + recipe.resultName, rect.x + 8, rect.y + 40, "9px Segoe UI, Microsoft YaHei", C.colors.muted);
+    }
+    drawGemPager(Game.getGemSynthesisPrevRect(), "‹", page > 0, C.colors.cyan);
+    drawGemPager(Game.getGemSynthesisNextRect(), "›", page < pages - 1, C.colors.cyan);
+    text((page + 1) + " / " + pages, 190, ui.pagerNext.y + 15, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "right");
+
+    text("词条预览", ui.listX, ui.detailY, "bold 9px Segoe UI, Microsoft YaHei", C.colors.cyan);
+    if (focus) text(focus.qualityName + " · " + focus.affix.text, ui.listX, ui.detailSubY, "bold 11px Segoe UI, Microsoft YaHei", focus.color);
+    else text("点击任意宝石查看词条", ui.listX, ui.detailSubY, "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+
+    var confirm = Game.getGemSynthesisConfirmRect(), cancel = Game.getGemSynthesisCancelRect();
+    var enabled = ready && !busy && plan.length > 0;
+    U.roundedRect(ctx, confirm.x, confirm.y, confirm.w, confirm.h, 8, enabled ? C.colors.green : "rgba(38, 56, 66, .9)", enabled ? "rgba(255, 255, 255, .28)" : "rgba(153, 205, 218, .16)");
+    text(busy && state.gemAction === "synthesize" ? "合成中…" : "确定", confirm.x + confirm.w / 2, confirm.y + 20, "bold 11px Segoe UI, Microsoft YaHei", enabled ? "#071217" : C.colors.muted, "center");
+    U.roundedRect(ctx, cancel.x, cancel.y, cancel.w, cancel.h, 8, "rgba(38, 56, 66, .9)", "rgba(153, 205, 218, .24)");
+    text("取消", cancel.x + cancel.w / 2, cancel.y + 20, "bold 11px Segoe UI, Microsoft YaHei", C.colors.text, "center");
+    if (state.gemError) text(String(state.gemError).slice(0, 30), center, ui.panelY + ui.panelHeight - 10, "9px Segoe UI, Microsoft YaHei", C.colors.red, "center");
   };
 
   function dot(x, y, radius, fill, stroke) {

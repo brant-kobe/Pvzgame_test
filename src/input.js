@@ -315,6 +315,27 @@
       return;
     }
     if (S.screen === "gems") {
+      if (S.gemSynthesisOpen) {
+        if (pointInRect(point, Game.getGemSynthesisCancelRect())) { Game.closeGemSynthesis(); return; }
+        if (pointInRect(point, Game.getGemSynthesisPrevRect())) { Game.setGemSynthesisPage(-1); return; }
+        if (pointInRect(point, Game.getGemSynthesisNextRect())) { Game.setGemSynthesisPage(1); return; }
+        if (pointInRect(point, Game.getGemSynthesisConfirmRect())) {
+          if (Game.accounts.getStatus() === "ready" && !Game.accounts.state.gemBusy && Game.getGemSynthesisPlan().length) Game.synthesizeAllGems();
+          return;
+        }
+        var plan = Game.getGemSynthesisPlan(), planPage = Game.getGemSynthesisPage(), planRows = C.gemSynthesisUI.rows;
+        for (var planRow = 0; planRow < planRows; planRow++) {
+          var recipe = plan[planPage * planRows + planRow];
+          if (!recipe) continue;
+          for (var planGem = 0; planGem < recipe.gems.length; planGem++) {
+            if (pointInRect(point, Game.getGemSynthesisGemRect(planRow, planGem))) {
+              Game.focusGemSynthesis(recipe.gems[planGem].id);
+              return;
+            }
+          }
+        }
+        return;
+      }
       if (pointInRect(point, C.gemUI.back)) { Game.backToAttributes(); return; }
       if (Game.accounts.getStatus() !== "ready" || Game.accounts.state.gemBusy) return;
       var gemPart = Game.gems.getPart(S.gemPart), gemPage = Game.getGemPage(S.gemPart), gemIndex;
@@ -326,15 +347,20 @@
       }
       if (pointInRect(point, Game.getGemInventoryPrevRect())) { Game.setGemPage(-1); return; }
       if (pointInRect(point, Game.getGemInventoryNextRect())) { Game.setGemPage(1); return; }
-      if (pointInRect(point, Game.getGemSynthesisPrevRect())) { Game.cycleGemSynthesisQuality(-1); return; }
-      if (pointInRect(point, Game.getGemSynthesisNextRect())) { Game.cycleGemSynthesisQuality(1); return; }
+      var pageRows = C.gemUI.inventory.rows, pageStart = gemPage * pageRows;
+      for (gemIndex = 0; gemIndex < pageRows; gemIndex++) {
+        var lockGem = gemPart.inventory[pageStart + gemIndex];
+        if (lockGem && pointInRect(point, Game.getGemInventoryLockRect(gemIndex))) {
+          Game.toggleGemLock(lockGem.id);
+          return;
+        }
+      }
       for (gemIndex = 0; gemIndex < gemPart.sockets.length; gemIndex++) {
         if (gemPart.sockets[gemIndex] && pointInRect(point, Game.getGemSocketRect(gemIndex))) {
           Game.unsocketGem(gemPart.sockets[gemIndex].id);
           return;
         }
       }
-      var pageRows = C.gemUI.inventory.rows, pageStart = gemPage * pageRows;
       for (gemIndex = 0; gemIndex < pageRows; gemIndex++) {
         var gem = gemPart.inventory[pageStart + gemIndex];
         if (gem && gemPart.canSocket && pointInRect(point, Game.getGemInventoryRowRect(gemIndex))) {
@@ -342,8 +368,8 @@
           return;
         }
       }
-      if (S.gemSynthQuality < C.gems.maxQuality && gemPart.counts[S.gemSynthQuality] >= C.gems.synthesisCost && pointInRect(point, Game.getGemSynthesisButtonRect())) {
-        Game.synthesizeGems(gemPart.partId, S.gemSynthQuality);
+      if (pointInRect(point, Game.getGemSynthesisButtonRect())) {
+        Game.openGemSynthesis();
         return;
       }
       return;

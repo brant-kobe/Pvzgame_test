@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from .. import config, equipment, gems, models, rewards, security, times, wall
 from ..database import get_db
 from ..errors import ApiError
-from ..schemas import EquipmentEquip, EquipmentUpgrade, GemGrant, GemSocket, GemSynthesis, PasswordConfirm, ProgressReport, ResourceChange, RewardClaim, WallUpgrade
+from ..schemas import EquipmentEquip, EquipmentUpgrade, GemGrant, GemLock, GemSocket, GemSynthesis, GemSynthesizeAll, PasswordConfirm, ProgressReport, ResourceChange, RewardClaim, WallUpgrade
 from ..serializers import account_payload, equipment_payload, gems_payload, level_payload, progress_payload, resource_payload, wall_payload
 
 router = APIRouter()
@@ -171,6 +171,24 @@ def synthesize_gems(
     db: Session = Depends(get_db),
 ) -> dict:
     return gems.synthesize(db, account.id, (payload.partId or "").strip(), payload.quality)
+
+
+@router.post("/gems/synthesize-all")
+def synthesize_all_gems(
+    payload: GemSynthesizeAll,
+    account: models.Account = Depends(security.current_account),
+    db: Session = Depends(get_db),
+) -> dict:
+    return gems.synthesize_all(db, account.id)
+
+
+@router.post("/gems/lock")
+def lock_gem(
+    payload: GemLock,
+    account: models.Account = Depends(security.current_account),
+    db: Session = Depends(get_db),
+) -> dict:
+    return gems.set_locked(db, account.id, payload.gemId, payload.locked)
 
 
 @router.post("/gems/grant")

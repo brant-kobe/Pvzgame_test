@@ -465,3 +465,13 @@ git diff --check
 - 属性面板底部改为「装备 / 宝石 / 城墙 / 返回」四按钮；新增宝石界面：六部位页签、六槽位、分页背包、品质切换合成栏、六边形宝石图标与状态提示。账户资源 `gem` 的显示名改为「钻石」，与新宝石系统区分。
 - 本轮不做宝石正式产出；新账户宝石背包为空，只能用 `/api/me/gems/grant` 调试注入。
 - 验证：`tmp/check_db.py` **88 项**、`tmp/check_api.py` **115 项**、`tmp/check-gems.js` **122 项**、`tmp/check-wall.js` **63 项**、`tmp/check-accounts.js` **147 项**、`tmp/check-equipment.js` **76 项**全部通过；38 个 `check-*.js` 全部通过；`node --check`、`git diff --check`、`compileall` 通过；截图 `tmp/gems-screen.png`。
+
+---
+
+## 2026-10-20 · 宝石锁定与一键合成确认
+
+- 宝石改为**手动一键合成**：主界面保留「一键合成」按钮，点击后弹出确认窗口，按「部位 × 品质」分页列出全部可合成组（每组 5 颗未镶嵌宝石 → 1 颗高一档），点击任意宝石可在窗口下方预览该宝石词条；点「确定」一次合成全部组，点「取消」关闭且不发出请求。原品质左右切换与单组合成入口从界面移除，`/synthesize` 单组接口保留给旧测试。
+- 新增宝石锁定：`gems` 表增加 `locked` 列，背包行右侧锁按钮可锁定 / 解锁，锁定宝石显示 🔒；一键合成的候选、预览与批量消耗都会跳过锁定宝石，锁定状态在镶嵌 / 卸下后保持。
+- 新增 `POST /api/me/gems/synthesize-all` 与 `POST /api/me/gems/lock`；`server/app/gems.py` 增加合成计划、批量合成与锁定逻辑；旧库启动时由 `database.create_all()` 用 `ALTER TABLE` 补 `locked` 列，`SCHEMA_VERSION` 升到 **6**。
+- 前端新增 `config.gemSynthesisUI` 弹窗几何与 `Game.getGemSynthesisPlan` / `drawGemSynthesis` / `toggleGemLock` / `synthesizeAllGems`；`Game.gems` 增加 `getSynthesisPlan`、`getSynthesisSummary`、`findGem`，合成计划只收未镶嵌且未锁定的宝石。
+- 验证：`tmp/check_db.py` **142 项**、`tmp/check_api.py` **164 项**、`tmp/check-gems.js` **181 项**全部通过，39 个 `check-*.js` 全部通过；`node --check`、`git diff --check`、`compileall` 通过；真实库副本迁移后 `gems.locked` 列存在；截图 `tmp/gems-screen.png`（锁定标志）与 `tmp/gems-synthesis.png`（一键合成弹窗）。

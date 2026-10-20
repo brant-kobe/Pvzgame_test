@@ -60,6 +60,7 @@
         partId: partId,
         quality: quality,
         slotIndex: slot,
+        locked: !!row.locked,
         affix: affix
       });
     });
@@ -79,6 +80,7 @@
       qualityShort: info.short,
       color: info.color,
       slotIndex: gem.slotIndex,
+      locked: gem.locked,
       affix: gem.affix
     };
   }
@@ -88,11 +90,12 @@
   function getPart(partId) {
     var part = (C.equipment.slots || []).filter(function (slot) { return slot.id === partId; })[0] || C.equipment.slots[0];
     var id = part ? part.id : "arm";
-    var sockets = [], counts = [], inventory = [], socketed = 0, i;
+    var sockets = [], counts = [], inventory = [], socketed = 0, locked = 0, i;
     for (i = 0; i < C.gems.socketsPerPart; i++) sockets.push(null);
     for (i = 0; i <= C.gems.maxQuality; i++) counts.push(0);
     getAll().forEach(function (gem) {
       if (gem.partId !== id) return;
+      if (gem.locked) locked++;
       if (gem.slotIndex !== null) {
         sockets[gem.slotIndex] = decorate(gem);
         socketed++;
@@ -114,6 +117,7 @@
       inventory: inventory,
       counts: counts,
       socketedCount: socketed,
+      lockedCount: locked,
       capacity: C.gems.socketsPerPart,
       canSocket: socketed < C.gems.socketsPerPart
     };
@@ -125,12 +129,46 @@
     return part.sockets[slotIndex];
   }
 
-  function getDefaultSynthesisQuality(partId) {
-    var part = getPart(partId);
-    for (var quality = 0; quality < C.gems.maxQuality; quality++) {
-      if (part.counts[quality] >= C.gems.synthesisCost) return quality;
-    }
-    return 0;
+  function getSynthesisPlan() {
+    var plan = [], parts = C.equipment.slots || [];
+    parts.forEach(function (part) {
+      for (var quality = 0; quality < C.gems.maxQuality; quality++) {
+        var pool = getAll().filter(function (gem) {
+          return gem.partId === part.id && gem.quality === quality && gem.slotIndex === null && !gem.locked;
+        }).sort(function (a, b) { return a.id - b.id; });
+        for (var start = 0; start + C.gems.synthesisCost <= pool.length; start += C.gems.synthesisCost) {
+          var resultQuality = quality + 1;
+          plan.push({
+            partId: part.id,
+            partName: part.name,
+            partShort: part.short,
+            partColor: part.color,
+            quality: quality,
+            qualityName: C.gems.qualities[quality].name,
+            qualityShort: C.gems.qualities[quality].short,
+            color: C.gems.qualities[quality].color,
+            resultQuality: resultQuality,
+            resultName: C.gems.qualities[resultQuality].name,
+            resultShort: C.gems.qualities[resultQuality].short,
+            resultColor: C.gems.qualities[resultQuality].color,
+            gems: pool.slice(start, start + C.gems.synthesisCost).map(decorate)
+          });
+        }
+      }
+    });
+    return plan;
+  }
+
+  function getSynthesisSummary() {
+    var plan = getSynthesisPlan(), locked = 0;
+    getAll().forEach(function (gem) { if (gem.locked) locked++; });
+    return { recipes: plan.length, gems: plan.length * C.gems.synthesisCost, locked: locked };
+  }
+
+  function findGem(gemId) {
+    var found = null;
+    getAll().forEach(function (gem) { if (gem.id === gemId) found = decorate(gem); });
+    return found;
   }
 
   function emptyTotals() {
@@ -193,7 +231,9 @@
     getPart: getPart,
     getSocket: getSocket,
     getTotals: getTotals,
-    getDefaultSynthesisQuality: getDefaultSynthesisQuality,
+    getSynthesisPlan: getSynthesisPlan,
+    getSynthesisSummary: getSynthesisSummary,
+    findGem: findGem,
     qualityInfo: qualityInfo
   };
 })(window.Game = window.Game || {});

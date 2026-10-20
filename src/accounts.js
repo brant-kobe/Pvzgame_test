@@ -443,6 +443,19 @@
     });
   }
 
+  function synthesizeAllGems() {
+    return runGemAction("synthesize", "/api/me/gems/synthesize-all", {}, function (data) {
+      var count = data && data.synthesized ? data.synthesized : 0;
+      return "一键合成完成 · 获得 " + count + " 颗";
+    });
+  }
+
+  function toggleGemLock(gemId, locked) {
+    return runGemAction("lock", "/api/me/gems/lock", { gemId: gemId, locked: !!locked }, function () {
+      return locked ? "宝石已锁定" : "宝石已解锁";
+    });
+  }
+
   function completedMap() {
     var map = {};
     if (state.status !== "ready") {
@@ -544,6 +557,8 @@
     socketGem: socketGem,
     unsocketGem: unsocketGem,
     synthesizeGems: synthesizeGems,
+    synthesizeAllGems: synthesizeAllGems,
+    toggleGemLock: toggleGemLock,
     getGems: function () { return state.gems; },
     getProgress: function () { return { completed: completedMap() }; },
     isCompleted: function (levelId) { return !!completedMap()[levelId]; },

@@ -224,12 +224,22 @@
       inventory: { x: 34, y: 344, w: 292, h: 84, rowHeight: 28, rows: 3 },
       inventoryPrev: { x: 252, y: 321, w: 20, h: 18 },
       inventoryNext: { x: 278, y: 321, w: 20, h: 18 },
+      inventoryLock: { offsetX: 262, offsetY: 4, w: 24, h: 18 },
       synthesis: { x: 34, y: 430, w: 292, h: 62 },
-      synthesisPrev: { x: 48, y: 464, w: 24, h: 24 },
-      synthesisNext: { x: 196, y: 464, w: 24, h: 24 },
-      synthesisButton: { x: 236, y: 458, w: 78, h: 30 },
+      synthesisButton: { x: 44, y: 452, w: 272, h: 32 },
       noteY: 506,
       back: { x: 98, y: 514, w: 164, h: 36 }
+    },
+    gemSynthesisUI: {
+      panelX: 28, panelY: 92, panelWidth: 304, panelHeight: 420,
+      titleY: 148, subtitleY: 168,
+      listX: 40, listY: 178, listWidth: 280, rowHeight: 56, rows: 4,
+      gemsX: 50, gemsY: 13, gemSize: 18, gemGap: 21,
+      pagerPrev: { x: 210, y: 402, w: 26, h: 22 },
+      pagerNext: { x: 242, y: 402, w: 26, h: 22 },
+      detailY: 434, detailSubY: 450,
+      confirm: { x: 178, y: 470, w: 70, h: 30 },
+      cancel: { x: 256, y: 470, w: 70, h: 30 }
     },
     accounts: { apiBase: "", healthPath: "/api/health", timeoutMs: 4000, usernameMin: 2, usernameMax: 16, passwordMin: 6, passwordMax: 64, legacyKey: "blockline.progress", maxRecords: 5, maxStatusNote: 26 },
     resources: [

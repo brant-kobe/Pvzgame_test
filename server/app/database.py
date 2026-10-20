@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 _engine = None
@@ -40,6 +40,15 @@ def engine():
 
 def create_all() -> None:
     Base.metadata.create_all(engine())
+    _migrate_gem_lock()
+
+
+def _migrate_gem_lock() -> None:
+    columns = {column["name"] for column in inspect(engine()).get_columns("gems")}
+    if "locked" in columns:
+        return
+    with engine().begin() as connection:
+        connection.execute(text("ALTER TABLE gems ADD COLUMN locked BOOLEAN NOT NULL DEFAULT 0"))
 
 
 def session_scope() -> Session:

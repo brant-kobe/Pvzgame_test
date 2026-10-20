@@ -2,7 +2,7 @@
 (function (Game) {
   "use strict";
   var C = Game.config;
-  Game.state = { screen: "menu", selectedLevel: 1, accountMode: "login", player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null, gemPart: "arm", gemPage: 0, gemSynthQuality: 0, equipmentBagPart: "arm" };
+  Game.state = { screen: "menu", selectedLevel: 1, accountMode: "login", player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null, gemPart: "arm", gemPage: 0, gemSynthesisOpen: false, gemSynthesisPage: 0, gemSynthesisFocus: 0, equipmentBagPart: "arm" };
   Game.reset = function () {
     var s = Game.state;
     var level = C.levels.find(function (item) { return item.id === s.selectedLevel; });
@@ -18,7 +18,7 @@
     });
     s.player = { x: C.width / 2, y: C.height - 58, aimAngle: -Math.PI / 2, manualAimTimer: 0, maxHp: 100, hp: 100, damage: 28, fireInterval: .52, fireTimer: .05, magazineSize: C.magazineCapacity, ammo: C.magazineCapacity, reloadDuration: C.reloadDuration, reloadTimer: 0, rifleEnabled: true, burst: 0, burstShotsRemaining: 0, burstTimer: 0, burstAngle: -Math.PI / 2, spread: 0, pierce: 0, bulletRadius: 4, crit: C.attributes.base.critRate, critDamage: C.attributes.base.critDamage, burn: 0, freeze: 0, bulletType: "normal", skills: skills, skillOrder: [], level: 1, xp: 0, nextXp: C.xpBase, traits: {} };
     s.bullets = []; s.skillProjectiles = []; s.armoredCars = []; s.bombDrops = []; s.bombZones = []; s.electromagneticZones = []; s.tornadoes = []; s.drones = []; s.hailStorms = []; s.fuelShells = []; s.fuelPools = []; s.enemyShots = []; s.explosions = []; s.enemies = []; s.pendingSpawns = []; s.particles = []; s.texts = []; s.upgradeCards = []; s.skillRangePreview = null; s.levelPreview = null;
-    s.gemPage = 0; s.gemSynthQuality = 0; s.equipmentBagPart = "arm";
+    s.gemPage = 0; s.gemSynthesisOpen = false; s.gemSynthesisPage = 0; s.gemSynthesisFocus = 0; s.equipmentBagPart = "arm";
     s.wall = { x: C.width / 2, y: C.height - 125, width: C.width - 30, height: 30, maxHp: C.wallMaxHp, hp: C.wallMaxHp };
     if (Game.attributes) { Game.attributes.applyPlayer(s.player); Game.attributes.applyWall(s.wall); }
     s.session = { level: s.selectedLevel, waves: waves, xpScale: (level && level.xpScale) || 1, hpScale: (level && level.hpScale) || 1, elapsed: 0, wave: 1, spawnCount: 0, spawnTimer: .25, eliteSpawned: false, bossSpawned: false, kills: 0, message: "", messageTimer: 0, reward: null };
@@ -70,7 +70,9 @@
     if (!valid) partId = (C.equipment.slots && C.equipment.slots[0] ? C.equipment.slots[0].id : "arm");
     Game.state.gemPart = partId;
     Game.state.gemPage = 0;
-    Game.state.gemSynthQuality = Game.gems ? Game.gems.getDefaultSynthesisQuality(partId) : 0;
+    Game.state.gemSynthesisOpen = false;
+    Game.state.gemSynthesisPage = 0;
+    Game.state.gemSynthesisFocus = 0;
   };
   Game.openGems = function (partId) {
     Game.accounts.state.gemError = "";
@@ -215,9 +217,62 @@
   Game.setGemPage = function (delta) {
     Game.state.gemPage = Math.max(0, Math.min(Game.state.gemPage + delta, Game.getGemPageCount(Game.state.gemPart) - 1));
   };
-  Game.cycleGemSynthesisQuality = function (delta) {
-    var max = C.gems.maxQuality;
-    Game.state.gemSynthQuality = ((Game.state.gemSynthQuality + delta) % (max + 1) + (max + 1)) % (max + 1);
+  Game.getGemSynthesisPlan = function () {
+    return Game.gems ? Game.gems.getSynthesisPlan() : [];
+  };
+  Game.getGemSynthesisSummary = function () {
+    return Game.gems ? Game.gems.getSynthesisSummary() : { recipes: 0, gems: 0, locked: 0 };
+  };
+  Game.getGemSynthesisPageCount = function () {
+    return Math.max(1, Math.ceil(Game.getGemSynthesisPlan().length / C.gemSynthesisUI.rows));
+  };
+  Game.getGemSynthesisPage = function () {
+    return Math.max(0, Math.min(Game.state.gemSynthesisPage, Game.getGemSynthesisPageCount() - 1));
+  };
+  Game.setGemSynthesisPage = function (delta) {
+    Game.state.gemSynthesisPage = Math.max(0, Math.min(Game.state.gemSynthesisPage + delta, Game.getGemSynthesisPageCount() - 1));
+  };
+  Game.openGemSynthesis = function () {
+    if (Game.state.screen !== "gems") return false;
+    var plan = Game.getGemSynthesisPlan();
+    Game.state.gemSynthesisOpen = true;
+    Game.state.gemSynthesisPage = 0;
+    Game.state.gemSynthesisFocus = plan.length ? plan[0].gems[0].id : 0;
+    return true;
+  };
+  Game.closeGemSynthesis = function () {
+    Game.state.gemSynthesisOpen = false;
+    Game.state.gemSynthesisPage = 0;
+    Game.state.gemSynthesisFocus = 0;
+  };
+  Game.focusGemSynthesis = function (gemId) {
+    if (!Game.state.gemSynthesisOpen) return false;
+    var found = Game.gems ? Game.gems.findGem(gemId) : null;
+    if (!found) return false;
+    Game.state.gemSynthesisFocus = found.id;
+    return true;
+  };
+  Game.toggleGemLock = function (gemId) {
+    if (Game.state.screen !== "gems") return Promise.resolve({ ok: false });
+    var found = Game.gems ? Game.gems.findGem(gemId) : null;
+    if (!found) return Promise.resolve({ ok: false });
+    return Game.accounts.toggleGemLock(gemId, !found.locked).then(function (result) {
+      if (!result || !result.ok) return result;
+      var plan = Game.getGemSynthesisPlan(), focus = Game.state.gemSynthesisFocus, stillListed = false;
+      plan.forEach(function (recipe) {
+        recipe.gems.forEach(function (gem) { if (gem.id === focus) stillListed = true; });
+      });
+      if (!stillListed) Game.state.gemSynthesisFocus = plan.length ? plan[0].gems[0].id : 0;
+      Game.state.gemSynthesisPage = Math.max(0, Math.min(Game.state.gemSynthesisPage, Game.getGemSynthesisPageCount() - 1));
+      return result;
+    });
+  };
+  Game.synthesizeAllGems = function () {
+    if (Game.state.screen !== "gems") return Promise.resolve({ ok: false });
+    return Game.accounts.synthesizeAllGems().then(function (result) {
+      if (result && result.ok) Game.closeGemSynthesis();
+      return result;
+    });
   };
   Game.socketGem = function (gemId) {
     if (Game.state.screen !== "gems") return Promise.resolve({ ok: false });
@@ -284,9 +339,23 @@
   };
   Game.getGemInventoryPrevRect = function () { return C.gemUI.inventoryPrev; };
   Game.getGemInventoryNextRect = function () { return C.gemUI.inventoryNext; };
-  Game.getGemSynthesisPrevRect = function () { return C.gemUI.synthesisPrev; };
-  Game.getGemSynthesisNextRect = function () { return C.gemUI.synthesisNext; };
+  Game.getGemInventoryLockRect = function (index) {
+    var geo = C.gemUI.inventoryLock, row = Game.getGemInventoryRowRect(index);
+    return { x: row.x + geo.offsetX, y: row.y + geo.offsetY, w: geo.w, h: geo.h };
+  };
   Game.getGemSynthesisButtonRect = function () { return C.gemUI.synthesisButton; };
+  Game.getGemSynthesisRowRect = function (index) {
+    var geo = C.gemSynthesisUI;
+    return { x: geo.listX, y: geo.listY + index * geo.rowHeight, w: geo.listWidth, h: geo.rowHeight - 4 };
+  };
+  Game.getGemSynthesisGemRect = function (rowIndex, gemIndex) {
+    var geo = C.gemSynthesisUI, row = Game.getGemSynthesisRowRect(rowIndex);
+    return { x: row.x + geo.gemsX + gemIndex * geo.gemGap - 2, y: row.y + geo.gemsY - 2, w: geo.gemSize + 4, h: geo.gemSize + 4 };
+  };
+  Game.getGemSynthesisPrevRect = function () { return C.gemSynthesisUI.pagerPrev; };
+  Game.getGemSynthesisNextRect = function () { return C.gemSynthesisUI.pagerNext; };
+  Game.getGemSynthesisConfirmRect = function () { return C.gemSynthesisUI.confirm; };
+  Game.getGemSynthesisCancelRect = function () { return C.gemSynthesisUI.cancel; };
   Game.getLevelBriefPanel = function () {
     var geo = C.levelSelect, roster = Game.getLevelRoster(Game.state.levelPreview);
     var rows = roster.minions.length + roster.elites.length + (roster.boss ? 1 : 0);

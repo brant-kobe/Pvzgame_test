@@ -52,6 +52,15 @@ class GemSynthesis(BaseModel):
     quality: int = -1
 
 
+class GemLock(BaseModel):
+    gemId: int = 0
+    locked: bool = True
+
+
+class GemSynthesizeAll(BaseModel):
+    pass
+
+
 class GemGrant(BaseModel):
     partId: str = ""
     quality: int = -1

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from . import times
@@ -87,6 +87,7 @@ class Gem(Base):
     quality: Mapped[int] = mapped_column(Integer, default=0)
     affix_id: Mapped[str] = mapped_column(String(32))
     slot_index: Mapped[int | None] = mapped_column(Integer, default=None, nullable=True)
+    locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
 class SchemaVersion(Base):

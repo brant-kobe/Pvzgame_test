@@ -22,7 +22,7 @@ git diff --check
 - `node --check`：语法校验，必须全部通过。
 - `git diff --check`：空白字符校验。Windows 下出现的 `LF will be replaced by CRLF` 只是换行符提示，不是错误。
 - 逻辑回归优先用一次性 `node -e` 冒烟测试；需要模拟 Canvas 时，用 `Proxy` 桩实现 `document.getElementById("game").getContext("2d")`。
-- **画面前端不要依赖无头浏览器**：本机沙箱禁止程序打开命名管道，`msedge` / `chrome --headless` 一律在 `mojo platform_channel` 上失败（换 `--no-sandbox`、`--single-process` 都没用，不是页面问题）。要检查 Canvas 画面，用 `tmp/trace-draw.js` 把真实绘制指令录成 `tmp/draw-ops.json`，再用捆绑 Python 跑 `tmp/replay-draw.py` 回放成 PNG；`trace-draw.js` 的场景参数是 `enemies`（六种单位造型）、`status`（冻结 / 眩晕 / 麻痹 / 减速 / 燃烧 + 护甲 + 「燃」角标 / 燃烧 + 冻伤 10 层的两个角标 / 雷电僵尸的麻痹与电弧，共 8 个样本按 4×2 网格排布）、`wasp`（毒蜂的三种形态：悬停 / 飞行途中 / 精英，外加两枚毒刺与一枚篮球弹体并排对照造型）、`wheelchair`（满血 / 半血回血中 / 精英三种状态，外加一只普通僵尸作尺寸对照）、`frostBeast`（普通僵尸作尺寸对照，外加减速中 / 眩晕中 / 精英三只寒霜兽）或 `codex <分类> <id> [页码]`、`account <menu|login|register|account|attributes|equipment|equipmentBag|wall|gems|result>`。
+- **画面前端不要依赖无头浏览器**：本机沙箱禁止程序打开命名管道，`msedge` / `chrome --headless` 一律在 `mojo platform_channel` 上失败（换 `--no-sandbox`、`--single-process` 都没用，不是页面问题）。要检查 Canvas 画面，用 `tmp/trace-draw.js` 把真实绘制指令录成 `tmp/draw-ops.json`，再用捆绑 Python 跑 `tmp/replay-draw.py` 回放成 PNG；`trace-draw.js` 的场景参数是 `enemies`（六种单位造型）、`status`（冻结 / 眩晕 / 麻痹 / 减速 / 燃烧 + 护甲 + 「燃」角标 / 燃烧 + 冻伤 10 层的两个角标 / 雷电僵尸的麻痹与电弧，共 8 个样本按 4×2 网格排布）、`wasp`（毒蜂的三种形态：悬停 / 飞行途中 / 精英，外加两枚毒刺与一枚篮球弹体并排对照造型）、`wheelchair`（满血 / 半血回血中 / 精英三种状态，外加一只普通僵尸作尺寸对照）、`frostBeast`（普通僵尸作尺寸对照，外加减速中 / 眩晕中 / 精英三只寒霜兽）或 `codex <分类> <id> [页码]`、`account <menu|login|register|account|attributes|equipment|equipmentBag|wall|gems|gemsSynth|result>`。
 - 不要引入测试框架、构建器或运行时依赖，除非用户明确要求。
 - **调试中间产物统一放进 `tmp/`**：冒烟测试脚本、临时截图、日志、导出数据等一律写入工作区根目录的 `tmp/`，不要散落在项目根目录或 `src/`；该目录已在 `.gitignore` 中忽略，不会被提交。仅当临时产物需要长期保留或复用时，才正式收录进 `src/` 或文档。
 
@@ -36,7 +36,7 @@ git diff --check
 | `src/attributes.js` | 角色属性：基础值 + 外部修正，计算攻击/元素/冷却/防线/暴击/负面时间 | `Game.attributes`；`Game.reset` 时应用 |
 | `src/equipment.js` | 装备层：六部位缓存、背包、元素汇总、属性修正 | `Game.equipment`；只读账户装备数据 |
 | `src/wall.js` | 城墙层：钢材等级、稀土突破、防线血量修正 | `Game.wall`；只读账户城墙数据 |
-| `src/gems.js` | 宝石层：六部位 × 六槽位、背包词条、五合一与属性修正 | `Game.gems`；只读账户宝石数据 |
+| `src/gems.js` | 宝石层：六部位 × 六槽位、背包词条、锁定、一键合成与属性修正 | `Game.gems`；只读账户宝石数据 |
 | `src/accounts.js` | 账户数据层：内存缓存 + 异步落库 | `Game.accounts`；render 只读缓存 |
 | `src/utils.js` | 数学、随机、绘制、文本工具 | `Game.utils` |
 | `src/state.js` | `Game.state` 单局状态、`Game.reset`、界面切换 | 只存数据，不写绘制逻辑 |
@@ -141,8 +141,8 @@ git diff --check
 - **校验规则有两份**：前端 `config.accounts`（用户名 / 密码的长度与字符集）只做即时提示，`server/app/config.py` 是权威校验 —— 改动其中一份必须同步另一份，并写进本次变更说明。
 - **断连行为**：`file://` 打开或 `/api/health` 失败时进入 `offline` 态 —— 顶栏提示「未连接数据库 · 本局进度不会保存」、账户界面禁用、战斗与测试场照常可玩但**不保存成绩**；未登录（`guest`）同样不保存。**任何情况下都不允许静默丢档**。
 - **装备数据层**：`equipment` 表以 `(account_id, slot_id)` 为联合主键，存 `element_id` 与 `level`；首次 `/api/me` 或升级时由 `server/app/equipment.py` 的 `ensure_rows` 补齐六个部位，六系洗牌分配且之后固定。升级接口 `POST /api/me/equipment/upgrade` 由服务端校验部位、满级与材料，扣金币 + 部位专属图纸；**金币与图纸价格只在服务端配置**，返回的 `nextCost` 是前端唯一价格来源。装备上限 100，攻击/元素每级 +5，图纸 10 起每级 +10、金币 80 起每级 +40。`equipment_bag` 存掉落装备的 `slot_id` / `element_id`（无等级、无唯一约束），`POST /api/me/equipment/equip` 只交换元素；资源产出现在由关卡奖励接入。完整设计见 `DEVELOPMENT_PLAN.md` 第 12 节与第 14 节。
-- **城墙数据层**：`wall_state` 表以 `account_id` 为主键，存 `level`（1～200）与 `breakthroughs`（0～19）；首次 `/api/me` 时由 `server/app/wall.py` 的 `ensure_state` 创建 Lv.1。`POST /api/me/wall/upgrade` 的 `action` 为 `level` 时按 `20 × 当前等级` 扣钢材升级；为 `breakthrough` 时只允许在 10/20/…/190 节点、扣 `2 × 已突破次数 + 2` 稀土，**等级与血量都不变**。Lv.200 封顶。`hpBonus = (level - 1) × 200`，基础 1000；测试场 9999 不被覆盖。`schema_version` 当前为 **5**，资源 `steel` / `rareEarth` 已进入 `RESOURCE_IDS`。
-- **宝石数据层**：`gems` 表存 `id` / `account_id` / `part_id` / `quality`（0～4）/ `affix_id` / `slot_index`（0～5 或 `NULL`），唯一约束 `(account_id, part_id, slot_index)` 允许背包存在多个 `NULL`。`server/app/gems.py` 负责词条数值、随机词条、首空槽镶嵌、卸下与五合一；`POST /api/me/gems/socket`、`/unsocket`、`/synthesize` 与调试用 `/grant` 均返回完整宝石列表。普通等级与品质绑定部位，5 颗同部位同品质**未镶嵌**宝石合成高一档，红色封顶。宝石由关卡奖励产出（灰～紫），红色仍需五合一；`/grant` 保留作调试注入。
+- **城墙数据层**：`wall_state` 表以 `account_id` 为主键，存 `level`（1～200）与 `breakthroughs`（0～19）；首次 `/api/me` 时由 `server/app/wall.py` 的 `ensure_state` 创建 Lv.1。`POST /api/me/wall/upgrade` 的 `action` 为 `level` 时按 `20 × 当前等级` 扣钢材升级；为 `breakthrough` 时只允许在 10/20/…/190 节点、扣 `2 × 已突破次数 + 2` 稀土，**等级与血量都不变**。Lv.200 封顶。`hpBonus = (level - 1) × 200`，基础 1000；测试场 9999 不被覆盖。`schema_version` 当前为 **6**，资源 `steel` / `rareEarth` 已进入 `RESOURCE_IDS`。
+- **宝石数据层**：`gems` 表存 `id` / `account_id` / `part_id` / `quality`（0～4）/ `affix_id` / `slot_index`（0～5 或 `NULL`）/ `locked`，唯一约束 `(account_id, part_id, slot_index)` 允许背包存在多个 `NULL`。旧库启动时 `database.create_all()` 用 `ALTER TABLE` 补 `locked` 列（默认 0），`SCHEMA_VERSION` 当前为 **6**。`server/app/gems.py` 负责词条数值、随机词条、首空槽镶嵌、卸下、锁定、五合一、一键批量合成与调试注入；`POST /api/me/gems/socket`、`/unsocket`、`/synthesize`、`/synthesize-all`、`/lock` 与 `/grant` 均返回完整宝石列表。**宝石不自动合成**：`/synthesize-all` 按「部位 × 品质」把未镶嵌、未锁定的宝石每 5 颗组成一组，一次合成全部组并各产出一颗高一档宝石，同一批新产出不会被再次消耗；`locked` 为 1 的宝石显示 🔒、不进入候选、不被消耗，仍可镶嵌。`/synthesize` 单组接口保留给旧测试 / 内部使用。普通等级与品质绑定部位，红色封顶；宝石由关卡奖励产出（灰～紫），红色仍需五合一；`/grant` 保留作调试注入。
 
 
 ## 文档同步要求

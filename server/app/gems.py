@@ -53,6 +53,7 @@ def gem_payload(row: models.Gem) -> dict:
         "partId": row.part_id,
         "quality": _quality(row.quality),
         "slotIndex": row.slot_index,
+        "locked": bool(row.locked),
         "affix": affix_payload(row.affix_id, row.quality),
     }
 
@@ -66,7 +67,7 @@ def random_affix(rng=None) -> str:
 
 
 def create(db: Session, account_id: int, part_id: str, quality: int, affix_id: str | None = None, rng=None) -> models.Gem:
-    row = models.Gem(account_id=account_id, part_id=part_id, quality=_quality(quality), affix_id=affix_id or random_affix(rng), slot_index=None)
+    row = models.Gem(account_id=account_id, part_id=part_id, quality=_quality(quality), affix_id=affix_id or random_affix(rng), slot_index=None, locked=False)
     db.add(row)
     return row
 
@@ -110,6 +111,34 @@ def unsocket(db: Session, account_id: int, gem_id: int) -> dict:
     return {"gems": payload(rows(db, account_id)), "gemId": row.id}
 
 
+def set_locked(db: Session, account_id: int, gem_id: int, locked: bool) -> dict:
+    row = _owned(db, account_id, gem_id)
+    row.locked = bool(locked)
+    db.commit()
+    return {"gems": payload(rows(db, account_id)), "gemId": row.id, "locked": row.locked}
+
+
+def _candidates(items, part_id: str, quality: int) -> list[models.Gem]:
+    return [
+        row for row in items
+        if row.part_id == part_id and row.quality == quality and row.slot_index is None and not row.locked
+    ]
+
+
+def _plan(items) -> list[dict]:
+    plan = []
+    for part_id in config.EQUIPMENT_SLOTS:
+        for quality in range(config.GEM_MAX_QUALITY):
+            candidates = _candidates(items, part_id, quality)
+            for start in range(0, len(candidates) - config.GEM_SYNTHESIS_COST + 1, config.GEM_SYNTHESIS_COST):
+                plan.append({
+                    "partId": part_id,
+                    "quality": quality,
+                    "gems": candidates[start:start + config.GEM_SYNTHESIS_COST],
+                })
+    return plan
+
+
 def synthesize(db: Session, account_id: int, part_id: str, quality: int) -> dict:
     if part_id not in config.EQUIPMENT_SLOTS:
         raise ApiError(422, "unknown_gem_part", "未知装备部位")
@@ -118,10 +147,7 @@ def synthesize(db: Session, account_id: int, part_id: str, quality: int) -> dict
         raise ApiError(422, "invalid_gem_quality", "宝石品质不合法")
     if quality >= config.GEM_MAX_QUALITY:
         raise ApiError(422, "gem_max_quality", "红色宝石已是最高品质")
-    candidates = [
-        row for row in rows(db, account_id)
-        if row.part_id == part_id and row.quality == quality and row.slot_index is None
-    ][:config.GEM_SYNTHESIS_COST]
+    candidates = _candidates(rows(db, account_id), part_id, quality)[:config.GEM_SYNTHESIS_COST]
     if len(candidates) < config.GEM_SYNTHESIS_COST:
         raise ApiError(422, "not_enough_gems", "同部位同品质的未镶嵌宝石不足 5 颗")
     consumed = [row.id for row in candidates]
@@ -134,6 +160,31 @@ def synthesize(db: Session, account_id: int, part_id: str, quality: int) -> dict
         db.rollback()
         raise ApiError(409, "gem_slot_conflict", "宝石合成冲突，请重试")
     return {"gems": payload(rows(db, account_id)), "gem": gem_payload(created), "consumedIds": consumed}
+
+
+def synthesize_all(db: Session, account_id: int) -> dict:
+    items = rows(db, account_id)
+    plan = _plan(items)
+    if not plan:
+        raise ApiError(422, "no_synthesis_candidates", "没有可合成的宝石（锁定与已镶嵌宝石不参与）")
+    consumed = []
+    created = []
+    for recipe in plan:
+        for row in recipe["gems"]:
+            consumed.append(row.id)
+            db.delete(row)
+        created.append(create(db, account_id, recipe["partId"], recipe["quality"] + 1))
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ApiError(409, "gem_slot_conflict", "宝石合成冲突，请重试")
+    return {
+        "gems": payload(rows(db, account_id)),
+        "results": payload(created),
+        "synthesized": len(created),
+        "consumedIds": consumed,
+    }
 
 
 def grant(db: Session, account_id: int, part_id: str, quality: int, count: int) -> dict:

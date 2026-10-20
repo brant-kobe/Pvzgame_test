@@ -596,8 +596,8 @@ data/
 | `equipment` | `account_id` + `slot_id`（联合主键）、`element_id`、`level` | 六部位**已装备**的固定随机元素与等级；`level` 默认 1、上限 100 |
 | `equipment_bag` | `id`（自增主键）、`account_id`、`slot_id`、`element_id` | 装备背包：掉落装备只含部位与元素，无等级；**不设唯一约束**，同部位同元素可重复 |
 | `wall_state` | `account_id`（主键）、`level`、`breakthroughs` | 城墙等级 1～200 与已完成稀土突破次数 0～19 |
-| `gems` | `id`（自增主键）、`account_id`、`part_id`、`quality`、`affix_id`、`slot_index` | 部位绑定宝石；`slot_index` 0～5 已镶嵌、`NULL` 背包；唯一约束 `(account_id, part_id, slot_index)` |
-| `schema_version` | `version` | 供以后手写迁移脚本判断版本；当前为 5 |
+| `gems` | `id`（自增主键）、`account_id`、`part_id`、`quality`、`affix_id`、`slot_index`、`locked` | 部位绑定宝石；`slot_index` 0～5 已镶嵌、`NULL` 背包；`locked` 为 1 时一键合成忽略；唯一约束 `(account_id, part_id, slot_index)` |
+| `schema_version` | `version` | 供以后手写迁移脚本判断版本；当前为 6 |
 
 - SQLAlchemy 2.0 类型化声明式模型；SQLite 连接统一设 `foreign_keys=ON`、`journal_mode=WAL`、`busy_timeout=5000`。
 - 建表用 `Base.metadata.create_all()` 配合 `schema_version` 记录版本；**暂不引入 Alembic**（本地单机、单库），将来真需要版本化迁移时再补。
@@ -623,7 +623,9 @@ data/
 | POST | `/api/me/wall/upgrade` | `{action: "level"|"breakthrough"}` → 钢材升级或稀土突破 |
 | POST | `/api/me/gems/socket` | `{gemId}` → 放进该部位第一个空槽 |
 | POST | `/api/me/gems/unsocket` | `{gemId}` → 从槽位回到背包 |
-| POST | `/api/me/gems/synthesize` | `{partId, quality}` → 5 颗未镶嵌同部位同品质合成高一档 |
+| POST | `/api/me/gems/synthesize` | `{partId, quality}` → 5 颗未镶嵌、未锁定同部位同品质合成高一档（前端旧入口保留） |
+| POST | `/api/me/gems/synthesize-all` | 空对象 → 一次合成全部可合成组，跳过锁定与已镶嵌宝石 |
+| POST | `/api/me/gems/lock` | `{gemId, locked}` → 锁定 / 解锁单颗宝石 |
 | POST | `/api/me/gems/grant` | `{partId, quality, count}` → 调试注入宝石，正式玩法不调用 |
 | DELETE | `/api/me` | `{password}` 二次确认后删号（级联清进度、资源、装备、城墙与宝石） |
 
@@ -880,7 +882,8 @@ git diff --check
 - 品质五档：灰 / 绿 / 蓝 / 紫 / 红，颜色分别为 `#9aa8b2` / `#63e6a0` / `#68d8ff` / `#c9a1ff` / `#ff6b6b`。
 - 每颗宝石固定 **1 条词条**，词条类型等概率随机；品质只提高数值。
 - 只有 `slotIndex !== null` 的已镶嵌宝石提供属性；背包宝石不生效。
-- 同一部位、同一品质的 **5 颗未镶嵌宝石**自动合成 1 颗同部位、高一档品质的宝石，词条重新随机；已镶嵌宝石受保护；红色封顶。
+- 同一部位、同一品质的 **5 颗未镶嵌、未锁定宝石**可合成 1 颗同部位、高一档品质的宝石，词条重新随机；**不再自动合成**，必须由玩家打开「一键合成」确认窗口并点「确定」才执行；已镶嵌与锁定宝石受保护；红色封顶。
+- **宝石锁定**：每颗宝石可单独锁定 / 解锁，锁定后显示 🔒，不会被一键合成的预览或确认选中，也不会被批量消耗；仍可正常镶嵌，卸下后保持锁定状态。
 - 本轮不做正式产出；新账户宝石为空，`POST /api/me/gems/grant` 仅用于开发 / 测试注入，客户端不提供入口。
 - 账户资源 `gem` 的显示名改为「钻石」，与新宝石系统分开；资源 id / 数据库 / 接口不变。
 
@@ -900,42 +903,45 @@ git diff --check
 
 ### 16.3 后端
 
-- `gem` 数据表：`id` / `account_id` / `part_id` / `quality` / `affix_id` / `slot_index`；唯一约束 `(account_id, part_id, slot_index)`，SQLite 允许多个 `NULL` 背包宝石。
-- `SCHEMA_VERSION` 3 → **4**；`create_all()` 自动补表，旧账户宝石为空。
-- `server/app/gems.py`：词条数值与文本、随机词条、首空槽镶嵌、卸下、五合一、调试注入。
-- `GET /api/me` 增加 `gems` 列表；新增 `/api/me/gems/socket`、`/unsocket`、`/synthesize`、`/grant`。
-- 错误码：`unknown_gem_part` / `invalid_gem_quality` / `invalid_gem_count` / `gem_not_found` / `gem_slots_full` / `not_enough_gems` / `gem_max_quality` / `gem_slot_conflict`。
+- `gem` 数据表：`id` / `account_id` / `part_id` / `quality` / `affix_id` / `slot_index` / `locked`；唯一约束 `(account_id, part_id, slot_index)`，SQLite 允许多个 `NULL` 背包宝石。旧库启动时以 `ALTER TABLE` 补 `locked` 列，默认 `0`。
+- `SCHEMA_VERSION` 从 5 升到 **6**；`create_all()` 自动补表与补列，旧账户宝石全部未锁定。
+- `server/app/gems.py`：词条数值与文本、随机词条、首空槽镶嵌、卸下、锁定、五合一、一键批量合成与调试注入。
+- `GET /api/me` 增加 `gems` 列表；新增 `/api/me/gems/socket`、`/unsocket`、`/synthesize`、`/synthesize-all`、`/lock`、`/grant`。
+- 一键合成按「部位 × 品质」分组，每组每满 5 颗生成 1 颗；锁定、已镶嵌宝石不进入候选；新产出在同一批内不会被再次消耗。
+- 错误码：`unknown_gem_part` / `invalid_gem_quality` / `invalid_gem_count` / `gem_not_found` / `gem_slots_full` / `not_enough_gems` / `gem_max_quality` / `gem_slot_conflict` / `no_synthesis_candidates`。
 - 删除账户级联删除宝石。
 
 ### 16.4 前端
 
-- 新增 `src/gems.js`（`Game.gems`）：归一化、`getPart`、`getSocket`、`getTotals`、`getDefaultSynthesisQuality`；只汇总已镶嵌宝石。
+- 新增 `src/gems.js`（`Game.gems`）：归一化（含 `locked`）、`getPart`、`getSocket`、`getTotals`、`getSynthesisPlan`、`getSynthesisSummary`、`findGem`；只汇总已镶嵌宝石，合成计划只收未镶嵌且未锁定的宝石。
 - `src/attributes.js` 增加独立 `gemModifiers`、`setGemModifiers` / `clearGemModifiers`，**不能写进装备或城墙的修正入口**。
-- `src/accounts.js` 增加 `gems`、`gemBusy`、`gemAction`、`gemError`、`gemNotice` 与 `socketGem` / `unsocketGem` / `synthesizeGems`；登录加载、401 / 登出清空。
+- `src/accounts.js` 增加 `gems`、`gemBusy`、`gemAction`、`gemError`、`gemNotice` 与 `socketGem` / `unsocketGem` / `synthesizeGems` / `synthesizeAllGems` / `toggleGemLock`；登录加载、401 / 登出清空。
 - 加载顺序加入 `gems.js`；所有测试沙箱同步加载。
-- `config.attributesUI` 改为四个 74×36 按钮；`config.gemUI` 统一面板、页签、槽位、背包与合成栏几何。
+- `config.attributesUI` 改为四个 74×36 按钮；`config.gemUI` 统一面板、页签、槽位、背包、锁按钮与一键合成入口几何，`config.gemSynthesisUI` 统一确认弹窗几何。
 
 ### 16.5 界面
 
 - 属性面板底部：装备 / 宝石 / 城墙 / 返回。
-- 宝石界面：六个部位页签（显示已镶嵌数量）、当前部位摘要、3×2 六槽位、分页背包（每页 3 行）、合成栏（品质左右切换 + 数量 + 合成按钮）、状态行与返回。
-- 空槽显示「+ 空槽」；已镶嵌槽显示品质色、六边形切割宝石图标、品质短名与词条文本；点击槽位直接卸下。
-- 背包行显示品质名、词条文本与「镶嵌 ›」；点击放入该部位第一个空槽，6 格已满时置灰。
-- 合成栏显示「当前品质 数量 / 5」「未镶嵌」，红色显示「已最高」，数量不足显示「不足 5 颗」。
-- 未登录 / 离线显示登录提示并禁用操作；busy 显示处理中并阻止重复点击。
+- 宝石界面：六个部位页签（显示已镶嵌数量）、当前部位摘要、3×2 六槽位、分页背包（每页 3 行）、锁定按钮、一键合成入口、状态行与返回。
+- 空槽显示「+ 空槽」；已镶嵌槽显示品质色、六边形切割宝石图标、品质短名与词条文本；点击槽位直接卸下，锁定宝石在槽内也显示 🔒。
+- 背包行显示品质名、词条文本、「镶嵌 ›」与右侧锁按钮；锁定时行首显示 🔒、按钮变为高亮锁图标；点击行放入该部位第一个空槽，6 格已满时置灰。
+- 「一键合成」按钮显示当前全部可合成组数与锁定数量；点击后弹出确认窗口，按「部位 × 品质」分页列出每组 5 颗宝石与产物品质，点击任意宝石在下方预览其词条；底部「确定」一次合成全部组，「取消」直接关闭且不发请求。
+- 未登录 / 离线显示登录提示并禁用操作；busy 显示处理中并阻止重复点击；合成中弹窗保留并显示「合成中…」。
 
 ### 16.6 验证
 
-- `tmp/check-gems.js` 新增；覆盖五档数值、12 种词条汇总、仅镶嵌生效、六槽上限、卸下、五合一、红色封顶、UI 几何 / 绘制 / 点击、401 / 网络 / 登出。
-- `tmp/check_db.py`：schema 4、`gems` 表、多个 `NULL` 背包、词条数值、镶嵌 / 卸下 / 合成 / 红色上限 / 级联删除。
-- `tmp/check_api.py`：`/api/me` 宝石为空、注入、镶嵌、六槽上限、卸下、合成、非法参数、持久化、静态 `gems.js`。
+- `tmp/check-gems.js`：覆盖五档数值、12 种词条汇总、仅镶嵌生效、六槽上限、卸下、锁定 / 解锁、锁定不入计划、一键合成一组与多组、取消不发请求、确认弹窗 / 分页 / 词条预览、红色封顶、UI 几何、401 / 网络 / 登出。
+- `tmp/check_db.py`：schema 6、`gems.locked` 默认值、锁定写库、一键合成批量消耗与锁定保护、无候选错误、镶嵌 / 卸下 / 红色上限 / 级联删除。
+- `tmp/check_api.py`：`/api/me` 宝石为空、注入、锁定 / 解锁、镶嵌、六槽上限、卸下、一键合成、无候选 422、非法参数、持久化、静态 `gems.js`。
 - `tmp/check-accounts.js`：宝石加载 / 登出清理、钻石资源名。
 - `tmp/check_equipment.js` / `tmp/check_wall.js` / `tmp/check_attributes.js`：属性面板四入口与宝石说明。
-- 截图 `tmp/gems-screen.png`；`tmp/trace-draw.js` 新增 `account gems` 场景。
+- 截图 `tmp/gems-screen.png`（锁定标志）与 `tmp/gems-synthesis.png`（一键合成弹窗）；`tmp/trace-draw.js` 新增 `account gemsSynth` 场景。
 
 ### 16.7 验收标准
 
-- 新账户宝石背包为空；注入 5 颗灰色手臂宝石后可合成 1 颗绿色手臂宝石，部位不变、词条随机、5 颗被消耗。
+- 新账户宝石背包为空；未锁定的 5 颗灰色手臂宝石会出现在一键合成预览，确认后合成 1 颗绿色手臂宝石，部位不变、词条随机、5 颗被消耗。
+- 锁定宝石显示 🔒，且无论背包中有多少颗，都不会被一键合成预览列出或消耗；解锁后立即重新进入预览。
+- 取消确认窗口不发出合成请求；确定后一次处理全部可合成组，10 颗灰色会产出 2 颗绿色。
 - 6 个槽位依次填满，第 7 颗返回槽位已满；卸下后对应加成立即消失。
 - 只有已镶嵌宝石计入属性；背包宝石不影响攻击 / 元素 / 冷却 / 防线 / 暴击 / 暴伤 / 负面时间。
 - 红色宝石不能继续合成；不足 5 颗、不同部位、不同品质均不能合成。
