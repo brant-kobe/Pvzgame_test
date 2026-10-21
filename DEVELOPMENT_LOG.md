@@ -475,3 +475,23 @@ git diff --check
 - 新增 `POST /api/me/gems/synthesize-all` 与 `POST /api/me/gems/lock`；`server/app/gems.py` 增加合成计划、批量合成与锁定逻辑；旧库启动时由 `database.create_all()` 用 `ALTER TABLE` 补 `locked` 列，`SCHEMA_VERSION` 升到 **6**。
 - 前端新增 `config.gemSynthesisUI` 弹窗几何与 `Game.getGemSynthesisPlan` / `drawGemSynthesis` / `toggleGemLock` / `synthesizeAllGems`；`Game.gems` 增加 `getSynthesisPlan`、`getSynthesisSummary`、`findGem`，合成计划只收未镶嵌且未锁定的宝石。
 - 验证：`tmp/check_db.py` **142 项**、`tmp/check_api.py` **164 项**、`tmp/check-gems.js` **181 项**全部通过，39 个 `check-*.js` 全部通过；`node --check`、`git diff --check`、`compileall` 通过；真实库副本迁移后 `gems.locked` 列存在；截图 `tmp/gems-screen.png`（锁定标志）与 `tmp/gems-synthesis.png`（一键合成弹窗）。
+---
+
+## 2026-10-21 · 角色界面（角色大厅）
+
+- 首页底部左侧入口由「属性面板」改为「角色」（`config.menu.buttons.character`），新增 `character` 界面：上半部分是 2 列 × 3 行的 62 × 62 正方形装备格，格内用 `drawEquipmentGlyph` 画出六个部位的装备图标（护臂 / 背心 / 头盔 / 长裤 / 靴子 / 手套）、部位名、元素圆点与 `Lv.N`，右侧信息列显示元素系、攻击与元素加成；中部为「装备强化 / 城墙强化」两个入口；下半部分是背包，最下方三个页签「宝石 / 装备 / 资源」。
+- 点击装备方块弹出该部位**宝石浮层**：六行槽位从上往下固定排列（空槽也占行），显示品质、词条、🔒 与「卸下」按钮；「关闭」或点击浮层外收起。空槽行提示在下方宝石背包点击宝石镶嵌。
+- 宝石页签跨部位列出账户全部未镶嵌宝石（`Game.gems.getBag()` 新增），行内可锁定、点击镶嵌，标题行右侧是 `‹ n/m ›` 分页与「一键合成」（复用原有确认浮层）；装备页签用新增的 `Game.equipment.getBagOverview()` 按部位显示等级、元素与背包元素计数；资源页签显示 11 项资源数量。
+- **独立宝石界面移除**：删除 `config.gemUI`、`Game.drawGemsPanel`、`Game.openGems` / `selectGemPart` / `getGemPartTabRect` / `getGemSocketRect` / `getGemInventory*` / `getGemSynthesisButtonRect` 与 `S.gemPart` / `S.gemPage`；宝石操作的守卫改为 `screen === "character"`，合成确认浮层（`gemSynthesisUI` / `drawGemSynthesis`）保留复用。
+- 属性面板退为**只读页**：`config.attributesUI` 只留面板与返回按钮，底部文案「返回角色」，`Game.backToCharacter` 统一回角色界面；装备界面与城墙界面的「返回」也改为回到角色界面。
+- 新增 `config.characterUI`（面板、顶栏、装备格、强化入口、背包三种行布局、状态行、页签、宝石浮层）与一整套 `Game.getCharacter*Rect()` 几何接口，render 与 input 共用；新增状态 `S.characterPart` / `S.characterTab` / `S.characterGemPage` / `S.characterGems`，`Game.reset` 重置。
+- 验证：新增 `tmp/check-character.js` **184 项**全部通过；`tmp/check-gems.js` 重写界面段后 **207 项**、`tmp/check-attributes.js`、`tmp/check-equipment.js` **109 项**、`tmp/check-wall.js` **61 项**、`tmp/check-accounts.js` **164 项**同步更新；全量 35 个 `check-*.js` 与 8 个 `audit-*.js` 0 失败；`node --check` 与 `git diff --check` 通过；出图 `tmp/character-screen.png`、`character-gems.png`、`character-equip.png`、`character-resource.png`、`character-guest.png`、`character-synth.png` 与 `attributes-screen.png`。后端未改动。
+---
+
+## 2026-10-22 · 资源方格与三角形宝石
+
+- 资源页签改为**方格**：6 列 × 2 行、每格 44 × 44（`config.characterUI.resourceCells`），格内用新增的 `drawResourceIcon` 画对应图标 —— 金币（带内圈的硬币）、钻石（菱形）、零件（六齿齿轮）、钢材（复用 `drawSteelIcon` 金属锭）、稀土（复用 `drawRareEarthIcon` 金色圆锥）、六种图纸（同款卷纸 + 右上折角，按部位色区分）；数量写在格内右下角。
+- **数量为 0 的资源不绘制**：新增 `Game.getCharacterResources()`（= `Game.accounts.getResourceList()` 过滤零值），全为 0 时只显示「暂无资源 · 关卡奖励会产出资源」；超过 12 项时状态行提示「共 N 项 · 仅显示前 12 项」。`Game.getCharacterResourceCellRect` 改为按 `size/gap/columns` 计算正方形格子。
+- 宝石页签与装备页签也改为**方格**：宝石页签 6 列 × 2 行、每页 12 格（`config.characterUI.gemCells`），每格画三角宝石、词条名与数值、左上角部位短名，右上角 14 × 14 锁按钮（点格子镶嵌、点锁按钮锁定），标题行保留分页与一键合成；装备页签 3 列 × 2 行（`config.characterUI.equipCells`），每格画部位短名、元素圆点、装备图标、`Lv.N` 与背包件数。`Game.getCharacterBagRowRect` / `getCharacterBagLineRect` 与 `config.characterUI.bag` / `bagLines` 一并删除，改用 `getCharacterGemCellRect` / `getCharacterEquipCellRect`。
+- 宝石图标由六边形改为**按品质着色的三角形**（灰 / 绿 / 蓝 / 紫 / 红，带顶面高光与左右切面），镶嵌浮层、背包方格与「一键合成」确认窗口共用同一份 `drawGemIcon`。
+- 验证：`tmp/check-character.js` 184 → **193 项**（新增方格正方形与不重叠、零值资源隐藏、数量文案、无资源提示等断言）；`tmp/check-gems.js` 239 项通过；全量 35 个 `check-*.js` 与 8 个 `audit-*.js` 0 失败，`node --check` 与 `git diff --check` 通过；出图更新 `tmp/character-resource.png`、`tmp/character-screen.png`、`tmp/character-equip.png`、`tmp/character-guest.png`、`tmp/character-guest-equip.png`、`tmp/character-guest-resource.png`、`tmp/character-gems.png`、`tmp/character-synth.png`。后端未改动。

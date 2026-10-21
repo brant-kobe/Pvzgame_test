@@ -129,6 +129,23 @@
     return part.sockets[slotIndex];
   }
 
+  function getBag() {
+    var order = {}, rows = [];
+    (C.equipment.slots || []).forEach(function (slot, index) { order[slot.id] = index; });
+    getAll().forEach(function (gem) {
+      if (gem.slotIndex !== null) return;
+      rows.push(decorate(gem));
+    });
+    rows.sort(function (a, b) {
+      if (a.quality !== b.quality) return b.quality - a.quality;
+      var left = order[a.partId] === undefined ? 99 : order[a.partId];
+      var right = order[b.partId] === undefined ? 99 : order[b.partId];
+      if (left !== right) return left - right;
+      return a.id - b.id;
+    });
+    return rows;
+  }
+
   function getSynthesisPlan() {
     var plan = [], parts = C.equipment.slots || [];
     parts.forEach(function (part) {
@@ -230,6 +247,7 @@
     getAll: getAll,
     getPart: getPart,
     getSocket: getSocket,
+    getBag: getBag,
     getTotals: getTotals,
     getSynthesisPlan: getSynthesisPlan,
     getSynthesisSummary: getSynthesisSummary,

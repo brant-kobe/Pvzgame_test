@@ -168,7 +168,7 @@
         start: { x: 98, y: 250, w: 164, h: 46 },
         levelSelect: { x: 98, y: 306, w: 164, h: 42 },
         testArena: { x: 98, y: 362, w: 164, h: 42 },
-        attributes: { x: 34, y: 480, w: 92, h: 44 },
+        character: { x: 34, y: 480, w: 92, h: 44 },
         skillCodex: { x: 132, y: 480, w: 92, h: 44 },
         zombieCodex: { x: 230, y: 480, w: 92, h: 44 }
       }
@@ -196,10 +196,32 @@
       elementTitleY: 326,
       elementX: [56, 160, 264], elementY: [360, 392], elementOrder: ["physical", "fire", "ice", "electric", "wind", "energy"],
       noteY: 444,
-      equipment: { x: 26, y: 514, w: 74, h: 36 },
-      gems: { x: 104, y: 514, w: 74, h: 36 },
-      wall: { x: 182, y: 514, w: 74, h: 36 },
-      back: { x: 260, y: 514, w: 74, h: 36 }
+      back: { x: 98, y: 514, w: 164, h: 36 }
+    },
+    characterUI: {
+      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
+      back: { x: 28, y: 64, w: 56, h: 26 },
+      badge: { x: 104, y: 68, w: 152, h: 20 },
+      attributes: { x: 268, y: 64, w: 62, h: 26 },
+      titleY: 112, subtitleY: 136,
+      slotGrid: { x: [45, 187], y: [150, 216, 282], size: 62, infoWidth: 62 },
+      actionEquip: { x: 36, y: 346, w: 138, h: 34 },
+      actionWall: { x: 186, y: 346, w: 138, h: 34 },
+      bagTitleY: 396,
+      gemCells: { x: 34, y: 404, size: 44, gap: 4, columns: 6, rows: 2 },
+      equipCells: { x: 106, y: 404, size: 44, gap: 4, columns: 3, rows: 2 },
+      resourceCells: { x: 40, y: 406, size: 44, gap: 4, columns: 6, rows: 2 },
+      bagPager: { prev: { x: 190, y: 380, w: 20, h: 20 }, next: { x: 236, y: 380, w: 20, h: 20 } },
+      bagLock: { offsetX: 30, offsetY: 0, w: 14, h: 14 },
+      bagAction: { x: 262, y: 380, w: 62, h: 20 },
+      statusY: 508,
+      tabs: { x: 36, y: 514, w: 92, h: 36, gap: 6 },
+      gemPanel: { x: 30, y: 96, w: 300, h: 432 },
+      gemPanelTitleY: 152, gemPanelSubtitleY: 172,
+      gemRows: { x: 40, y: 184, w: 280, height: 44, rows: 6 },
+      gemUnsocket: { offsetX: 212, offsetY: 10, w: 62, h: 24 },
+      gemPanelNoteY: 462,
+      gemPanelClose: { x: 118, y: 474, w: 132, h: 34 }
     },
     equipmentUI: {
       panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
@@ -226,22 +248,6 @@
       actionCard: { x: 36, y: 294, w: 288, h: 166 },
       actionButton: { x: 54, y: 410, w: 252, h: 34 },
       noteY: 482,
-      back: { x: 98, y: 514, w: 164, h: 36 }
-    },
-    gemUI: {
-      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
-      titleY: 112, subtitleY: 136,
-      partTabs: { x: 32, y: 152, w: 46, h: 28, gap: 4 },
-      summaryY: 198,
-      sockets: { x: 34, y: 208, w: 92, h: 48, gapX: 4, gapY: 4, columns: 3 },
-      inventoryTitleY: 334,
-      inventory: { x: 34, y: 344, w: 292, h: 84, rowHeight: 28, rows: 3 },
-      inventoryPrev: { x: 252, y: 321, w: 20, h: 18 },
-      inventoryNext: { x: 278, y: 321, w: 20, h: 18 },
-      inventoryLock: { offsetX: 262, offsetY: 4, w: 24, h: 18 },
-      synthesis: { x: 34, y: 430, w: 292, h: 62 },
-      synthesisButton: { x: 44, y: 452, w: 272, h: 32 },
-      noteY: 506,
       back: { x: 98, y: 514, w: 164, h: 36 }
     },
     gemSynthesisUI: {

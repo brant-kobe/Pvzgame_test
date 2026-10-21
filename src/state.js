@@ -2,7 +2,7 @@
 (function (Game) {
   "use strict";
   var C = Game.config;
-  Game.state = { screen: "menu", selectedLevel: 1, accountMode: "login", player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null, gemPart: "arm", gemPage: 0, gemSynthesisOpen: false, gemSynthesisPage: 0, gemSynthesisFocus: 0, equipmentBagPart: "arm" };
+  Game.state = { screen: "menu", selectedLevel: 1, accountMode: "login", player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null, characterPart: "arm", characterTab: "gem", characterGemPage: 0, characterGems: null, gemSynthesisOpen: false, gemSynthesisPage: 0, gemSynthesisFocus: 0, equipmentBagPart: "arm" };
   Game.reset = function () {
     var s = Game.state;
     var level = C.levels.find(function (item) { return item.id === s.selectedLevel; });
@@ -18,7 +18,8 @@
     });
     s.player = { x: C.width / 2, y: C.height - 58, aimAngle: -Math.PI / 2, manualAimTimer: 0, maxHp: 100, hp: 100, damage: 28, fireInterval: .52, fireTimer: .05, magazineSize: C.magazineCapacity, ammo: C.magazineCapacity, reloadDuration: C.reloadDuration, reloadTimer: 0, rifleEnabled: true, burst: 0, burstShotsRemaining: 0, burstTimer: 0, burstAngle: -Math.PI / 2, spread: 0, pierce: 0, bulletRadius: 4, crit: C.attributes.base.critRate, critDamage: C.attributes.base.critDamage, burn: 0, freeze: 0, bulletType: "normal", skills: skills, skillOrder: [], level: 1, xp: 0, nextXp: C.xpBase, traits: {} };
     s.bullets = []; s.skillProjectiles = []; s.armoredCars = []; s.bombDrops = []; s.bombZones = []; s.electromagneticZones = []; s.tornadoes = []; s.drones = []; s.hailStorms = []; s.fuelShells = []; s.fuelPools = []; s.enemyShots = []; s.explosions = []; s.enemies = []; s.pendingSpawns = []; s.particles = []; s.texts = []; s.upgradeCards = []; s.skillRangePreview = null; s.levelPreview = null;
-    s.gemPage = 0; s.gemSynthesisOpen = false; s.gemSynthesisPage = 0; s.gemSynthesisFocus = 0; s.equipmentBagPart = "arm";
+    s.characterPart = "arm"; s.characterTab = "gem"; s.characterGemPage = 0; s.characterGems = null;
+    s.gemSynthesisOpen = false; s.gemSynthesisPage = 0; s.gemSynthesisFocus = 0; s.equipmentBagPart = "arm";
     s.wall = { x: C.width / 2, y: C.height - 125, width: C.width - 30, height: 30, maxHp: C.wallMaxHp, hp: C.wallMaxHp };
     if (Game.attributes) { Game.attributes.applyPlayer(s.player); Game.attributes.applyWall(s.wall); }
     s.session = { level: s.selectedLevel, waves: waves, xpScale: (level && level.xpScale) || 1, hpScale: (level && level.hpScale) || 1, elapsed: 0, wave: 1, spawnCount: 0, spawnTimer: .25, eliteSpawned: false, bossSpawned: false, kills: 0, message: "", messageTimer: 0, reward: null };
@@ -38,7 +39,27 @@
   Game.closeLevelPreview = function () { Game.state.levelPreview = null; };
   Game.openZombieCodex = function () { Game.state.zombieCodexCategory = "minion"; Game.state.selectedZombieCodexId = null; Game.state.codexPage = 0; Game.state.screen = "zombieCodex"; };
   Game.openSkillCodex = function () { Game.state.selectedSkillCodexId = null; Game.state.codexPage = 0; Game.state.screen = "skillCodex"; };
-  Game.openAttributes = function () { Game.state.screen = "attributes"; };
+  Game.openAttributes = function () { Game.state.characterGems = null; Game.state.screen = "attributes"; };
+  Game.openCharacter = function () {
+    Game.accounts.state.gemError = "";
+    Game.accounts.state.gemNotice = "";
+    Game.state.characterGems = null;
+    Game.state.screen = "character";
+  };
+  Game.selectCharacterPart = function (partId) {
+    var valid = (C.equipment.slots || []).some(function (slot) { return slot.id === partId; });
+    if (!valid) partId = (C.equipment.slots && C.equipment.slots[0] ? C.equipment.slots[0].id : "arm");
+    Game.state.characterPart = partId;
+  };
+  Game.setCharacterTab = function (tab) {
+    Game.state.characterTab = tab === "equipment" || tab === "resource" ? tab : "gem";
+    Game.state.gemSynthesisOpen = false;
+  };
+  Game.openCharacterGems = function (partId) {
+    Game.selectCharacterPart(partId);
+    Game.state.characterGems = Game.state.characterPart;
+  };
+  Game.closeCharacterGems = function () { Game.state.characterGems = null; };
   Game.openEquipment = function () {
     Game.accounts.state.equipmentError = "";
     Game.accounts.state.equipmentNotice = "";
@@ -65,22 +86,11 @@
     Game.accounts.state.wallNotice = "";
     Game.state.screen = "wall";
   };
-  Game.selectGemPart = function (partId) {
-    var valid = (C.equipment.slots || []).some(function (slot) { return slot.id === partId; });
-    if (!valid) partId = (C.equipment.slots && C.equipment.slots[0] ? C.equipment.slots[0].id : "arm");
-    Game.state.gemPart = partId;
-    Game.state.gemPage = 0;
+  Game.backToCharacter = function () {
+    Game.state.characterGems = null;
     Game.state.gemSynthesisOpen = false;
-    Game.state.gemSynthesisPage = 0;
-    Game.state.gemSynthesisFocus = 0;
+    Game.state.screen = "character";
   };
-  Game.openGems = function (partId) {
-    Game.accounts.state.gemError = "";
-    Game.accounts.state.gemNotice = "";
-    Game.selectGemPart(partId || Game.state.gemPart);
-    Game.state.screen = "gems";
-  };
-  Game.backToAttributes = function () { Game.state.screen = "attributes"; };
   Game.backToMenu = function () { Game.state.levelPreview = null; Game.state.screen = "menu"; };
   Game.getTestEnemyIds = function () { return Object.keys(C.enemies); };
   Game.startTestArena = function () {
@@ -206,16 +216,21 @@
     if (Game.state.screen !== "wall") return Promise.resolve({ ok: false });
     return Game.accounts.upgradeWall(action);
   };
-  Game.getGemPageCount = function (partId) {
+  Game.getCharacterGemRows = function () {
+    var all = Game.gems ? Game.gems.getBag() : [], geo = C.characterUI.gemCells;
+    var perPage = geo.columns * geo.rows, pages = Math.max(1, Math.ceil(all.length / perPage)), page = Game.getCharacterGemPage();
+    return { items: all.slice(page * perPage, page * perPage + perPage), total: all.length, pages: pages, page: page };
+  };
+  Game.getCharacterGemPageCount = function () {
     if (!Game.gems) return 1;
-    var count = Game.gems.getPart(partId || Game.state.gemPart).inventory.length;
-    return Math.max(1, Math.ceil(count / C.gemUI.inventory.rows));
+    var geo = C.characterUI.gemCells;
+    return Math.max(1, Math.ceil(Game.gems.getBag().length / (geo.columns * geo.rows)));
   };
-  Game.getGemPage = function (partId) {
-    return Math.max(0, Math.min(Game.state.gemPage, Game.getGemPageCount(partId) - 1));
+  Game.getCharacterGemPage = function () {
+    return Math.max(0, Math.min(Game.state.characterGemPage, Game.getCharacterGemPageCount() - 1));
   };
-  Game.setGemPage = function (delta) {
-    Game.state.gemPage = Math.max(0, Math.min(Game.state.gemPage + delta, Game.getGemPageCount(Game.state.gemPart) - 1));
+  Game.setCharacterGemPage = function (delta) {
+    Game.state.characterGemPage = Math.max(0, Math.min(Game.state.characterGemPage + delta, Game.getCharacterGemPageCount() - 1));
   };
   Game.getGemSynthesisPlan = function () {
     return Game.gems ? Game.gems.getSynthesisPlan() : [];
@@ -233,7 +248,7 @@
     Game.state.gemSynthesisPage = Math.max(0, Math.min(Game.state.gemSynthesisPage + delta, Game.getGemSynthesisPageCount() - 1));
   };
   Game.openGemSynthesis = function () {
-    if (Game.state.screen !== "gems") return false;
+    if (Game.state.screen !== "character") return false;
     var plan = Game.getGemSynthesisPlan();
     Game.state.gemSynthesisOpen = true;
     Game.state.gemSynthesisPage = 0;
@@ -253,7 +268,7 @@
     return true;
   };
   Game.toggleGemLock = function (gemId) {
-    if (Game.state.screen !== "gems") return Promise.resolve({ ok: false });
+    if (Game.state.screen !== "character") return Promise.resolve({ ok: false });
     var found = Game.gems ? Game.gems.findGem(gemId) : null;
     if (!found) return Promise.resolve({ ok: false });
     return Game.accounts.toggleGemLock(gemId, !found.locked).then(function (result) {
@@ -268,22 +283,22 @@
     });
   };
   Game.synthesizeAllGems = function () {
-    if (Game.state.screen !== "gems") return Promise.resolve({ ok: false });
+    if (Game.state.screen !== "character") return Promise.resolve({ ok: false });
     return Game.accounts.synthesizeAllGems().then(function (result) {
       if (result && result.ok) Game.closeGemSynthesis();
       return result;
     });
   };
   Game.socketGem = function (gemId) {
-    if (Game.state.screen !== "gems") return Promise.resolve({ ok: false });
+    if (Game.state.screen !== "character") return Promise.resolve({ ok: false });
     return Game.accounts.socketGem(gemId);
   };
   Game.unsocketGem = function (gemId) {
-    if (Game.state.screen !== "gems") return Promise.resolve({ ok: false });
+    if (Game.state.screen !== "character") return Promise.resolve({ ok: false });
     return Game.accounts.unsocketGem(gemId);
   };
   Game.synthesizeGems = function (partId, quality) {
-    if (Game.state.screen !== "gems") return Promise.resolve({ ok: false });
+    if (Game.state.screen !== "character") return Promise.resolve({ ok: false });
     return Game.accounts.synthesizeGems(partId, quality);
   };
   Game.isLevelUnlocked = function (levelId) {
@@ -325,25 +340,51 @@
     var rect = C.wallUI.actionButton;
     return { x: rect.x, y: rect.y, w: rect.w, h: rect.h };
   };
-  Game.getGemPartTabRect = function (index) {
-    var geo = C.gemUI.partTabs;
+  Game.getCharacterSlotRect = function (index) {
+    var grid = C.characterUI.slotGrid, column = index % 2, row = Math.floor(index / 2);
+    return { x: grid.x[column], y: grid.y[row], w: grid.size, h: grid.size };
+  };
+  Game.getCharacterSlotInfoRect = function (index) {
+    var grid = C.characterUI.slotGrid, rect = Game.getCharacterSlotRect(index);
+    return { x: rect.x + grid.size + 6, y: rect.y + 2, w: grid.infoWidth - 6, h: grid.size - 4 };
+  };
+  Game.getCharacterActionRect = function (key) { return key === "wall" ? C.characterUI.actionWall : C.characterUI.actionEquip; };
+  Game.getCharacterHeaderRect = function (key) { return key === "attributes" ? C.characterUI.attributes : C.characterUI.back; };
+  Game.getCharacterTabRect = function (index) {
+    var geo = C.characterUI.tabs;
     return { x: geo.x + index * (geo.w + geo.gap), y: geo.y, w: geo.w, h: geo.h };
   };
-  Game.getGemSocketRect = function (index) {
-    var geo = C.gemUI.sockets, column = index % geo.columns, row = Math.floor(index / geo.columns);
-    return { x: geo.x + column * (geo.w + geo.gapX), y: geo.y + row * (geo.h + geo.gapY), w: geo.w, h: geo.h };
+  Game.getCharacterGemCellRect = function (index) {
+    var geo = C.characterUI.gemCells, column = index % geo.columns, row = Math.floor(index / geo.columns);
+    return { x: geo.x + column * (geo.size + geo.gap), y: geo.y + row * (geo.size + geo.gap), w: geo.size, h: geo.size };
   };
-  Game.getGemInventoryRowRect = function (index) {
-    var geo = C.gemUI.inventory;
-    return { x: geo.x, y: geo.y + index * geo.rowHeight, w: geo.w, h: geo.rowHeight };
+  Game.getCharacterEquipCellRect = function (index) {
+    var geo = C.characterUI.equipCells, column = index % geo.columns, row = Math.floor(index / geo.columns);
+    return { x: geo.x + column * (geo.size + geo.gap), y: geo.y + row * (geo.size + geo.gap), w: geo.size, h: geo.size };
   };
-  Game.getGemInventoryPrevRect = function () { return C.gemUI.inventoryPrev; };
-  Game.getGemInventoryNextRect = function () { return C.gemUI.inventoryNext; };
-  Game.getGemInventoryLockRect = function (index) {
-    var geo = C.gemUI.inventoryLock, row = Game.getGemInventoryRowRect(index);
+  Game.getCharacterResources = function () {
+    return Game.accounts.getResourceList().filter(function (item) { return (item.amount || 0) > 0; });
+  };
+  Game.getCharacterResourceCellRect = function (index) {
+    var geo = C.characterUI.resourceCells, column = index % geo.columns, row = Math.floor(index / geo.columns);
+    return { x: geo.x + column * (geo.size + geo.gap), y: geo.y + row * (geo.size + geo.gap), w: geo.size, h: geo.size };
+  };
+  Game.getCharacterGemLockRect = function (index) {
+    var geo = C.characterUI.bagLock, cell = Game.getCharacterGemCellRect(index);
+    return { x: cell.x + geo.offsetX, y: cell.y + geo.offsetY, w: geo.w, h: geo.h };
+  };
+  Game.getCharacterGemPagerRect = function (key) { return C.characterUI.bagPager[key === "next" ? "next" : "prev"]; };
+  Game.getCharacterBagActionRect = function () { return C.characterUI.bagAction; };
+  Game.getCharacterGemPanel = function () { return C.characterUI.gemPanel; };
+  Game.getCharacterGemSlotRowRect = function (index) {
+    var geo = C.characterUI.gemRows;
+    return { x: geo.x, y: geo.y + index * geo.height, w: geo.w, h: geo.height - 4 };
+  };
+  Game.getCharacterGemUnsocketRect = function (index) {
+    var geo = C.characterUI.gemUnsocket, row = Game.getCharacterGemSlotRowRect(index);
     return { x: row.x + geo.offsetX, y: row.y + geo.offsetY, w: geo.w, h: geo.h };
   };
-  Game.getGemSynthesisButtonRect = function () { return C.gemUI.synthesisButton; };
+  Game.getCharacterGemCloseRect = function () { return C.characterUI.gemPanelClose; };
   Game.getGemSynthesisRowRect = function (index) {
     var geo = C.gemSynthesisUI;
     return { x: geo.listX, y: geo.listY + index * geo.rowHeight, w: geo.listWidth, h: geo.rowHeight - 4 };

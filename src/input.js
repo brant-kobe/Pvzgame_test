@@ -265,21 +265,18 @@
       else if (pointInRect(point, menuButtons.start)) Game.start(Game.getContinueLevel());
       else if (pointInRect(point, menuButtons.levelSelect)) Game.openLevelSelect();
       else if (pointInRect(point, menuButtons.testArena)) Game.startTestArena();
-      else if (pointInRect(point, menuButtons.attributes)) Game.openAttributes();
+      else if (pointInRect(point, menuButtons.character)) Game.openCharacter();
       else if (pointInRect(point, menuButtons.skillCodex)) Game.openSkillCodex();
       else if (pointInRect(point, menuButtons.zombieCodex)) Game.openZombieCodex();
       return;
     }
     if (S.screen === "attributes") {
-      if (pointInRect(point, C.attributesUI.equipment)) Game.openEquipment();
-      else if (pointInRect(point, C.attributesUI.gems)) Game.openGems();
-      else if (pointInRect(point, C.attributesUI.wall)) Game.openWall();
-      else if (pointInRect(point, C.attributesUI.back)) Game.backToMenu();
+      if (pointInRect(point, C.attributesUI.back)) Game.backToCharacter();
       return;
     }
     if (S.screen === "equipment") {
       if (pointInRect(point, C.equipmentUI.bag)) { Game.openEquipmentBag(); return; }
-      if (pointInRect(point, C.equipmentUI.back)) { Game.backToAttributes(); return; }
+      if (pointInRect(point, C.equipmentUI.back)) { Game.backToCharacter(); return; }
       if (Game.accounts.getStatus() === "ready") {
         for (var ei = 0; ei < C.equipment.slots.length; ei++) {
           if (pointInRect(point, Game.getEquipmentUpgradeRect(ei))) { Game.upgradeEquipment(C.equipment.slots[ei].id); return; }
@@ -304,7 +301,7 @@
       return;
     }
     if (S.screen === "wall") {
-      if (pointInRect(point, C.wallUI.back)) { Game.backToAttributes(); return; }
+      if (pointInRect(point, C.wallUI.back)) { Game.backToCharacter(); return; }
       if (Game.accounts.getStatus() === "ready") {
         var wallView = Game.wall.getView();
         if ((wallView.canLevel || wallView.canBreakthrough) && pointInRect(point, Game.getWallActionButtonRect())) {
@@ -314,7 +311,7 @@
       }
       return;
     }
-    if (S.screen === "gems") {
+    if (S.screen === "character") {
       if (S.gemSynthesisOpen) {
         if (pointInRect(point, Game.getGemSynthesisCancelRect())) { Game.closeGemSynthesis(); return; }
         if (pointInRect(point, Game.getGemSynthesisPrevRect())) { Game.setGemSynthesisPage(-1); return; }
@@ -336,41 +333,58 @@
         }
         return;
       }
-      if (pointInRect(point, C.gemUI.back)) { Game.backToAttributes(); return; }
-      if (Game.accounts.getStatus() !== "ready" || Game.accounts.state.gemBusy) return;
-      var gemPart = Game.gems.getPart(S.gemPart), gemPage = Game.getGemPage(S.gemPart), gemIndex;
-      for (gemIndex = 0; gemIndex < C.equipment.slots.length; gemIndex++) {
-        if (pointInRect(point, Game.getGemPartTabRect(gemIndex))) {
-          Game.selectGemPart(C.equipment.slots[gemIndex].id);
+      if (S.characterGems) {
+        var gemPanel = Game.getCharacterGemPanel(), gemPart = Game.gems.getPart(S.characterGems), gemSlot;
+        if (pointInRect(point, Game.getCharacterGemCloseRect())) { Game.closeCharacterGems(); return; }
+        if (point.x < gemPanel.x || point.x > gemPanel.x + gemPanel.w || point.y < gemPanel.y || point.y > gemPanel.y + gemPanel.h) { Game.closeCharacterGems(); return; }
+        if (Game.accounts.getStatus() === "ready" && !Game.accounts.state.gemBusy) {
+          for (gemSlot = 0; gemSlot < C.gems.socketsPerPart; gemSlot++) {
+            if (gemPart.sockets[gemSlot] && pointInRect(point, Game.getCharacterGemUnsocketRect(gemSlot))) {
+              Game.unsocketGem(gemPart.sockets[gemSlot].id);
+              return;
+            }
+          }
+        }
+        return;
+      }
+      if (pointInRect(point, Game.getCharacterHeaderRect("back"))) { Game.backToMenu(); return; }
+      if (pointInRect(point, Game.getCharacterHeaderRect("attributes"))) { Game.openAttributes(); return; }
+      for (var characterSlot = 0; characterSlot < C.equipment.slots.length; characterSlot++) {
+        if (pointInRect(point, Game.getCharacterSlotRect(characterSlot))) {
+          Game.openCharacterGems(C.equipment.slots[characterSlot].id);
           return;
         }
       }
-      if (pointInRect(point, Game.getGemInventoryPrevRect())) { Game.setGemPage(-1); return; }
-      if (pointInRect(point, Game.getGemInventoryNextRect())) { Game.setGemPage(1); return; }
-      var pageRows = C.gemUI.inventory.rows, pageStart = gemPage * pageRows;
-      for (gemIndex = 0; gemIndex < pageRows; gemIndex++) {
-        var lockGem = gemPart.inventory[pageStart + gemIndex];
-        if (lockGem && pointInRect(point, Game.getGemInventoryLockRect(gemIndex))) {
+      if (pointInRect(point, Game.getCharacterActionRect("equip"))) { Game.openEquipment(); return; }
+      if (pointInRect(point, Game.getCharacterActionRect("wall"))) { Game.openWall(); return; }
+      for (var characterTabIndex = 0; characterTabIndex < 3; characterTabIndex++) {
+        if (pointInRect(point, Game.getCharacterTabRect(characterTabIndex))) {
+          Game.setCharacterTab(["gem", "equipment", "resource"][characterTabIndex]);
+          return;
+        }
+      }
+      if (S.characterTab !== "gem") return;
+      if (pointInRect(point, Game.getCharacterGemPagerRect("prev"))) { Game.setCharacterGemPage(-1); return; }
+      if (pointInRect(point, Game.getCharacterGemPagerRect("next"))) { Game.setCharacterGemPage(1); return; }
+      if (pointInRect(point, Game.getCharacterBagActionRect())) {
+        if (Game.accounts.getStatus() === "ready" && !Game.accounts.state.gemBusy && Game.getGemSynthesisPlan().length) Game.openGemSynthesis();
+        return;
+      }
+      if (Game.accounts.getStatus() !== "ready" || Game.accounts.state.gemBusy) return;
+      var characterGems = Game.getCharacterGemRows(), gemCellCount = C.characterUI.gemCells.columns * C.characterUI.gemCells.rows, gemCell;
+      for (gemCell = 0; gemCell < gemCellCount; gemCell++) {
+        var lockGem = characterGems.items[gemCell];
+        if (lockGem && pointInRect(point, Game.getCharacterGemLockRect(gemCell))) {
           Game.toggleGemLock(lockGem.id);
           return;
         }
       }
-      for (gemIndex = 0; gemIndex < gemPart.sockets.length; gemIndex++) {
-        if (gemPart.sockets[gemIndex] && pointInRect(point, Game.getGemSocketRect(gemIndex))) {
-          Game.unsocketGem(gemPart.sockets[gemIndex].id);
+      for (gemCell = 0; gemCell < gemCellCount; gemCell++) {
+        var socketGem = characterGems.items[gemCell];
+        if (socketGem && pointInRect(point, Game.getCharacterGemCellRect(gemCell))) {
+          Game.socketGem(socketGem.id);
           return;
         }
-      }
-      for (gemIndex = 0; gemIndex < pageRows; gemIndex++) {
-        var gem = gemPart.inventory[pageStart + gemIndex];
-        if (gem && gemPart.canSocket && pointInRect(point, Game.getGemInventoryRowRect(gemIndex))) {
-          Game.socketGem(gem.id);
-          return;
-        }
-      }
-      if (pointInRect(point, Game.getGemSynthesisButtonRect())) {
-        Game.openGemSynthesis();
-        return;
       }
       return;
     }

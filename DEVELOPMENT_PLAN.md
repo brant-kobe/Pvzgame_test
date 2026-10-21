@@ -392,6 +392,7 @@
 - 账户界面（已实施）：首页菜单底部的「账户：未登录 / 用户名」按钮进入，内容为用户名与注册时间、通关进度与每关最佳用时 / 击杀、资源占位区，以及「导入本机旧进度」「注销登录」「删除账户」（删除需再输密码）。
 - 登录界面（已实施）：在 Canvas 上绘制的登录 / 注册切换界面，表单值由 `#account-dialog` 输入浮层承载（用户名 + `type="password"` 密码框），风格与测试场 DOM 面板一致，不引入前端框架。
 - 顶部账户横幅（已实施）：**只在菜单、关卡选择与结算界面显示**，战斗中不画以免遮挡战场；未连接数据库时提示「未连接数据库 · 本局进度不会保存」，未登录时提示「未登录 · 进度不会保存」。结算界面另有一行状态：已登录显示「成绩已保存到账户 · 用户名」，否则显示「成绩未保存 · 未登录 / 未连接数据库」。
+- 角色界面（已实施，详见第 18 节）：首页底部左侧入口；上半部分 2 列 × 3 行正方形装备格（格内画装备图标、部位名、元素圆点与 `Lv.N`），点击方块弹出该部位六行宝石浮层（词条 + 卸下）；中部「装备强化 / 城墙强化」两个入口；下半部分背包，最下方「宝石 / 装备 / 资源」三个页签，宝石页签带分页与「一键合成」。右上角「属性」进入只读属性面板（底部只有「返回角色」），独立的宝石界面已并入角色界面。
 
 ## 10. 验收标准
 
@@ -822,6 +823,7 @@ git diff --check
 - `Game.openEquipment` / `Game.backToAttributes` / `Game.upgradeEquipment` 是界面切换与升级入口；卡片、按钮、返回按钮几何由 `Game.getEquipmentCardRect` / `Game.getEquipmentUpgradeRect` / `config.equipmentUI` 统一给出。
 - 属性面板底部为「装备 / 宝石 / 城墙 / 返回」四按钮；装备界面为 2 列 × 3 行、140×106 卡片，显示部位、`Lv.N / 100`、攻击、元素、金币与图纸消耗、强化按钮；底部改为「装备背包 / 返回属性」双按钮，状态行显示成功 / 错误或「关卡奖励产出」。`drawHud` 在装备界面跳过。
 - 新增装备背包界面（`config.equipmentBagUI`）：六部位页签、摘要（部位等级 / 当前元素 / 背包件数）与六个固定元素行（名称、`×N`、已装备标记或「装备」按钮）；换装成功后在页面内提示并立即刷新属性。入口只有「属性 → 装备 → 装备背包」，战斗中不能换装。
+- 第 18 节起：属性面板改为只读页（底部只有「返回角色」），装备与城墙入口统一收进角色界面，装备界面底部按钮文案改为「装备背包 / 返回角色」。
 - 账户中心资源区最终为 4 列 × 3 行网格，展示金币、钻石、零件、六种图纸、钢材与稀土（城墙系统加入后从 3×3 扩展为 4×3）。
 
 ### 14.4 验证（装备阶段）
@@ -948,6 +950,7 @@ git diff --check
 - 背包行显示品质名、词条文本、「镶嵌 ›」与右侧锁按钮；锁定时行首显示 🔒、按钮变为高亮锁图标；点击行放入该部位第一个空槽，6 格已满时置灰。
 - 「一键合成」按钮显示当前全部可合成组数与锁定数量；点击后弹出确认窗口，按「部位 × 品质」分页列出每组 5 颗宝石与产物品质，点击任意宝石在下方预览其词条；底部「确定」一次合成全部组，「取消」直接关闭且不发请求。
 - 未登录 / 离线显示登录提示并禁用操作；busy 显示处理中并阻止重复点击；合成中弹窗保留并显示「合成中…」。
+- 第 18 节起上述独立宝石界面已移除：宝石镶嵌 / 卸下 / 锁定 / 一键合成全部并入角色界面（装备方块弹出六槽位浮层 + 背包「宝石」页签），合成确认弹窗（`config.gemSynthesisUI` 与 `Game.drawGemSynthesis`）保留复用。
 
 ### 16.6 验证
 
@@ -1020,3 +1023,79 @@ git diff --check
 - 未登录 / 离线时结算页提示奖励不会保存且不产生请求；测试场不结算。
 - 背包里的装备按部位 × 元素聚合显示数量，换装只交换元素、强化等级不变，重复件全部保留；换装后装备卡与属性面板同步。
 - 服务端事务失败不会留下半套奖励；`equipment` 的 `level` 只在强化接口里变化。
+
+## 18. 角色界面（角色大厅 · 已实现）
+
+### 18.1 定位与导航
+
+角色界面把原本散在「属性面板」里的装备、宝石、城墙入口与背包收进一屏，成为**角色养成内容的唯一入口**；属性面板退回只读数值页。
+
+```
+menu ──「角色」──> character ──「属性」──> attributes（只读）──「返回角色」──> character
+                     ├─「装备强化」──> equipment ──「装备背包」──> equipmentBag
+                     │                    └─「返回角色」──> character
+                     ├─「城墙强化」──> wall ──「返回角色」──> character
+                     ├─ 装备方块 ──> 宝石浮层（S.characterGems）
+                     └─ 背包页签 宝石 / 装备 / 资源；宝石页签「一键合成」──> 合成确认浮层（S.gemSynthesisOpen）
+```
+
+- 首页底部左侧按钮由「属性面板」改为「角色」（`config.menu.buttons.character`，文案「角色」），`Game.openCharacter()` 进入 `character`；`Game.backToMenu()` 回首页。
+- 属性面板保留，但从角色界面右上角「属性」进入；`config.attributesUI` 只保留 `panelX/panelY/panelWidth/panelHeight/titleY/subtitleY/back`，底部只剩「返回角色」，`Game.backToCharacter()` 回角色界面。
+- **独立宝石界面移除**：`config.gemUI`、`Game.openGems` / `selectGemPart` / `drawGemsPanel` / `getGemPartTabRect` / `getGemSocketRect` / `getGemInventory*` / `getGemSynthesisButtonRect` 与 `S.gemPart` / `S.gemPage` 全部删除；宝石操作的守卫从 `screen === "gems"` 改为 `"character"`。合成确认浮层（`config.gemSynthesisUI` / `Game.drawGemSynthesis` / `S.gemSynthesisOpen`）保留并复用。
+
+### 18.2 界面结构（`config.characterUI`）
+
+| 区域 | 几何 | 内容 |
+| --- | --- | --- |
+| 面板 | `panelX/Y 22/56`、`316 × 512` | 与其它子界面一致 |
+| 顶栏 | `back {28,64,56,26}`、`badge {104,68,152,20}`、`attributes {268,64,62,26}` | 「‹ 首页」/ `CHARACTER · LOADOUT` / 「属性」 |
+| 标题 | `titleY 112`、`subtitleY 136` | 「角色」+ 状态副标题（错误 / 提示，或「六件装备 · 点击方块查看宝石槽位」） |
+| 装备格 | `slotGrid { x:[45,187], y:[150,216,282], size:62, infoWidth:62 }` | 2 列 × 3 行正方形；格内图标 + 部位名 + 元素圆点 + `Lv.N`，右侧信息列元素系 / 攻击 / 元素加成 |
+| 强化入口 | `actionEquip {36,346,138,34}`、`actionWall {186,346,138,34}` | 主标「装备强化 / 城墙强化」，副行 `金币 N` / `Lv.N · 钢材 N` |
+| 背包标题 | `bagTitleY 396` | 「背包 · 宝石 / 装备 / 资源」 |
+| 宝石页签 | `gemCells {34,404,size 44,gap 4,columns 6,rows 2}`、`bagPager`、`bagLock {offsetX 30,w 14,h 14}`、`bagAction {262,380,62,20}` | 12 格/页的宝石方格（三角 + 词条名 + 数值 + 部位短名 + 锁按钮）+ 分页 + 「一键合成」 |
+| 装备页签 | `equipCells {106,404,size 44,gap 4,columns 3,rows 2}` | 六部位方格（部位短名 / 元素圆点 / 图标 / `Lv.N` / 背包件数） |
+| 资源页签 | `resourceCells {40,406,size 44,gap 4,columns 6,rows 2}` | 数量非零的资源方格（图标居中 + 右下角数量，零值不显示），容量 12 |
+| 状态行 | `statusY 508` | 错误（红）/ 成功（绿）/ 提示（灰） |
+| 页签 | `tabs {36,514,92,36,gap 6}` | 宝石 / 装备 / 资源 |
+| 宝石浮层 | `gemPanel {30,96,300,432}`、`gemRows {40,184,280,44×6}`、`gemUnsocket {offsetX 212}`、`gemPanelClose {118,474,132,34}` | 六行固定（空槽占行）+ 说明 + 关闭 |
+
+- **装备图标**：`drawEquipmentGlyph(kind, cx, cy, size, color)` 用纯 Canvas 路径画六个部位（护臂 + 两条皮扣、背心、头盔、长裤、靴子、手套），颜色取装备元素色，未登录 / 未获取用灰阶；只在 `render.js` 内使用，不影响数据层。
+- **宝石/装备/资源方格**：三个背包页签统一用方格展示，几何分别由 `config.characterUI.gemCells`（6 列 × 2 行，12 格/页）、`equipCells`（3 列 × 2 行）与 `resourceCells`（6 列 × 2 行）给出，矩形一律由 `Game.getCharacterGemCellRect` / `getCharacterEquipCellRect` / `getCharacterResourceCellRect` 计算；宝石方格的锁按钮由 `bagLock` 偏移到格子右上角（14 × 14）。
+- **宝石图标**：`drawGemIcon(cx, cy, size, color)` 画**按品质着色的三角形**（顶面高光 + 左亮右暗两片切面 + 一道棱线），颜色来自 `config.gems.qualities`，镶嵌浮层、背包方格与「一键合成」确认窗口共用同一份绘制。
+- **资源图标**：`drawResourceIcon(id, cx, cy, size, color)` 按资源 id 分流 —— 金币画带内圈的硬币、钻石画菱形、零件画六齿齿轮、钢材复用 `drawSteelIcon`（金属锭）、稀土复用 `drawRareEarthIcon`（金色圆锥）、六种图纸画同款卷纸（右上折角 + 三条横线）并用部位色区分。资源页签用 6 列 × 2 行的 44 × 44 方格（`config.characterUI.resourceCells`），图标居中、数量写在格内右下角；**数量为 0 的资源不绘制**（`Game.getCharacterResources()` 过滤），全为 0 时只显示「暂无资源 · 关卡奖励会产出资源」，超过 12 项时状态行改提示「共 N 项 · 仅显示前 12 项」。
+- **宝石浮层**：六行从上往下固定排列，已镶嵌行显示品质名、词条、🔒（锁定时）与「卸下」；空槽行显示「＋ 空槽 N」与「在下方宝石背包点击宝石即可镶嵌」；副标题显示 `Lv.N · 元素系 · N / 6`；底部说明与「关闭」。
+- **交互优先级**（`input.js`）：合成确认浮层 > 宝石浮层 > 常规（返回 / 属性 / 装备格 / 强化入口 / 页签 / 分页 / 一键合成 / 锁 / 镶嵌），浮层打开时其余点击一律吞掉。
+
+### 18.3 数据入口
+
+- `src/gems.js` 新增 `getBag()`：过滤 `slotIndex === null` 的宝石并按「品质降序 → 部位顺序 → id」排序，供宝石页签跨部位展示。
+- `src/equipment.js` 新增 `getBagOverview()`：六部位各一行（等级、元素、背包元素计数），只做展示聚合，不参与属性。
+- 资源页签读 `Game.getCharacterResources()`（= `Game.accounts.getResourceList()` 过滤掉数量为 0 的项）；装备格读 `Game.equipment.getSlots()`。
+- 镶嵌 / 卸下 / 锁定 / 一键合成全部复用既有账户层接口（`Game.accounts.socketGem` / `unsocketGem` / `toggleGemLock` / `synthesizeAllGems`），不新增请求路径。
+
+### 18.4 状态与几何接口
+
+- 新增状态：`S.characterPart`（选中部位，默认 `arm`）、`S.characterTab`（`gem` / `equipment` / `resource`，默认 `gem`）、`S.characterGemPage`、`S.characterGems`（浮层部位 id 或 `null`），均由 `Game.reset` 重置。
+- 新增状态函数：`openCharacter` / `selectCharacterPart` / `setCharacterTab` / `openCharacterGems` / `closeCharacterGems` / `backToCharacter` / `getCharacterGemRows` / `getCharacterGemPageCount` / `getCharacterGemPage` / `setCharacterGemPage`。
+- 新增几何 getter（render 与 input 共用）：`getCharacterSlotRect` / `getCharacterSlotInfoRect` / `getCharacterActionRect` / `getCharacterHeaderRect` / `getCharacterTabRect` / `getCharacterBagRowRect` / `getCharacterBagLineRect` / `getCharacterResourceCellRect` / `getCharacterGemLockRect` / `getCharacterGemPagerRect` / `getCharacterBagActionRect` / `getCharacterGemPanel` / `getCharacterGemSlotRowRect` / `getCharacterGemUnsocketRect` / `getCharacterGemCloseRect`。
+- `drawHud` 的跳过列表用 `character` 替换 `gems`；`Game.draw` 用 `if (S.screen === "character") Game.drawCharacter();`。
+
+### 18.5 验证
+
+- 新增 `tmp/check-character.js` **193 项**：配置与接口、几何（正方形 2×3、资源方格正方形且不重叠、各区夹在面板 / 浮层内）、导航（角色 ↔ 属性 ↔ 装备 / 城墙、旧属性入口不响应）、装备格与浮层（六行固定、空槽、卸下、关闭、点击浮层外收起、busy 置灰）、三个页签（文案与数量；资源页签零值隐藏、无资源时只显示提示）、锁定与一键合成（确认 / 取消 / 无候选不请求）、未登录 / 401 / 离线（零请求、文案、缓存清空）。
+- `tmp/check-gems.js` 重写 [6] 界面几何与 [7] 绘制点击改为角色界面与宝石浮层（保留数据层断言）**207 项**；`tmp/check-attributes.js`（菜单改名、属性面板只读、返回角色）、`tmp/check-equipment.js`（109 项）、`tmp/check-wall.js`（61 项）、`tmp/check-accounts.js`（164 项）同步更新。
+- 全量 35 个 `tmp/check-*.js` 与 8 个 `tmp/audit-*.js` 0 失败；`node --check src/*.js` 与 `git diff --check` 通过。
+- 出图：`tmp/character-screen.png`、`tmp/character-gems.png`、`tmp/character-equip.png`、`tmp/character-resource.png`、`tmp/character-guest.png`、`tmp/character-synth.png` 与更新后的 `tmp/attributes-screen.png`（`tmp/trace-draw.js account character|characterEquip|characterResource|characterGems|characterGuest|gemsSynth` + `tmp/replay-draw.py`）。
+- 后端与数据库未改动。
+
+### 18.6 验收标准
+
+- 首页点击「角色」进入角色界面；六个 62×62 方块按 2 列 × 3 行排布，图标、部位名、`Lv.N`、元素圆点与右侧加成信息完整可见。
+- 点击任一方块弹出该部位六行宝石（空槽占行）；「卸下」发一次 `/api/me/gems/unsocket`，成功后槽位清空、属性回落；「关闭」或浮层外点击收起。
+- 中部两个入口分别进入装备界面与城墙界面，两处「返回」都回到角色界面；右上角「属性」进入只读属性面板并返回角色界面。
+- 三个页签可切换：宝石页签用 **6 列 × 2 行的方格**（每页 12 格）展示未镶嵌宝石 —— 三角图标、词条名、数值、部位短名与右上角锁按钮，点击方格镶嵌、点锁按钮锁定，标题行保留分页与一键合成；装备页签用 **3 列 × 2 行的方格**展示六个部位（部位短名、元素圆点、图标、`Lv.N` 与背包件数）。
+- 资源页签以 6 列 × 2 行方格展示数量非零的资源：金币 / 钻石 / 零件 / 六种图纸 / 钢材 / 稀土各有对应图标，数量写在格内右下角；数量为 0 的资源不出现，全为 0 时只显示提示文案。
+- 宝石图标在镶嵌浮层、背包方格与合成确认窗口中都是按品质（灰 / 绿 / 蓝 / 紫 / 红）着色的三角形。
+- 未登录 / 离线：不发任何请求、按钮置灰、顶栏与状态行给出提示；401 回 guest 并清空宝石与加成。
+- 旧宝石界面不可达（无菜单入口、无快捷键），`config.gemUI` 与相关函数不再存在。

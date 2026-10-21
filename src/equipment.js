@@ -106,6 +106,36 @@
     };
   }
 
+  function getBagOverview() {
+    return getSlots().map(function (slot) {
+      var counts = {}, parts = [], total = 0;
+      Object.keys(C.elements).forEach(function (element) { counts[element] = 0; });
+      state.bag.forEach(function (item) {
+        if (item.slotId !== slot.id) return;
+        counts[item.element] += 1;
+        total += 1;
+      });
+      Object.keys(C.elements).forEach(function (element) {
+        if (!counts[element]) return;
+        parts.push({ element: element, name: C.elements[element].name, color: C.elements[element].color, count: counts[element] });
+      });
+      return {
+        id: slot.id,
+        name: slot.name,
+        short: slot.short,
+        color: slot.color,
+        level: slot.level,
+        maxLevel: slot.maxLevel,
+        element: slot.element,
+        elementName: slot.elementName,
+        elementColor: slot.elementColor,
+        equippedName: slot.elementName,
+        bagTotal: total,
+        parts: parts
+      };
+    });
+  }
+
   function clear() {
     state.data = null;
     state.bag = [];
@@ -171,6 +201,7 @@
     getSlot: getSlot,
     getBag: getBag,
     getBagPart: getBagPart,
+    getBagOverview: getBagOverview,
     getTotals: getTotals
   };
 })(window.Game = window.Game || {});
