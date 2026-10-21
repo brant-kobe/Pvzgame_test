@@ -613,6 +613,79 @@
       ctx.closePath(); ctx.fill(); ctx.stroke();
     }
   }
+  function drawDollFigure(s, accent, sway) {
+    var wood = "#8a6a45", dark = "#3a2a1c", face = accent || "#e6c08a";
+    ctx.save();
+    ctx.strokeStyle = "rgba(200, 168, 255, .42)"; ctx.lineWidth = Math.max(.8, s * .1);
+    ctx.beginPath(); ctx.moveTo(sway * s * .34, -s * 2.5); ctx.lineTo(0, -s * 1.26); ctx.stroke();
+    ctx.strokeStyle = wood; ctx.lineWidth = Math.max(1, s * .24); ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-s * .18, s * .66); ctx.lineTo(-s * .26, s * 1.14);
+    ctx.moveTo(s * .18, s * .66); ctx.lineTo(s * .26, s * 1.14);
+    ctx.moveTo(-s * .4, -s * .08); ctx.lineTo(-s * .8, s * .32);
+    ctx.moveTo(s * .4, -s * .08); ctx.lineTo(s * .8, s * .26);
+    ctx.stroke();
+    U.roundedRect(ctx, -s * .42, -s * .3, s * .84, s * .98, s * .2, wood, dark);
+    ctx.fillStyle = face;
+    ctx.beginPath(); ctx.arc(0, -s * .78, s * .46, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = dark; ctx.lineWidth = Math.max(1, s * .09);
+    ctx.beginPath(); ctx.arc(0, -s * .78, s * .46, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-s * .32, -s * .78); ctx.lineTo(s * .32, -s * .78); ctx.stroke();
+    ctx.fillStyle = "#241a12";
+    ctx.beginPath(); ctx.arc(-s * .15, -s * .87, Math.max(.6, s * .075), 0, Math.PI * 2); ctx.arc(s * .15, -s * .87, Math.max(.6, s * .075), 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = dark;
+    ctx.beginPath(); ctx.arc(-s * .4, -s * .08, s * .11, 0, Math.PI * 2); ctx.arc(s * .4, -s * .08, s * .11, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  function drawPuppetRig(r, info, elite, phase) {
+    var bar = elite ? "#d9b45a" : "#8a6a45", bead = elite ? "#ffe6a8" : "#c9a97f", thread = elite ? "rgba(255, 226, 150, .62)" : "rgba(200, 168, 255, .58)";
+    var sway = Math.sin(phase) * r * .07, side, fromX, toX, toY;
+    ctx.save();
+    ctx.strokeStyle = thread; ctx.lineWidth = Math.max(1, r * .045); ctx.lineCap = "round";
+    for (side = -1; side <= 1; side += 2) {
+      ctx.beginPath();
+      ctx.moveTo(side * r * .82, -r * 1.32);
+      ctx.lineTo(side * r * 1.02 + sway, r * .4);
+      ctx.moveTo(side * r * .5, -r * 1.32);
+      ctx.lineTo(side * r * .56 + sway * .5, -r * .04);
+      ctx.stroke();
+    }
+    ctx.shadowColor = elite ? "rgba(255, 226, 150, .5)" : "rgba(200, 168, 255, .42)";
+    ctx.shadowBlur = Math.max(3, r * .3);
+    U.roundedRect(ctx, -r * .88 + sway * .3, -r * 1.4, r * 1.76, r * .14, r * .07, bar, "#3a2a1c");
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = bead;
+    for (side = -1; side <= 1; side += 2) {
+      ctx.beginPath(); ctx.arc(side * r * .55, -r * .04, Math.max(1, r * .11), 0, Math.PI * 2); ctx.fill();
+    }
+    fromX = r * .62; toX = r * 1.02; toY = -r * .48;
+    ctx.strokeStyle = elite ? "#d9b45a" : "#6b5a44"; ctx.lineWidth = Math.max(1.5, r * .17);
+    ctx.beginPath(); ctx.moveTo(fromX, -r * .06); ctx.lineTo(toX, toY); ctx.stroke();
+    ctx.save();
+    ctx.translate(r * 1.06, -r * .74);
+    ctx.rotate(Math.sin(phase * 1.3) * .12);
+    drawDollFigure(r * .3, info.accent, Math.sin(phase) * .18);
+    ctx.restore();
+    ctx.restore();
+  }
+  function drawPuppetDollBody(r, info, phase) {
+    var sway = Math.sin(phase * 1.7) * .5, index, threadX, lift = Math.sin(phase * 3.2) * r * .04;
+    ctx.fillStyle = "rgba(0, 0, 0, .3)";
+    ctx.beginPath(); ctx.ellipse(0, r * 1.02, r * .92, r * .26, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(200, 168, 255, .4)"; ctx.lineWidth = Math.max(1, r * .07); ctx.lineCap = "round";
+    for (index = 0; index < 3; index++) {
+      threadX = (index - 1) * r * .3;
+      ctx.beginPath();
+      ctx.moveTo(threadX, -r * 1.1);
+      ctx.quadraticCurveTo(threadX + sway * r * .16, -r * 1.55, threadX + sway * r * .3, -r * 1.86);
+      ctx.stroke();
+    }
+    ctx.save();
+    ctx.translate(0, lift);
+    ctx.rotate(sway * .045);
+    drawDollFigure(r * .86, info.accent, sway);
+    ctx.restore();
+  }
   function statusInfo(id) { return (C.statusEffects || {})[id] || { name: "", color: C.colors.text, label: "" }; }
   function drawFreezeShell(enemy, r, info) {
     var reach = r * (info.flying ? 1.5 : enemy.type === "boss" ? 1.45 : 1.18);
@@ -670,11 +743,14 @@
       var isWasp = enemy.type === "wasp" || enemy.type === "waspElite";
       var isWheelchair = enemy.type === "wheelchair" || enemy.type === "wheelchairElite";
       var isFrostBeast = enemy.type === "frostBeast" || enemy.type === "frostBeastElite";
+      var isPuppet = enemy.type === "puppet" || enemy.type === "puppetElite", isPuppetDoll = enemy.type === "puppetDoll";
       var auraReach = info.flying ? r * 1.7 : r;
       var shirtColor = isSplitter ? (isElite ? "#584a84" : "#463c6b")
+        : isPuppet ? (isElite ? "#3a2d4d" : "#4a3d5c")
         : isElite ? (isRunner ? "#98633b" : isArmored ? "#5b6b78" : isBasketball ? "#96591f" : isFlame ? "#4d2318" : isSnowman ? "#9fc4d4" : isThunder ? "#4c3f8f" : "#617745")
         : isRunner ? "#705345" : enemy.type === "boss" ? "#4d2d3b" : isArmored ? "#46545f" : isBasketball ? "#7a4a20" : isFlame ? "#3a1c14" : isSnowman ? "#c6e0ea" : isThunder ? "#6b5bb5" : "#3f6655";
       var shirtShadow = isSplitter ? "#241f38"
+        : isPuppet ? (isElite ? "#221a30" : "#2b2338")
         : isElite ? (isArmored ? "#333f48" : isBasketball ? "#4f2d0f" : isFlame ? "#2b1109" : isSnowman ? "#6d94a4" : isThunder ? "#2b2258" : "#3b3026")
         : isRunner ? "#382b2d" : enemy.type === "boss" ? "#281c2a" : isArmored ? "#28323a" : isBasketball ? "#4a2a12" : isFlame ? "#22100b" : isSnowman ? "#7fa6b6" : isThunder ? "#3a2f6b" : "#243c39";
       ctx.save();
@@ -715,6 +791,14 @@
 
       if (isFrostBeast) {
         drawFrostBeast(r, info, isElite, S.session.elapsed * 1.6 + enemy.x * .05 + enemy.y * .03);
+        if (Game.isHardControlled(enemy) && enemy.controlType === "freeze") drawFreezeShell(enemy, r, info);
+        ctx.restore();
+        drawEnemyVitals(enemy, r);
+        return;
+      }
+
+      if (isPuppetDoll) {
+        drawPuppetDollBody(r, info, S.session.elapsed * 1.8 + enemy.x * .08 + enemy.y * .04);
         if (Game.isHardControlled(enemy) && enemy.controlType === "freeze") drawFreezeShell(enemy, r, info);
         ctx.restore();
         drawEnemyVitals(enemy, r);
@@ -773,6 +857,7 @@
       if (isFlame) drawFlameCrown(r, S.session.elapsed * 6 + enemy.x * .06 + enemy.y * .04);
       if (isSnowman) drawSnowmanMarks(r, S.session.elapsed * 1.6 + enemy.x * .05);
       if (isThunder) drawThunderMarks(r, S.session.elapsed * 7 + enemy.x * .06 + enemy.y * .04);
+      if (isPuppet) drawPuppetRig(r, info, isElite, S.session.elapsed * 1.5 + enemy.x * .05 + enemy.y * .03);
       if (enemy.type === "boss") { ctx.fillStyle = "#6d3949"; ctx.beginPath(); ctx.moveTo(-r * .65, -r * 1.18); ctx.lineTo(-r * .82, -r * 1.7); ctx.lineTo(-r * .35, -r * 1.35); ctx.lineTo(0, -r * 1.78); ctx.lineTo(r * .3, -r * 1.3); ctx.lineTo(r * .82, -r * 1.7); ctx.lineTo(r * .65, -r * 1.1); ctx.closePath(); ctx.fill(); ctx.strokeStyle = C.colors.red; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, Math.PI * 2); ctx.stroke(); }
       var regenLimit = info.regenBelowHpRatio ? enemy.maxHp * info.regenBelowHpRatio : enemy.maxHp;
       if (info.regenPerSecond > 0 && enemy.hp < regenLimit) {
@@ -835,11 +920,17 @@
   };
   Game.drawEnemyShots = function () {
     (S.enemyShots || []).forEach(function (shot) {
-      var r = shot.radius, stinger = shot.type === "stinger";
+      var r = shot.radius, stinger = shot.type === "stinger", doll = shot.type === "doll";
       ctx.save();
       ctx.translate(shot.x, shot.y);
       ctx.fillStyle = "rgba(0, 0, 0, .3)";
       ctx.beginPath(); ctx.ellipse(2, S.wall.y - S.wall.height / 2 - shot.y + 2, r * .8, r * .26, 0, 0, Math.PI * 2); ctx.fill();
+      if (doll) {
+        ctx.rotate(Math.sin(shot.travel * .09) * .22);
+        drawDollFigure(r * .78, shot.accent, Math.sin(shot.travel * .12));
+        ctx.restore();
+        return;
+      }
       if (stinger) {
         ctx.rotate(Math.sin(shot.travel * .12) * .14);
         ctx.fillStyle = "rgba(168, 224, 95, .2)";
@@ -2028,7 +2119,8 @@
       ctx.font = "10px Segoe UI, Microsoft YaHei"; ctx.fillStyle = C.colors.muted; ctx.textAlign = "left";
       U.wrapText(ctx, selectedEnemy.tactics || "暂无应对建议。", 44, 482, 272, 12);
       var traitY = drawCodexTraitRow("属性克制", enemyElementTraits(selectedEnemy), 516);
-      drawCodexTraitRow("状态抗性", enemyStatusTraits(selectedEnemy), traitY);
+      traitY = drawCodexTraitRow("状态抗性", enemyStatusTraits(selectedEnemy), traitY);
+      drawCodexTraitRow("召唤", enemySummonTraits(selectedEnemy), traitY);
       Game.button(C.width / 2 - 82, 558, 164, 38, "返回图鉴列表", C.colors.cyan);
       return;
     }
@@ -2064,6 +2156,12 @@
       else if (scale !== undefined && scale !== null && scale !== 1) labels.push({ text: prefix + (info.scaleLabel || info.name + "时间") + " " + (scale > 1 ? "+" : "−") + Math.round(Math.abs(scale - 1) * 100) + "%", color: info.color });
     });
     return labels;
+  }
+  function enemySummonTraits(enemy) {
+    var ratios = enemy && enemy.summonHpRatios;
+    if (!ratios || !ratios.length) return [];
+    var info = C.enemies[enemy.summonType];
+    return [{ text: "生命 " + ratios.map(function (ratio) { return Math.round(ratio * 100) + "%"; }).join(" / ") + " 时各脱离一只" + (info ? info.name : "傀儡"), color: C.colors.purple }];
   }
   function drawCodexTraitRow(label, items, y) {
     if (!items.length) return y;

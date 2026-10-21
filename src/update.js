@@ -74,6 +74,17 @@
         if (current.hp <= 0) { Game.killEnemy(k); continue; }
       }
       Game.tickFrostbite(current, dt);
+      if (info.summonHpRatios && current.hp > 0) {
+        var summons = current.summons || 0, summonInfo = C.enemies[info.summonType];
+        while (summons < info.summonHpRatios.length && current.hp > 0 && current.hp <= current.maxHp * info.summonHpRatios[summons]) {
+          var side = summons % 2 === 0 ? 1 : -1;
+          S.pendingSpawns.push({ type: info.summonType, x: U.clamp(current.x + side * (info.radius + summonInfo.radius + 6), summonInfo.radius, C.width - summonInfo.radius), y: current.y });
+          summons++;
+          Game.addText(current.x, current.y - info.radius - 10, "傀儡脱离", C.colors.purple);
+          Game.burst(current.x, current.y, 8, C.colors.purple);
+        }
+        current.summons = summons;
+      }
       if (current.regenPerSecond > 0) {
         var regenLimit = info.regenBelowHpRatio ? current.maxHp * info.regenBelowHpRatio : current.maxHp;
         if (current.hp < regenLimit) current.hp = Math.min(regenLimit, current.hp + current.regenPerSecond * dt * Game.getHealScale(current));

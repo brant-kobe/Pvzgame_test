@@ -137,6 +137,20 @@
     { total: 114, interval: .33, mix: ["thunder", "flame", "snowman", "thunder", "flame"], hpScale: 1.95 },
     { total: 132, interval: .3, mix: ["snowman", "thunder", "flame", "snowman", "thunder"], hpScale: 2.1 }
   ];
+  var levelTwelveWaves = [
+    { total: 12, interval: 1.55, mix: ["armored"] },
+    { total: 14, interval: 1.4, mix: ["armored", "flame"] },
+    { total: 18, interval: 1.25, mix: ["armored", "flame", "wheelchair"] },
+    { total: 22, interval: .55, mix: ["armored", "flame", "wheelchair", "armored"], elite: "wheelchairElite" },
+    { total: 28, interval: .5, mix: ["flame", "wheelchair", "armored", "flame"] },
+    { total: 40, interval: .45, mix: ["wheelchair", "armored", "flame", "wheelchair"], hpScale: 1.2 },
+    { total: 50, interval: .42, mix: ["armored", "wheelchair", "flame", "armored"], boss: true, hpScale: 1.35 },
+    { total: 60, interval: .4, mix: ["wheelchair", "flame", "armored", "wheelchair", "flame"], hpScale: 1.5 },
+    { total: 72, interval: .36, mix: ["armored", "wheelchair", "flame", "armored", "wheelchair"], hpScale: 1.65 },
+    { total: 86, interval: .33, mix: ["flame", "armored", "wheelchair", "flame", "armored"], hpScale: 1.8 },
+    { total: 100, interval: .3, mix: ["wheelchair", "flame", "armored", "wheelchair", "flame"], hpScale: 1.95 },
+    { total: 116, interval: .28, mix: ["armored", "wheelchair", "flame", "armored", "wheelchair"], hpScale: 2.1 }
+  ];
   Game.config = {
     width: 360, height: 640, maxLevel: 15, maxSkillSlots: 4, wallMaxHp: 1000, armorBlockWindow: .12, xpBase: 15, xpMultiplier: 1.13, xpBonus: 6, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12, flyingHover: 16,
     sprites: {
@@ -361,6 +375,9 @@
       wheelchairElite: { name: "轮椅僵尸精英", codexCategory: "elite", description: "轮椅僵尸的精英形态，轮椅更厚重、输液更急：生命低于一半后每秒回复的生命是小怪的两倍多，火系弱点不变。", tactics: "血厚且回血更快，必须一口气打穿半血以下的回复段；温压弹与燃油弹的持续火伤 ×1.5，压缩气刃的重伤能让它的回复直接减半。", hp: 520, speed: 17, radius: 22, damage: 22, xp: 38, color: "#414c5c", accent: "#ffd166", damageTakenByElement: { fire: 1.5 }, regenPerSecond: 14, regenBelowHpRatio: .5 },
       frostBeast: { name: "寒霜兽", codexCategory: "minion", description: "披着冰壳的巨型乌龟，挪动得极慢，也推不动、拉不走：完全免疫冻结、麻痹、燃烧、冻伤、击退与牵引，代价是额外承受 200% 火系伤害。", tactics: "冰冻、燃烧、麻痹、冻伤、击退与牵引全都无效，只有眩晕还能控住它；温压弹与燃油弹的直伤 ×3 最快。", hp: 200, speed: 12, radius: 22, damage: 18, xp: 26, color: "#87b6c9", accent: "#a9e8ff", damageTakenByElement: { fire: 3 }, statusImmune: { burn: true, freeze: true, paralysis: true, frostbite: true, knockback: true, pull: true } },
       frostBeastElite: { name: "寒霜兽精英", codexCategory: "elite", description: "寒霜兽的精英形态，冰壳更厚、体型更大：同样免疫冻结、麻痹、燃烧、冻伤、击退与牵引，也照样额外承受 200% 火系伤害。", tactics: "它更耐打但一样慢，冰冻、燃烧、麻痹、冻伤、击退与牵引依旧无效，只有眩晕能短暂控住它；温压弹直伤 ×3 最快。", hp: 760, speed: 15, radius: 27, damage: 26, xp: 52, color: "#5f8ba1", accent: "#ffd166", damageTakenByElement: { fire: 3 }, statusImmune: { burn: true, freeze: true, paralysis: true, frostbite: true, knockback: true, pull: true } },
+      puppet: { name: "傀儡僵尸", codexCategory: "minion", description: "身上缠满提线的僵尸，靠木制操控架牵着自己行动：能量伤害减半、额外承受 50% 物理伤害，生命跌破一半与四分之一时各脱手放出一只傀儡。", tactics: "它停在中距离抛掷傀儡、不会贴墙，物理伤害 ×1.5 是主攻方向；两只傀儡与普通僵尸同级。", hp: 120, speed: 18, radius: 17, damage: 13, xp: 22, color: "#5b4a6e", accent: "#c8a8ff", ranged: { standoff: 100, interval: 2.6, projectileSpeed: 200, projectileRadius: 8, damage: 13, shot: "doll", action: "抛掷" }, damageTakenByElement: { energy: .5, physical: 1.5 }, summonHpRatios: [.5, .25], summonType: "puppetDoll" },
+      puppetElite: { name: "傀儡僵尸精英", codexCategory: "elite", description: "傀儡僵尸的精英形态，操控架更粗、抛出的傀儡更重：完全免疫能量伤害，物理伤害额外 ×1.5，但不再放出傀儡。", tactics: "能量系对它完全无效，改用物理或冰火技能；它射得更远更重，但不会放傀儡，可以安心集火。", hp: 620, speed: 22, radius: 22, damage: 20, xp: 44, color: "#42335a", accent: "#ffd166", ranged: { standoff: 130, interval: 2.1, projectileSpeed: 220, projectileRadius: 11, damage: 20, shot: "doll", action: "抛掷" }, damageTakenByElement: { energy: 0, physical: 1.5 } },
+      puppetDoll: { name: "傀儡", codexCategory: "minion", codexHidden: true, description: "傀儡僵尸脱手掉落的木偶，行动与普通僵尸完全一致，只是换了一副木头身体。", tactics: "生命与威胁都等同普通僵尸，顺手清掉即可，别让它们跟着本体一起到墙下。", hp: 28, speed: 20, radius: 14, damage: 10, xp: 8, color: "#8a6a45", accent: "#e6c08a" },
       boss: { name: "尸潮领主", codexCategory: "boss", description: "关卡首领，体型巨大、生命值极高；生命低于一半时进入狂暴状态，移动速度提升。", tactics: "持续输出并留意其接近城墙；燃烧、暴击与高伤害构筑有助于缩短战斗时间。", hp: 3000, speed: 10, radius: 34, damage: 24, xp: 100, color: "#9d5264", accent: "#ffb0bc" }
     },
     skillDefaults: {
@@ -496,7 +513,8 @@
       { id: 8, name: "环城高架", subtitle: "飞鸟与快跑压境，贴地技能失效", brief: "飞鸟全程停在半空，装甲车、龙卷风与燃油弹都打不到，改用对空手段。", unlocked: true, hpScale: 2, xpScale: .165, waves: levelEightWaves },
       { id: 9, name: "焦土防线", subtitle: "护甲与烈焰混编，后期节奏收紧", brief: "火焰僵尸免疫燃烧与冻结、火系伤害减半，前期放慢、后期明显加快。", unlocked: true, hpScale: 2.1, xpScale: .21, waves: levelNineWaves },
       { id: 10, name: "冰火交界", subtitle: "元素互克，控制手段大打折扣", brief: "火焰与雪人的抗性互补，只堆单一元素或只堆冰冻控制都会被卡住一半。", unlocked: true, hpScale: 2.2, xpScale: .22, waves: levelTenWaves },
-      { id: 11, name: "高压电厂", subtitle: "电系受制，冰火再度交锋", brief: "雷电僵尸让电系技能减半、精英完全免疫，冰火互克仍需两手准备。", unlocked: true, hpScale: 2.35, xpScale: .2, waves: levelElevenWaves }
+      { id: 11, name: "高压电厂", subtitle: "电系受制，冰火再度交锋", brief: "雷电僵尸让电系技能减半、精英完全免疫，冰火互克仍需两手准备。", unlocked: true, hpScale: 2.35, xpScale: .2, waves: levelElevenWaves },
+      { id: 12, name: "旧城疗养院", subtitle: "护甲挡伤，轮椅半血回血", brief: "护甲挡伤、轮椅半血后持续回血、火焰免疫燃烧与冻结，三种机制同时压上。", unlocked: true, hpScale: 2.5, xpScale: .19, waves: levelTwelveWaves }
     ],
     waves: levelOneWaves
   };
