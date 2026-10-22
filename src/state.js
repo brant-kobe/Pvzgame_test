@@ -2,7 +2,7 @@
 (function (Game) {
   "use strict";
   var C = Game.config;
-  Game.state = { screen: "menu", selectedLevel: 1, accountMode: "login", player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null, characterPart: "arm", characterTab: "gem", characterGemPage: 0, characterGems: null, gemSynthesisOpen: false, gemSynthesisPage: 0, gemSynthesisFocus: 0, equipmentBagPart: "arm" };
+  Game.state = { screen: "menu", selectedLevel: 1, accountMode: "login", player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null, characterPart: "arm", characterTab: "gem", characterGemPage: 0, characterGems: null, characterGemDetail: null, characterGemReplace: null, characterEquipItem: null, characterEquipPage: 0, gemSynthesisOpen: false, gemSynthesisPage: 0, gemSynthesisFocus: 0, equipmentBagPart: "arm" };
   Game.reset = function () {
     var s = Game.state;
     var level = C.levels.find(function (item) { return item.id === s.selectedLevel; });
@@ -19,6 +19,7 @@
     s.player = { x: C.width / 2, y: C.height - 58, aimAngle: -Math.PI / 2, manualAimTimer: 0, maxHp: 100, hp: 100, damage: 28, fireInterval: .52, fireTimer: .05, magazineSize: C.magazineCapacity, ammo: C.magazineCapacity, reloadDuration: C.reloadDuration, reloadTimer: 0, rifleEnabled: true, burst: 0, burstShotsRemaining: 0, burstTimer: 0, burstAngle: -Math.PI / 2, spread: 0, pierce: 0, bulletRadius: 4, crit: C.attributes.base.critRate, critDamage: C.attributes.base.critDamage, burn: 0, freeze: 0, bulletType: "normal", skills: skills, skillOrder: [], level: 1, xp: 0, nextXp: C.xpBase, traits: {} };
     s.bullets = []; s.skillProjectiles = []; s.armoredCars = []; s.bombDrops = []; s.bombZones = []; s.electromagneticZones = []; s.tornadoes = []; s.drones = []; s.hailStorms = []; s.fuelShells = []; s.fuelPools = []; s.enemyShots = []; s.explosions = []; s.enemies = []; s.pendingSpawns = []; s.particles = []; s.texts = []; s.upgradeCards = []; s.skillRangePreview = null; s.levelPreview = null;
     s.characterPart = "arm"; s.characterTab = "gem"; s.characterGemPage = 0; s.characterGems = null;
+    s.characterGemDetail = null; s.characterGemReplace = null; s.characterEquipItem = null; s.characterEquipPage = 0;
     s.gemSynthesisOpen = false; s.gemSynthesisPage = 0; s.gemSynthesisFocus = 0; s.equipmentBagPart = "arm";
     s.wall = { x: C.width / 2, y: C.height - 125, width: C.width - 30, height: 30, maxHp: C.wallMaxHp, hp: C.wallMaxHp };
     if (Game.attributes) { Game.attributes.applyPlayer(s.player); Game.attributes.applyWall(s.wall); }
@@ -39,11 +40,20 @@
   Game.closeLevelPreview = function () { Game.state.levelPreview = null; };
   Game.openZombieCodex = function () { Game.state.zombieCodexCategory = "minion"; Game.state.selectedZombieCodexId = null; Game.state.codexPage = 0; Game.state.screen = "zombieCodex"; };
   Game.openSkillCodex = function () { Game.state.selectedSkillCodexId = null; Game.state.codexPage = 0; Game.state.screen = "skillCodex"; };
-  Game.openAttributes = function () { Game.state.characterGems = null; Game.state.screen = "attributes"; };
+  Game.openAttributes = function () {
+    Game.state.characterGems = null;
+    Game.state.characterGemDetail = null;
+    Game.state.characterGemReplace = null;
+    Game.state.characterEquipItem = null;
+    Game.state.screen = "attributes";
+  };
   Game.openCharacter = function () {
     Game.accounts.state.gemError = "";
     Game.accounts.state.gemNotice = "";
     Game.state.characterGems = null;
+    Game.state.characterGemDetail = null;
+    Game.state.characterGemReplace = null;
+    Game.state.characterEquipItem = null;
     Game.state.screen = "character";
   };
   Game.selectCharacterPart = function (partId) {
@@ -54,12 +64,74 @@
   Game.setCharacterTab = function (tab) {
     Game.state.characterTab = tab === "equipment" || tab === "resource" ? tab : "gem";
     Game.state.gemSynthesisOpen = false;
+    Game.state.characterGemDetail = null;
+    Game.state.characterEquipItem = null;
   };
   Game.openCharacterGems = function (partId) {
     Game.selectCharacterPart(partId);
     Game.state.characterGems = Game.state.characterPart;
+    Game.state.characterGemDetail = null;
+    Game.state.characterGemReplace = null;
+    Game.state.characterEquipItem = null;
   };
-  Game.closeCharacterGems = function () { Game.state.characterGems = null; };
+  Game.closeCharacterGems = function () {
+    Game.state.characterGems = null;
+    Game.state.characterGemReplace = null;
+  };
+  Game.openCharacterGemDetail = function (gemId) {
+    if (Game.state.screen !== "character" || !Game.gems) return false;
+    var gem = Game.gems.findGem(gemId);
+    if (!gem || gem.slotIndex !== null) return false;
+    Game.state.characterGemDetail = gem.id;
+    Game.state.characterEquipItem = null;
+    return true;
+  };
+  Game.closeCharacterGemDetail = function () { Game.state.characterGemDetail = null; };
+  Game.getCharacterGemDetail = function () {
+    var id = Game.state.characterGemDetail;
+    if (!id || !Game.gems) return null;
+    var gem = Game.gems.findGem(id);
+    if (!gem) return null;
+    return { gem: gem, plan: Game.gems.planSocket(gem.id), part: Game.gems.getPart(gem.partId) };
+  };
+  Game.getCharacterGemReplace = function () {
+    return Game.state.characterGemReplace && Game.gems ? Game.gems.findGem(Game.state.characterGemReplace) : null;
+  };
+  Game.openCharacterEquip = function (itemId) {
+    if (Game.state.screen !== "character" || !Game.equipment) return false;
+    var found = null;
+    Game.equipment.getBagRows().forEach(function (item) { if (item.id === itemId) found = item; });
+    if (!found) return false;
+    Game.state.characterEquipItem = found.id;
+    Game.state.characterGemDetail = null;
+    Game.accounts.state.equipmentBagError = "";
+    Game.accounts.state.equipmentBagNotice = "";
+    return true;
+  };
+  Game.closeCharacterEquip = function () { Game.state.characterEquipItem = null; };
+  Game.getCharacterEquipDetail = function () {
+    var id = Game.state.characterEquipItem;
+    if (!id || !Game.equipment) return null;
+    var found = null;
+    Game.equipment.getBagRows().forEach(function (item) { if (item.id === id) found = item; });
+    return found;
+  };
+  Game.getCharacterEquipRows = function () {
+    var all = Game.equipment ? Game.equipment.getBagRows() : [], geo = C.characterUI.equipCells;
+    var perPage = geo.columns * geo.rows, pages = Math.max(1, Math.ceil(all.length / perPage)), page = Game.getCharacterEquipPage();
+    return { items: all.slice(page * perPage, page * perPage + perPage), total: all.length, pages: pages, page: page };
+  };
+  Game.getCharacterEquipPageCount = function () {
+    if (!Game.equipment) return 1;
+    var geo = C.characterUI.equipCells;
+    return Math.max(1, Math.ceil(Game.equipment.getBagRows().length / (geo.columns * geo.rows)));
+  };
+  Game.getCharacterEquipPage = function () {
+    return Math.max(0, Math.min(Game.state.characterEquipPage, Game.getCharacterEquipPageCount() - 1));
+  };
+  Game.setCharacterEquipPage = function (delta) {
+    Game.state.characterEquipPage = Math.max(0, Math.min(Game.state.characterEquipPage + delta, Game.getCharacterEquipPageCount() - 1));
+  };
   Game.openEquipment = function () {
     Game.accounts.state.equipmentError = "";
     Game.accounts.state.equipmentNotice = "";
@@ -88,6 +160,9 @@
   };
   Game.backToCharacter = function () {
     Game.state.characterGems = null;
+    Game.state.characterGemDetail = null;
+    Game.state.characterGemReplace = null;
+    Game.state.characterEquipItem = null;
     Game.state.gemSynthesisOpen = false;
     Game.state.screen = "character";
   };
@@ -289,9 +364,36 @@
       return result;
     });
   };
-  Game.socketGem = function (gemId) {
-    if (Game.state.screen !== "character") return Promise.resolve({ ok: false });
-    return Game.accounts.socketGem(gemId);
+  Game.socketCharacterGem = function (gemId) {
+    if (Game.state.screen !== "character" || !Game.gems) return Promise.resolve({ ok: false });
+    var gem = Game.gems.findGem(gemId), plan = Game.gems.planSocket(gemId);
+    if (!gem) return Promise.resolve({ ok: false, mode: "missing", error: "宝石不存在" });
+    if (!plan.ok) return Promise.resolve({ ok: false, mode: plan.mode, error: plan.message });
+    if (plan.mode === "pick") {
+      Game.selectCharacterPart(gem.partId);
+      Game.state.characterGems = gem.partId;
+      Game.state.characterGemReplace = gem.id;
+      Game.state.characterGemDetail = null;
+      return Promise.resolve({ ok: false, mode: "pick", pending: true, error: plan.message });
+    }
+    return Game.accounts.socketGem(gemId).then(function (result) {
+      if (result && result.ok) Game.state.characterGemDetail = null;
+      return result;
+    });
+  };
+  Game.replaceCharacterGem = function (gemId, slotIndex) {
+    if (Game.state.screen !== "character" || !Game.gems) return Promise.resolve({ ok: false });
+    return Game.accounts.socketGem(gemId, slotIndex).then(function (result) {
+      if (result && result.ok) {
+        Game.state.characterGemDetail = null;
+        Game.state.characterGemReplace = null;
+      }
+      return result;
+    });
+  };
+  Game.replaceCharacterEquipment = function (itemId) {
+    if (Game.state.screen !== "character" || !Game.state.characterEquipItem) return Promise.resolve({ ok: false });
+    return Game.accounts.equipEquipment(itemId);
   };
   Game.unsocketGem = function (gemId) {
     if (Game.state.screen !== "character") return Promise.resolve({ ok: false });
@@ -385,6 +487,13 @@
     return { x: row.x + geo.offsetX, y: row.y + geo.offsetY, w: geo.w, h: geo.h };
   };
   Game.getCharacterGemCloseRect = function () { return C.characterUI.gemPanelClose; };
+  Game.getCharacterGemDetailPanel = function () { return C.characterUI.gemDetail.panel; };
+  Game.getCharacterGemDetailSocketRect = function () { return C.characterUI.gemDetail.socket; };
+  Game.getCharacterGemDetailCloseRect = function () { return C.characterUI.gemDetail.close; };
+  Game.getCharacterEquipDetailPanel = function () { return C.characterUI.equipDetail.panel; };
+  Game.getCharacterEquipReplaceRect = function () { return C.characterUI.equipDetail.replace; };
+  Game.getCharacterEquipCloseRect = function () { return C.characterUI.equipDetail.close; };
+  Game.getCharacterEquipPagerRect = function (key) { return C.characterUI.equipPager[key === "next" ? "next" : "prev"]; };
   Game.getGemSynthesisRowRect = function (index) {
     var geo = C.gemSynthesisUI;
     return { x: geo.listX, y: geo.listY + index * geo.rowHeight, w: geo.listWidth, h: geo.rowHeight - 4 };

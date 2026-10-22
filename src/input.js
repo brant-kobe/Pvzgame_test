@@ -333,14 +333,36 @@
         }
         return;
       }
+      if (S.characterGemDetail) {
+        var detailBox = Game.getCharacterGemDetailPanel();
+        if (pointInRect(point, Game.getCharacterGemDetailSocketRect())) {
+          if (Game.accounts.getStatus() === "ready" && !Game.accounts.state.gemBusy && Game.getCharacterGemDetail()) Game.socketCharacterGem(S.characterGemDetail);
+          return;
+        }
+        if (pointInRect(point, Game.getCharacterGemDetailCloseRect())) { Game.closeCharacterGemDetail(); return; }
+        if (point.x < detailBox.x || point.x > detailBox.x + detailBox.w || point.y < detailBox.y || point.y > detailBox.y + detailBox.h) { Game.closeCharacterGemDetail(); return; }
+        return;
+      }
+      if (S.characterEquipItem) {
+        var equipBox = Game.getCharacterEquipDetailPanel(), equipDetail = Game.getCharacterEquipDetail();
+        if (pointInRect(point, Game.getCharacterEquipReplaceRect())) {
+          if (Game.accounts.getStatus() === "ready" && !Game.accounts.state.equipmentBagBusy && equipDetail && !equipDetail.equipped) Game.replaceCharacterEquipment(equipDetail.id);
+          return;
+        }
+        if (pointInRect(point, Game.getCharacterEquipCloseRect())) { Game.closeCharacterEquip(); return; }
+        if (point.x < equipBox.x || point.x > equipBox.x + equipBox.w || point.y < equipBox.y || point.y > equipBox.y + equipBox.h) { Game.closeCharacterEquip(); return; }
+        return;
+      }
       if (S.characterGems) {
         var gemPanel = Game.getCharacterGemPanel(), gemPart = Game.gems.getPart(S.characterGems), gemSlot;
+        var replaceGem = Game.getCharacterGemReplace();
         if (pointInRect(point, Game.getCharacterGemCloseRect())) { Game.closeCharacterGems(); return; }
         if (point.x < gemPanel.x || point.x > gemPanel.x + gemPanel.w || point.y < gemPanel.y || point.y > gemPanel.y + gemPanel.h) { Game.closeCharacterGems(); return; }
         if (Game.accounts.getStatus() === "ready" && !Game.accounts.state.gemBusy) {
           for (gemSlot = 0; gemSlot < C.gems.socketsPerPart; gemSlot++) {
             if (gemPart.sockets[gemSlot] && pointInRect(point, Game.getCharacterGemUnsocketRect(gemSlot))) {
-              Game.unsocketGem(gemPart.sockets[gemSlot].id);
+              if (replaceGem) Game.replaceCharacterGem(replaceGem.id, gemSlot);
+              else Game.unsocketGem(gemPart.sockets[gemSlot].id);
               return;
             }
           }
@@ -363,6 +385,19 @@
           return;
         }
       }
+      if (S.characterTab === "equipment") {
+        if (pointInRect(point, Game.getCharacterEquipPagerRect("prev"))) { Game.setCharacterEquipPage(-1); return; }
+        if (pointInRect(point, Game.getCharacterEquipPagerRect("next"))) { Game.setCharacterEquipPage(1); return; }
+        var equipRows = Game.getCharacterEquipRows(), equipCellCount = C.characterUI.equipCells.columns * C.characterUI.equipCells.rows, equipCell;
+        for (equipCell = 0; equipCell < equipCellCount; equipCell++) {
+          var equipBagItem = equipRows.items[equipCell];
+          if (equipBagItem && pointInRect(point, Game.getCharacterEquipCellRect(equipCell))) {
+            Game.openCharacterEquip(equipBagItem.id);
+            return;
+          }
+        }
+        return;
+      }
       if (S.characterTab !== "gem") return;
       if (pointInRect(point, Game.getCharacterGemPagerRect("prev"))) { Game.setCharacterGemPage(-1); return; }
       if (pointInRect(point, Game.getCharacterGemPagerRect("next"))) { Game.setCharacterGemPage(1); return; }
@@ -382,7 +417,7 @@
       for (gemCell = 0; gemCell < gemCellCount; gemCell++) {
         var socketGem = characterGems.items[gemCell];
         if (socketGem && pointInRect(point, Game.getCharacterGemCellRect(gemCell))) {
-          Game.socketGem(socketGem.id);
+          Game.openCharacterGemDetail(socketGem.id);
           return;
         }
       }

@@ -209,7 +209,7 @@
       actionWall: { x: 186, y: 346, w: 138, h: 34 },
       bagTitleY: 396,
       gemCells: { x: 34, y: 404, size: 44, gap: 4, columns: 6, rows: 2 },
-      equipCells: { x: 106, y: 404, size: 44, gap: 4, columns: 3, rows: 2 },
+      equipCells: { x: 34, y: 404, size: 44, gap: 4, columns: 6, rows: 2 },
       resourceCells: { x: 40, y: 406, size: 44, gap: 4, columns: 6, rows: 2 },
       bagPager: { prev: { x: 190, y: 380, w: 20, h: 20 }, next: { x: 236, y: 380, w: 20, h: 20 } },
       bagLock: { offsetX: 30, offsetY: 0, w: 14, h: 14 },
@@ -221,7 +221,20 @@
       gemRows: { x: 40, y: 184, w: 280, height: 44, rows: 6 },
       gemUnsocket: { offsetX: 212, offsetY: 10, w: 62, h: 24 },
       gemPanelNoteY: 462,
-      gemPanelClose: { x: 118, y: 474, w: 132, h: 34 }
+      gemPanelClose: { x: 118, y: 474, w: 132, h: 34 },
+      gemDetail: {
+        panel: { x: 44, y: 176, w: 272, h: 256 },
+        titleY: 236, iconY: 274, lineY: [312, 332], hintY: 356,
+        socket: { x: 58, y: 376, w: 118, h: 34 },
+        close: { x: 184, y: 376, w: 118, h: 34 }
+      },
+      equipDetail: {
+        panel: { x: 44, y: 176, w: 272, h: 256 },
+        titleY: 236, iconY: 274, lineY: [312, 332], hintY: 356,
+        replace: { x: 58, y: 376, w: 118, h: 34 },
+        close: { x: 184, y: 376, w: 118, h: 34 }
+      },
+      equipPager: { prev: { x: 190, y: 380, w: 20, h: 20 }, next: { x: 236, y: 380, w: 20, h: 20 } }
     },
     equipmentUI: {
       panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
@@ -384,6 +397,8 @@
       puppet: { name: "傀儡僵尸", codexCategory: "minion", description: "身上缠满提线的僵尸，靠木制操控架牵着自己行动：能量伤害减半、额外承受 50% 物理伤害，生命跌破一半与四分之一时各脱手放出一只傀儡。", tactics: "它停在中距离抛掷傀儡、不会贴墙，物理伤害 ×1.5 是主攻方向；两只傀儡与普通僵尸同级。", hp: 120, speed: 18, radius: 17, damage: 13, xp: 22, color: "#5b4a6e", accent: "#c8a8ff", ranged: { standoff: 100, interval: 2.6, projectileSpeed: 200, projectileRadius: 8, damage: 13, shot: "doll", action: "抛掷" }, damageTakenByElement: { energy: .5, physical: 1.5 }, summonHpRatios: [.5, .25], summonType: "puppetDoll" },
       puppetElite: { name: "傀儡僵尸精英", codexCategory: "elite", description: "傀儡僵尸的精英形态，操控架更粗、抛出的傀儡更重：完全免疫能量伤害，物理伤害额外 ×1.5，但不再放出傀儡。", tactics: "能量系对它完全无效，改用物理或冰火技能；它射得更远更重，但不会放傀儡，可以安心集火。", hp: 620, speed: 22, radius: 22, damage: 20, xp: 44, color: "#42335a", accent: "#ffd166", ranged: { standoff: 130, interval: 2.1, projectileSpeed: 220, projectileRadius: 11, damage: 20, shot: "doll", action: "抛掷" }, damageTakenByElement: { energy: 0, physical: 1.5 } },
       puppetDoll: { name: "傀儡", codexCategory: "minion", codexHidden: true, description: "傀儡僵尸脱手掉落的木偶，行动与普通僵尸完全一致，只是换了一副木头身体。", tactics: "生命与威胁都等同普通僵尸，顺手清掉即可，别让它们跟着本体一起到墙下。", hp: 28, speed: 20, radius: 14, damage: 10, xp: 8, color: "#8a6a45", accent: "#e6c08a" },
+      lizard: { name: "蜥蜴僵尸", codexCategory: "minion", description: "披着绝缘鳞甲的四足蜥蜴，贴地快速爬向防线：电系伤害减半，但冷血之躯额外承受 50% 冰系伤害。", tactics: "它爬得不慢，又几乎不吃电系伤害；改用干冰弹、冰雹发生器这类冰系技能，伤害 +50% 还能冻住它。", hp: 60, speed: 32, radius: 16, damage: 12, xp: 16, color: "#5f8148", accent: "#d8f27a", damageTakenByElement: { ice: 1.5, electric: .5 } },
+      lizardElite: { name: "蜥蜴僵尸精英", codexCategory: "elite", description: "蜥蜴僵尸的精英形态，鳞甲更厚、体型更大、爬得更快，抗性完全不变：电系伤害减半，冰系伤害额外 +50%。", tactics: "抗性没变：冰系依旧 +50% 还能冻住它，电系收益最差，用冰系或物理爆发尽早拦下。", hp: 400, speed: 38, radius: 21, damage: 19, xp: 34, color: "#45663a", accent: "#ffd166", damageTakenByElement: { ice: 1.5, electric: .5 } },
       boss: { name: "尸潮领主", codexCategory: "boss", description: "关卡首领，体型巨大、生命值极高；生命低于一半时进入狂暴状态，移动速度提升。", tactics: "持续输出并留意其接近城墙；燃烧、暴击与高伤害构筑有助于缩短战斗时间。", hp: 3000, speed: 10, radius: 34, damage: 24, xp: 100, color: "#9d5264", accent: "#ffb0bc" }
     },
     skillDefaults: {

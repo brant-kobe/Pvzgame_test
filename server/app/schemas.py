@@ -45,6 +45,7 @@ class WallUpgrade(BaseModel):
 
 class GemSocket(BaseModel):
     gemId: int = 0
+    slotIndex: int | None = None
 
 
 class GemSynthesis(BaseModel):
@@ -65,3 +66,4 @@ class GemGrant(BaseModel):
     partId: str = ""
     quality: int = -1
     count: int = 0
+    affixId: str = ""

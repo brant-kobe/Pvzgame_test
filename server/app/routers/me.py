@@ -152,7 +152,7 @@ def socket_gem(
     account: models.Account = Depends(security.current_account),
     db: Session = Depends(get_db),
 ) -> dict:
-    return gems.socket(db, account.id, payload.gemId)
+    return gems.socket(db, account.id, payload.gemId, payload.slotIndex)
 
 
 @router.post("/gems/unsocket")
@@ -197,7 +197,7 @@ def grant_gems(
     account: models.Account = Depends(security.current_account),
     db: Session = Depends(get_db),
 ) -> dict:
-    return gems.grant(db, account.id, (payload.partId or "").strip(), payload.quality, payload.count)
+    return gems.grant(db, account.id, (payload.partId or "").strip(), payload.quality, payload.count, (payload.affixId or "").strip())
 
 
 @router.post("/wall/upgrade")

@@ -613,6 +613,102 @@
       ctx.closePath(); ctx.fill(); ctx.stroke();
     }
   }
+  function drawLizardBody(r, info, elite, phase) {
+    var scale = elite ? "#41633a" : "#5b7f45", dark = elite ? "#1c2e1c" : "#2b4023", pale = elite ? "#86a26a" : "#a6c17f";
+    var head = elite ? "#4f7444" : "#6d9252", spike = elite ? "#d9b45a" : "#cfe08c", claw = elite ? "#f0e4c0" : "#e4ddba";
+    var sway = Math.sin(phase) * r * .12, side, index, angle, footX, footY, bandY;
+    ctx.fillStyle = "rgba(0, 0, 0, .32)";
+    ctx.beginPath(); ctx.ellipse(0, r * 1.02, r * 1.2, r * .26, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = elite ? "#3b5a33" : "#54763f"; ctx.strokeStyle = dark; ctx.lineWidth = Math.max(1, r * .06);
+    ctx.beginPath();
+    ctx.moveTo(-r * .16, r * .42);
+    ctx.quadraticCurveTo(r * .72, r * .96, r * 1.36 + sway, r * .68);
+    ctx.quadraticCurveTo(r * 1.48 + sway, r * .6, r * 1.34 + sway, r * .52);
+    ctx.quadraticCurveTo(r * .92, r * .8, r * .04, r * .74);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    for (side = -1; side <= 1; side += 2) {
+      ctx.strokeStyle = dark; ctx.lineWidth = Math.max(2, r * .2); ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(side * r * .4, -r * .36); ctx.lineTo(side * r * .96, -r * .52); ctx.lineTo(side * r * 1.04, -r * .16);
+      ctx.moveTo(side * r * .36, r * .3); ctx.lineTo(side * r * .96, r * .18); ctx.lineTo(side * r * 1.04, r * .5);
+      ctx.stroke();
+    }
+    ctx.save();
+    ctx.shadowColor = "rgba(126, 196, 96, .38)"; ctx.shadowBlur = Math.max(3, r * .4);
+    ctx.fillStyle = scale;
+    ctx.beginPath();
+    ctx.moveTo(-r * .46, -r * .34);
+    ctx.quadraticCurveTo(-r * .54, r * .1, -r * .3, r * .5);
+    ctx.quadraticCurveTo(0, r * .72, r * .3, r * .5);
+    ctx.quadraticCurveTo(r * .54, r * .1, r * .46, -r * .34);
+    ctx.quadraticCurveTo(r * .28, -r * .6, 0, -r * .6);
+    ctx.quadraticCurveTo(-r * .28, -r * .6, -r * .46, -r * .34);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = dark; ctx.lineWidth = Math.max(1, r * .08); ctx.stroke();
+    ctx.strokeStyle = pale; ctx.lineWidth = Math.max(1, r * .07);
+    ctx.beginPath(); ctx.moveTo(0, -r * .42); ctx.lineTo(0, r * .46); ctx.stroke();
+    ctx.strokeStyle = dark; ctx.lineWidth = Math.max(1, r * .05);
+    for (index = 0; index < 4; index++) {
+      bandY = -r * .3 + index * r * .22;
+      ctx.beginPath(); ctx.moveTo(-r * .17, bandY); ctx.lineTo(0, bandY + r * .1); ctx.lineTo(r * .17, bandY); ctx.stroke();
+    }
+    ctx.strokeStyle = claw; ctx.lineWidth = Math.max(1, r * .07);
+    for (index = 0; index < 4; index++) {
+      side = index % 2 ? 1 : -1;
+      footX = side * r * 1.04;
+      footY = index < 2 ? -r * .16 : r * .5;
+      for (angle = -1; angle <= 1; angle++) {
+        ctx.beginPath();
+        ctx.moveTo(footX, footY);
+        ctx.lineTo(footX + side * r * .14, footY + r * .03 + angle * r * .06);
+        ctx.stroke();
+      }
+    }
+    ctx.fillStyle = spike; ctx.strokeStyle = dark; ctx.lineWidth = Math.max(.8, r * .05);
+    for (side = -1; side <= 1; side += 2) {
+      for (index = 0; index < 2; index++) {
+        bandY = -r * (1.12 - index * .16);
+        ctx.beginPath();
+        ctx.moveTo(side * r * (.4 + index * .03), bandY - r * .1);
+        ctx.lineTo(side * r * (.78 + index * .04), bandY - r * .14);
+        ctx.lineTo(side * r * (.46 + index * .03), bandY + r * .11);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+    }
+    ctx.fillStyle = head; ctx.strokeStyle = dark; ctx.lineWidth = Math.max(1, r * .08);
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 1.4);
+    ctx.quadraticCurveTo(r * .22, -r * 1.36, r * .38, -r * 1.14);
+    ctx.quadraticCurveTo(r * .56, -r * .92, r * .5, -r * .7);
+    ctx.quadraticCurveTo(r * .42, -r * .54, 0, -r * .52);
+    ctx.quadraticCurveTo(-r * .42, -r * .54, -r * .5, -r * .7);
+    ctx.quadraticCurveTo(-r * .56, -r * .92, -r * .38, -r * 1.14);
+    ctx.quadraticCurveTo(-r * .22, -r * 1.36, 0, -r * 1.4);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = dark; ctx.lineWidth = Math.max(1, r * .06);
+    ctx.beginPath();
+    ctx.moveTo(-r * .4, -r * 1.14); ctx.quadraticCurveTo(-r * .22, -r * 1.22, -r * .08, -r * 1.16);
+    ctx.moveTo(r * .4, -r * 1.14); ctx.quadraticCurveTo(r * .22, -r * 1.22, r * .08, -r * 1.16);
+    ctx.stroke();
+    ctx.fillStyle = info.accent;
+    ctx.beginPath();
+    ctx.arc(-r * .26, -r * 1.06, Math.max(1, r * .13), 0, Math.PI * 2);
+    ctx.arc(r * .26, -r * 1.06, Math.max(1, r * .13), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#101c12";
+    ctx.beginPath();
+    ctx.arc(-r * .26, -r * 1.06, Math.max(.6, r * .055), 0, Math.PI * 2);
+    ctx.arc(r * .26, -r * 1.06, Math.max(.6, r * .055), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#20301c";
+    ctx.beginPath();
+    ctx.arc(-r * .07, -r * 1.32, Math.max(.7, r * .035), 0, Math.PI * 2);
+    ctx.arc(r * .07, -r * 1.32, Math.max(.7, r * .035), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#20301c"; ctx.lineWidth = Math.max(1, r * .05); ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(-r * .27, -r * .72); ctx.quadraticCurveTo(0, -r * .6, r * .27, -r * .72); ctx.stroke();
+  }
   function drawDollFigure(s, accent, sway) {
     var wood = "#8a6a45", dark = "#3a2a1c", face = accent || "#e6c08a";
     ctx.save();
@@ -744,6 +840,7 @@
       var isWheelchair = enemy.type === "wheelchair" || enemy.type === "wheelchairElite";
       var isFrostBeast = enemy.type === "frostBeast" || enemy.type === "frostBeastElite";
       var isPuppet = enemy.type === "puppet" || enemy.type === "puppetElite", isPuppetDoll = enemy.type === "puppetDoll";
+      var isLizard = enemy.type === "lizard" || enemy.type === "lizardElite";
       var auraReach = info.flying ? r * 1.7 : r;
       var shirtColor = isSplitter ? (isElite ? "#584a84" : "#463c6b")
         : isPuppet ? (isElite ? "#3a2d4d" : "#4a3d5c")
@@ -799,6 +896,14 @@
 
       if (isPuppetDoll) {
         drawPuppetDollBody(r, info, S.session.elapsed * 1.8 + enemy.x * .08 + enemy.y * .04);
+        if (Game.isHardControlled(enemy) && enemy.controlType === "freeze") drawFreezeShell(enemy, r, info);
+        ctx.restore();
+        drawEnemyVitals(enemy, r);
+        return;
+      }
+
+      if (isLizard) {
+        drawLizardBody(r, info, isElite, S.session.elapsed * 4.2 + enemy.x * .06 + enemy.y * .04);
         if (Game.isHardControlled(enemy) && enemy.controlType === "freeze") drawFreezeShell(enemy, r, info);
         ctx.restore();
         drawEnemyVitals(enemy, r);
@@ -2093,14 +2198,18 @@
         text(gem.locked ? "🔒" : "锁", lockRect.x + lockRect.w / 2, lockRect.y + 11, gem.locked ? "8px Segoe UI Emoji, Segoe UI, Microsoft YaHei" : "bold 7px Segoe UI, Microsoft YaHei", gem.locked ? C.colors.yellow : C.colors.muted, "center");
       });
     } else if (tab === "equipment") {
-      Game.equipment.getBagOverview().forEach(function (row, index) {
-        var rect = Game.getCharacterEquipCellRect(index), owned = row.level > 0;
-        U.roundedRect(ctx, rect.x, rect.y, rect.w, rect.h, 8, "rgba(13, 34, 46, .92)", owned ? row.elementColor : "rgba(153, 205, 218, .18)");
-        drawEquipmentGlyph(row.id, rect.x + rect.w / 2, rect.y + 23, 20, owned ? row.elementColor : "rgba(90, 116, 130, .60)");
-        text(row.short, rect.x + 5, rect.y + 10, "bold 7px Segoe UI, Microsoft YaHei", owned ? row.color : C.colors.muted);
-        if (owned) dot(rect.x + rect.w - 9, rect.y + 8, 3, row.elementColor, "rgba(255, 255, 255, .30)");
-        text(owned ? "Lv." + row.level : (ready ? "未获取" : "未登录"), rect.x + 5, rect.y + rect.h - 5, "8px Segoe UI, Microsoft YaHei", owned ? C.colors.cyan : C.colors.muted);
-        if (owned) text(row.bagTotal ? String(row.bagTotal) : "—", rect.x + rect.w - 5, rect.y + rect.h - 5, "bold 8px Segoe UI, Microsoft YaHei", row.bagTotal ? row.elementColor : C.colors.muted, "right");
+      var equipView = Game.getCharacterEquipRows();
+      drawGemPager(Game.getCharacterEquipPagerRect("prev"), "‹", equipView.page > 0, C.colors.cyan);
+      drawGemPager(Game.getCharacterEquipPagerRect("next"), "›", equipView.page < equipView.pages - 1, C.colors.cyan);
+      text((equipView.page + 1) + "/" + equipView.pages, 226, ui.bagTitleY - 2, "9px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+      if (!equipView.total) text(ready ? "暂无装备 · 关卡奖励会掉落" : "登录后显示装备背包", ui.equipCells.x + 8, ui.equipCells.y + 26, "9px Segoe UI, Microsoft YaHei", C.colors.muted);
+      equipView.items.forEach(function (item, index) {
+        var rect = Game.getCharacterEquipCellRect(index);
+        U.roundedRect(ctx, rect.x, rect.y, rect.w, rect.h, 8, "rgba(13, 34, 46, .92)", item.equipped ? C.colors.green : item.elementColor);
+        drawEquipmentGlyph(item.slotId, rect.x + rect.w / 2, rect.y + 20, 18, item.elementColor);
+        text(item.partShort, rect.x + 5, rect.y + 10, "bold 7px Segoe UI, Microsoft YaHei", item.partColor);
+        if (item.equipped) dot(rect.x + rect.w - 7, rect.y + 7, 3, C.colors.green, "rgba(255, 255, 255, .30)");
+        text(item.elementName, rect.x + rect.w / 2, rect.y + rect.h - 5, "bold 8px Segoe UI, Microsoft YaHei", item.elementColor, "center");
       });
     } else {
       var resourceCells = ui.resourceCells.columns * ui.resourceCells.rows;
@@ -2115,11 +2224,16 @@
 
     var note = tab === "gem"
       ? (state.gemError || state.gemNotice || (ready ? "已镶嵌宝石才提供属性 · 一键合成会先确认" : "登录后可镶嵌、锁定与合成宝石"))
-      : tab === "equipment" ? "换装请进入 装备强化 → 装备背包"
+      : tab === "equipment" ? (state.equipmentBagError || state.equipmentBagNotice || (ready ? "点击装备查看详情 · 替换只改元素" : "登录后可替换装备"))
         : resourceList.length > ui.resourceCells.columns * ui.resourceCells.rows
           ? "共 " + resourceList.length + " 项 · 仅显示前 " + ui.resourceCells.columns * ui.resourceCells.rows + " 项"
           : "资源由关卡奖励产出";
-    text(String(note).slice(0, 34), center, ui.statusY, "8px Segoe UI, Microsoft YaHei", tab === "gem" && state.gemError ? C.colors.red : (tab === "gem" && state.gemNotice ? C.colors.green : C.colors.muted), "center");
+    var noteColor = C.colors.muted;
+    if (tab === "gem" && state.gemError) noteColor = C.colors.red;
+    else if (tab === "gem" && state.gemNotice) noteColor = C.colors.green;
+    else if (tab === "equipment" && state.equipmentBagError) noteColor = C.colors.red;
+    else if (tab === "equipment" && state.equipmentBagNotice) noteColor = C.colors.green;
+    text(String(note).slice(0, 34), center, ui.statusY, "8px Segoe UI, Microsoft YaHei", noteColor, "center");
 
     ["宝石", "装备", "资源"].forEach(function (label, index) {
       var key = ["gem", "equipment", "resource"][index];
@@ -2128,6 +2242,8 @@
       text(label, rect.x + rect.w / 2, rect.y + 24, "bold 13px Segoe UI, Microsoft YaHei", active ? C.colors.text : C.colors.muted, "center");
     });
     if (S.characterGems) Game.drawCharacterGems();
+    if (S.characterEquipItem) Game.drawCharacterEquip();
+    if (S.characterGemDetail) Game.drawCharacterGemDetail();
     if (S.gemSynthesisOpen) Game.drawGemSynthesis();
   };
 
@@ -2135,35 +2251,97 @@
     var ui = C.characterUI, center = C.width / 2, state = Game.accounts.state;
     var ready = Game.accounts.getStatus() === "ready", busy = state.gemBusy;
     var partId = S.characterGems, part = Game.gems.getPart(partId), slot = Game.equipment.getSlot(partId);
-    var box = Game.getCharacterGemPanel();
+    var replaceGem = Game.getCharacterGemReplace(), box = Game.getCharacterGemPanel();
     U.roundedRect(ctx, 0, 0, C.width, C.height, 0, "rgba(3, 9, 13, .78)");
     panel(box.x, box.y, box.w, box.h, "rgba(10, 35, 49, .98)", "rgba(153, 205, 218, .24)", 20);
-    badge("GEM  ·  SOCKETS", center - 70, box.y + 14, 140, C.colors.green);
-    text(part.name + " · 宝石槽位", center, ui.gemPanelTitleY, "bold 22px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    badge("GEM  ·  SOCKETS", center - 70, box.y + 14, 140, replaceGem ? C.colors.yellow : C.colors.green);
+    text(part.name + (replaceGem ? " · 替换宝石" : " · 宝石槽位"), center, ui.gemPanelTitleY, "bold 22px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
     var subtitle = ready
-      ? "Lv." + (slot ? slot.level : 0) + (slot && slot.elementName ? " · " + slot.elementName + "系" : "") + " · " + part.socketedCount + " / " + part.capacity
+      ? (replaceGem
+        ? replaceGem.qualityName + " " + replaceGem.affix.text + " · " + part.socketedCount + " / " + part.capacity
+        : "Lv." + (slot ? slot.level : 0) + (slot && slot.elementName ? " · " + slot.elementName + "系" : "") + " · " + part.socketedCount + " / " + part.capacity)
       : (Game.accounts.getStatusNote() || "正在连接账户服务…");
-    text(subtitle, center, ui.gemPanelSubtitleY, "10px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
+    text(subtitle, center, ui.gemPanelSubtitleY, "10px Segoe UI, Microsoft YaHei", replaceGem ? replaceGem.color : C.colors.muted, "center");
     for (var index = 0; index < ui.gemRows.rows; index++) {
       var row = Game.getCharacterGemSlotRowRect(index), gem = part.sockets[index], button = Game.getCharacterGemUnsocketRect(index);
       if (gem) {
-        U.roundedRect(ctx, row.x, row.y, row.w, row.h, 10, "rgba(13, 34, 46, .96)", gem.color);
+        U.roundedRect(ctx, row.x, row.y, row.w, row.h, 10, "rgba(13, 34, 46, .96)", replaceGem ? "rgba(255, 209, 102, .52)" : gem.color);
         drawGemIcon(row.x + 20, row.y + 19, 18, gem.color);
         text(gem.qualityName + " 宝石", row.x + 36, row.y + 16, "bold 11px Segoe UI, Microsoft YaHei", gem.color);
         if (gem.locked) text("🔒", row.x + 110, row.y + 16, "10px Segoe UI Emoji, Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
         text(String(gem.affix.text).slice(0, 18), row.x + 36, row.y + 32, "10px Segoe UI, Microsoft YaHei", C.colors.text);
-        var enabled = ready && !busy;
-        U.roundedRect(ctx, button.x, button.y, button.w, button.h, 8, enabled ? C.colors.cyan : "rgba(38, 56, 66, .90)", enabled ? "rgba(255, 255, 255, .24)" : "rgba(153, 205, 218, .16)");
-        text(!ready ? "未登录" : (busy ? "处理中" : "卸下"), button.x + button.w / 2, button.y + 16, "bold 10px Segoe UI, Microsoft YaHei", enabled ? "#071217" : C.colors.muted, "center");
+        var enabled = ready && !busy, label = "卸下", tint = C.colors.cyan;
+        if (replaceGem) { label = "替换"; tint = C.colors.yellow; }
+        else if (busy) label = "处理中";
+        else if (!ready) label = "未登录";
+        U.roundedRect(ctx, button.x, button.y, button.w, button.h, 8, enabled ? tint : "rgba(38, 56, 66, .90)", enabled ? "rgba(255, 255, 255, .24)" : "rgba(153, 205, 218, .16)");
+        text(label, button.x + button.w / 2, button.y + 16, "bold 10px Segoe UI, Microsoft YaHei", enabled ? "#071217" : C.colors.muted, "center");
       } else {
         U.roundedRect(ctx, row.x, row.y, row.w, row.h, 10, "rgba(7, 20, 28, .62)", "rgba(153, 205, 218, .18)");
         text("+", row.x + 20, row.y + 26, "bold 17px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
         text("空槽 " + (index + 1), row.x + 36, row.y + 18, "bold 10px Segoe UI, Microsoft YaHei", C.colors.muted);
-        text("在下方宝石背包点击宝石即可镶嵌", row.x + 36, row.y + 33, "9px Segoe UI, Microsoft YaHei", "rgba(154, 176, 188, .70)");
+        text(replaceGem ? "点关闭取消替换后可镶嵌" : "在下方宝石背包点击宝石即可镶嵌", row.x + 36, row.y + 33, "9px Segoe UI, Microsoft YaHei", "rgba(154, 176, 188, .70)");
       }
     }
-    text(state.gemError || state.gemNotice || "已镶嵌宝石才提供属性 · 锁定不影响镶嵌", center, ui.gemPanelNoteY, "9px Segoe UI, Microsoft YaHei", state.gemError ? C.colors.red : (state.gemNotice ? C.colors.green : C.colors.muted), "center");
+    var note = replaceGem ? "选择要替换的宝石 · 点关闭取消替换" : (state.gemError || state.gemNotice || "已镶嵌宝石才提供属性 · 锁定不影响镶嵌");
+    text(String(note).slice(0, 34), center, ui.gemPanelNoteY, "9px Segoe UI, Microsoft YaHei", replaceGem ? C.colors.yellow : (state.gemError ? C.colors.red : (state.gemNotice ? C.colors.green : C.colors.muted)), "center");
     var close = Game.getCharacterGemCloseRect();
+    U.roundedRect(ctx, close.x, close.y, close.w, close.h, 10, "rgba(38, 56, 66, .94)", "rgba(153, 205, 218, .24)");
+    text("关闭", close.x + close.w / 2, close.y + 22, "bold 12px Segoe UI, Microsoft YaHei", C.colors.text, "center");
+  };
+
+  Game.drawCharacterGemDetail = function () {
+    var ui = C.characterUI, center = C.width / 2, state = Game.accounts.state;
+    var ready = Game.accounts.getStatus() === "ready", busy = state.gemBusy;
+    var detail = Game.getCharacterGemDetail();
+    if (!detail) return;
+    var gem = detail.gem, plan = detail.plan, part = detail.part;
+    var box = ui.gemDetail.panel, info = characterPartInfo(gem.partId);
+    U.roundedRect(ctx, 0, 0, C.width, C.height, 0, "rgba(3, 9, 13, .78)");
+    panel(box.x, box.y, box.w, box.h, "rgba(10, 35, 49, .98)", "rgba(153, 205, 218, .24)", 20);
+    badge("GEM  ·  DETAIL", center - 58, box.y + 14, 116, gem.color);
+    text("宝石详情", center, ui.gemDetail.titleY, "bold 21px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    drawGemIcon(box.x + 44, ui.gemDetail.iconY, 32, gem.color);
+    text(gem.qualityName + " 宝石", box.x + 72, ui.gemDetail.iconY - 4, "bold 13px Segoe UI, Microsoft YaHei", gem.color);
+    text(String(gem.affix.text).slice(0, 16), box.x + 72, ui.gemDetail.iconY + 16, "bold 11px Segoe UI, Microsoft YaHei", C.colors.text);
+    text("部位 · " + info.name + (gem.locked ? " · 已锁定" : ""), box.x + 16, ui.gemDetail.lineY[0], "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+    var stateText = plan.ok
+      ? (plan.mode === "replace" ? "可直接替换同词条宝石" : plan.mode === "pick" ? "槽位已满 · 需选择替换" : "可镶嵌到空槽")
+      : (plan.mode === "blocked" ? "同词条宝石需更高品质" : "不可镶嵌");
+    text("槽位 · " + part.socketedCount + " / " + part.capacity + " · " + stateText, box.x + 16, ui.gemDetail.lineY[1], "10px Segoe UI, Microsoft YaHei", plan.ok ? C.colors.green : C.colors.yellow);
+    var hint = ready ? (plan.mode === "place" ? "镶嵌后立即生效 · 卸下会回到背包" : plan.message) : (Game.accounts.getStatusNote() || "正在连接账户服务…");
+    text(String(hint).slice(0, 30), center, ui.gemDetail.hintY, "9px Segoe UI, Microsoft YaHei", plan.ok ? C.colors.muted : C.colors.yellow, "center");
+    var socket = Game.getCharacterGemDetailSocketRect(), close = Game.getCharacterGemDetailCloseRect();
+    var enabled = ready && !busy && plan.ok;
+    var label = !ready ? "未登录" : busy ? "处理中" : plan.mode === "replace" ? "替换镶嵌" : plan.mode === "pick" ? "选择替换" : "镶嵌";
+    U.roundedRect(ctx, socket.x, socket.y, socket.w, socket.h, 10, enabled ? C.colors.cyan : "rgba(38, 56, 66, .90)", enabled ? "rgba(255, 255, 255, .28)" : "rgba(153, 205, 218, .16)");
+    text(label, socket.x + socket.w / 2, socket.y + 22, "bold 12px Segoe UI, Microsoft YaHei", enabled ? "#071217" : C.colors.muted, "center");
+    U.roundedRect(ctx, close.x, close.y, close.w, close.h, 10, "rgba(38, 56, 66, .94)", "rgba(153, 205, 218, .24)");
+    text("关闭", close.x + close.w / 2, close.y + 22, "bold 12px Segoe UI, Microsoft YaHei", C.colors.text, "center");
+  };
+
+  Game.drawCharacterEquip = function () {
+    var ui = C.characterUI, center = C.width / 2, state = Game.accounts.state;
+    var ready = Game.accounts.getStatus() === "ready", busy = state.equipmentBagBusy;
+    var item = Game.getCharacterEquipDetail();
+    if (!item) return;
+    var box = ui.equipDetail.panel;
+    U.roundedRect(ctx, 0, 0, C.width, C.height, 0, "rgba(3, 9, 13, .78)");
+    panel(box.x, box.y, box.w, box.h, "rgba(10, 35, 49, .98)", "rgba(153, 205, 218, .24)", 20);
+    badge("EQUIPMENT  ·  DETAIL", center - 64, box.y + 14, 128, item.elementColor);
+    text("装备详情", center, ui.equipDetail.titleY, "bold 21px Segoe UI, Microsoft YaHei", C.colors.yellow, "center");
+    drawEquipmentGlyph(item.slotId, box.x + 44, ui.equipDetail.iconY, 34, item.elementColor);
+    text(item.partName + " · " + item.elementName + "系", box.x + 74, ui.equipDetail.iconY - 4, "bold 13px Segoe UI, Microsoft YaHei", item.elementColor);
+    text(item.level ? "Lv." + item.level : "未获取", box.x + 74, ui.equipDetail.iconY + 16, "bold 11px Segoe UI, Microsoft YaHei", C.colors.cyan);
+    text("状态 · " + (item.equipped ? "当前装备" : "可替换"), box.x + 16, ui.equipDetail.lineY[0], "10px Segoe UI, Microsoft YaHei", item.equipped ? C.colors.green : C.colors.muted);
+    text("替换只改元素 · 等级保留在部位", box.x + 16, ui.equipDetail.lineY[1], "10px Segoe UI, Microsoft YaHei", C.colors.muted);
+    var hint = state.equipmentBagError || state.equipmentBagNotice || (ready ? "" : (Game.accounts.getStatusNote() || "正在连接账户服务…"));
+    text(String(hint).slice(0, 30), center, ui.equipDetail.hintY, "9px Segoe UI, Microsoft YaHei", state.equipmentBagError ? C.colors.red : (state.equipmentBagNotice ? C.colors.green : C.colors.muted), "center");
+    var replace = Game.getCharacterEquipReplaceRect(), close = Game.getCharacterEquipCloseRect();
+    var enabled = ready && !busy && !item.equipped;
+    U.roundedRect(ctx, replace.x, replace.y, replace.w, replace.h, 10, enabled ? C.colors.cyan : "rgba(38, 56, 66, .90)", enabled ? "rgba(255, 255, 255, .28)" : "rgba(153, 205, 218, .16)");
+    var label = !ready ? "未登录" : (item.equipped ? "已装备" : busy ? "替换中" : "替换");
+    text(label, replace.x + replace.w / 2, replace.y + 22, "bold 12px Segoe UI, Microsoft YaHei", enabled ? "#071217" : C.colors.muted, "center");
     U.roundedRect(ctx, close.x, close.y, close.w, close.h, 10, "rgba(38, 56, 66, .94)", "rgba(153, 205, 218, .24)");
     text("关闭", close.x + close.w / 2, close.y + 22, "bold 12px Segoe UI, Microsoft YaHei", C.colors.text, "center");
   };

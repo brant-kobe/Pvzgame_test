@@ -428,8 +428,10 @@
     });
   }
 
-  function socketGem(gemId) {
-    return runGemAction("socket", "/api/me/gems/socket", { gemId: gemId }, function () { return "宝石已镶嵌"; });
+  function socketGem(gemId, slotIndex) {
+    return runGemAction("socket", "/api/me/gems/socket", { gemId: gemId, slotIndex: slotIndex === undefined ? null : slotIndex }, function (data) {
+      return data && data.replacedId ? "已替换宝石" : "宝石已镶嵌";
+    });
   }
 
   function unsocketGem(gemId) {

@@ -106,34 +106,33 @@
     };
   }
 
-  function getBagOverview() {
-    return getSlots().map(function (slot) {
-      var counts = {}, parts = [], total = 0;
-      Object.keys(C.elements).forEach(function (element) { counts[element] = 0; });
-      state.bag.forEach(function (item) {
-        if (item.slotId !== slot.id) return;
-        counts[item.element] += 1;
-        total += 1;
+  function getBagRows() {
+    var order = {}, slotsById = {}, list = [];
+    slots().forEach(function (slot, index) { order[slot.id] = index; slotsById[slot.id] = slot; });
+    state.bag.forEach(function (item) {
+      var slot = slotsById[item.slotId];
+      if (!slot) return;
+      var row = state.data && state.data[item.slotId], element = C.elements[item.element] || C.elements.physical;
+      list.push({
+        id: item.id,
+        slotId: item.slotId,
+        partName: slot.name,
+        partShort: slot.short,
+        partColor: slot.color,
+        element: item.element,
+        elementName: element.name,
+        elementColor: element.color,
+        level: row ? row.level : 0,
+        equipped: !!row && row.element === item.element
       });
-      Object.keys(C.elements).forEach(function (element) {
-        if (!counts[element]) return;
-        parts.push({ element: element, name: C.elements[element].name, color: C.elements[element].color, count: counts[element] });
-      });
-      return {
-        id: slot.id,
-        name: slot.name,
-        short: slot.short,
-        color: slot.color,
-        level: slot.level,
-        maxLevel: slot.maxLevel,
-        element: slot.element,
-        elementName: slot.elementName,
-        elementColor: slot.elementColor,
-        equippedName: slot.elementName,
-        bagTotal: total,
-        parts: parts
-      };
     });
+    list.sort(function (a, b) {
+      var left = order[a.slotId] === undefined ? 99 : order[a.slotId];
+      var right = order[b.slotId] === undefined ? 99 : order[b.slotId];
+      if (left !== right) return left - right;
+      return a.id - b.id;
+    });
+    return list;
   }
 
   function clear() {
@@ -201,7 +200,7 @@
     getSlot: getSlot,
     getBag: getBag,
     getBagPart: getBagPart,
-    getBagOverview: getBagOverview,
+    getBagRows: getBagRows,
     getTotals: getTotals
   };
 })(window.Game = window.Game || {});

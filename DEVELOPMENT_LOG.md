@@ -495,3 +495,24 @@ git diff --check
 - 宝石页签与装备页签也改为**方格**：宝石页签 6 列 × 2 行、每页 12 格（`config.characterUI.gemCells`），每格画三角宝石、词条名与数值、左上角部位短名，右上角 14 × 14 锁按钮（点格子镶嵌、点锁按钮锁定），标题行保留分页与一键合成；装备页签 3 列 × 2 行（`config.characterUI.equipCells`），每格画部位短名、元素圆点、装备图标、`Lv.N` 与背包件数。`Game.getCharacterBagRowRect` / `getCharacterBagLineRect` 与 `config.characterUI.bag` / `bagLines` 一并删除，改用 `getCharacterGemCellRect` / `getCharacterEquipCellRect`。
 - 宝石图标由六边形改为**按品质着色的三角形**（灰 / 绿 / 蓝 / 紫 / 红，带顶面高光与左右切面），镶嵌浮层、背包方格与「一键合成」确认窗口共用同一份 `drawGemIcon`。
 - 验证：`tmp/check-character.js` 184 → **193 项**（新增方格正方形与不重叠、零值资源隐藏、数量文案、无资源提示等断言）；`tmp/check-gems.js` 239 项通过；全量 35 个 `check-*.js` 与 8 个 `audit-*.js` 0 失败，`node --check` 与 `git diff --check` 通过；出图更新 `tmp/character-resource.png`、`tmp/character-screen.png`、`tmp/character-equip.png`、`tmp/character-guest.png`、`tmp/character-guest-equip.png`、`tmp/character-guest-resource.png`、`tmp/character-gems.png`、`tmp/character-synth.png`。后端未改动。
+
+---
+
+## 2026-10-22 · 宝石详情、同词条约束与装备替换
+
+- 点击背包宝石不再直接镶嵌，先弹出**宝石详情**（`S.characterGemDetail`、`config.characterUI.gemDetail`）：品质与词条、所属部位、`槽位 · N / 6 · 状态`、提示行与「镶嵌」「关闭」两个按钮；点「镶嵌」才落位，成功后收起浮层并在状态行提示「宝石已镶嵌 / 已替换宝石」。
+- 新增只读推演 `Game.gems.planSocket(gemId)`，返回 `place` / `replace` / `pick` / `blocked` / `socketed` / `missing` 六种模式，详情按钮文案与是否可点都由它决定。
+- **同词条唯一**：同一部位同一条词条只能存在一颗 —— 同词条且品质不高于已镶嵌那颗时拒绝（`gem_affix_conflict`，提示「同词条宝石不可重复镶嵌，需要更高品质」）；更高品质直接替换那颗宝石所在的槽位（原宝石回背包），详情按钮显示「替换镶嵌」；槽位已满且词条不冲突时置 `S.characterGemReplace` 打开该部位宝石浮层的**替换模式**（副标题换成待镶嵌宝石、六行按钮变「替换」、点行带上 `slotIndex`、关闭即取消），不再有「槽位已满」死路。
+- 服务端为权威实现：`gems.socket(db, account_id, gem_id, slot_index=None)` 先做同词条判定再决定目标槽位，替换前先把旧宝石的 `slot_index` 写空并 `flush`，避免 `uq_gem_socket` 唯一约束冲突；`/api/me/gems/socket` 新增可选 `slotIndex`，`/api/me/gems/grant` 新增可选 `affixId`（调试注入指定词条），两者都做了取值校验（`invalid_gem_slot` / `unknown_gem_affix`）。
+- **装备页签提供替换**：点击 3 × 2 方格中的任一部位打开**装备替换浮层**（`S.characterEquipPart`、`config.characterUI.equipPanel`），用 `Game.equipment.getBagPart` 列出六种元素（当前装备 / 持有 N / 无可用）与「替换」按钮；点整格调用 `Game.replaceCharacterEquipment` → `equipEquipment`，成功后留在浮层并提示「已换装」，`Lv.N` 保持不变（换装只交换 `element_id`）。
+- 新增 `config.characterUI.gemDetail` / `equipPanel` 与 `Game.getCharacterGemDetailPanel` / `getCharacterGemDetailSocketRect` / `getCharacterGemDetailCloseRect` / `getCharacterEquipPanel` / `getCharacterEquipRowRect` / `getCharacterEquipActionRect` / `getCharacterEquipCloseRect`；`openCharacter` / `backToCharacter` / `openAttributes` / `closeCharacterGems` / `setCharacterTab` 一并清空三个新浮层状态，`drawCharacter` 按「宝石浮层 → 装备替换 → 宝石详情 → 合成确认」叠加。
+- 验证：`tmp/check-character.js` 193 → **246 项**（宝石详情只开浮层不发请求、点「镶嵌」才发请求、装备替换换元素不改等级、新浮层几何不重叠等）；`tmp/check-gems.js` 239 → **310 项**（同词条同品质拒绝、高品质直替、`planSocket` 四种模式、满槽选择替换的完整 UI、指定槽位与非法槽位）；`tmp/check_db.py` 142 → **153 项**、`tmp/check_api.py` 164 → **177 项**（`slotIndex` / `affixId`、同词条唯一、满槽替换、非法槽位与未知词条）；全量 35 个 `check-*.js` 与 8 个 `audit-*.js` 0 失败，`node --check`、`compileall` 与 `git diff --check` 通过；出图 `tmp/character-gem-detail.png`、`tmp/character-gem-replace.png`、`tmp/character-equip-replace.png`，并更新 `character-equip.png`。
+
+---
+
+## 2026-10-22 · 装备背包改为方格与装备详情
+
+- 装备页签改为与宝石页签一致的 **6 列 × 2 行、每页 12 格**方格（`config.characterUI.equipCells` 改为 `{34,404,size 44,gap 4,columns 6,rows 2}`，与宝石方格同起点），按 `Game.equipment.getBagRows()` 逐件列出背包装备：格内是部位短名、装备图标与元素名，当前已装备的那件用绿框 + 右上绿点标出；新增 `config.characterUI.equipPager` 与 `Game.getCharacterEquipRows` / `getCharacterEquipPageCount` / `getCharacterEquipPage` / `setCharacterEquipPage` / `getCharacterEquipPagerRect`，超过 12 件时与宝石页签同一位置分页。
+- 装备替换浮层改为**装备详情**（`S.characterEquipItem`、`config.characterUI.equipDetail`，与宝石详情同一版式）：只显示装备图标、`部位 · 元素系`、`Lv.N`、当前装备 / 可替换与「替换」「关闭」，不再显示六种元素、持有数量与副标题；已装备的条目按钮显示「已装备」且不发请求。换装仍走 `equipEquipment`（只交换 `element_id`，等级保留在部位），替换后同一条目会变成换下来的旧元素。
+- 数据层把 `Game.equipment.getBagOverview()` 换成 `getBagRows()`（逐件输出部位名 / 短名 / 颜色、元素名 / 颜色、部位等级与是否当前装备，按「部位顺序 → id」排序），`getBagPart` 继续供装备背包界面按部位取六种元素。
+- 验证：`tmp/check-character.js` **245 项**（装备方格 6 × 2 与宝石同起点、逐件详情、替换不改等级、已装备条目不再请求、超过 12 件分页）、`tmp/check-gems.js` **285 项**；全量 35 个 `check-*.js` 与 8 个 `audit-*.js` 0 失败，`node --check`、`smoke-character.js` 与 `git diff --check` 通过；出图更新 `tmp/character-equip.png` 与 `tmp/character-equip-replace.png`。后端未改动。

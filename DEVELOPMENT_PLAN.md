@@ -174,7 +174,7 @@
 - **首领与小怪同场**：首领波在本波常规小怪投放到 `floor(plan.total / 2)` 时登场，登场后本波剩余小怪仍按 `total`、`mix`、`interval` 继续投放；`plan.total` 只计常规名额，首领是额外 1 只。每波计划投放完成后立即推进下一波，不等待场上敌人清空，因此首领存活时后续波次也会继续投放；末波投放完成后仍须清空首领、小怪与待生成子体才能胜利。
 - 当前首领拥有高生命与生命低于一半时的阶段加速；血条绘制在首领头顶，是一条血条加一个剩余条数计数：总血量按 `config.bossHealth.bars`（当前 3）等分，打空一条计数减 1 且血条重新满格，计数画在血条内部右端。召唤小怪、明确预警和攻击前摇属于后续首领行为扩展。
 - 僵尸图鉴中，小怪、精英和首领分别归入对应分类；新增小怪时同时规划其精英形态及两者的图鉴资料。
-- **新增小怪的特殊机制**（护甲僵尸、篮球僵尸、飞鸟僵尸、火焰僵尸、雪人僵尸、雷电僵尸、毒蜂、轮椅僵尸、寒霜兽、傀儡僵尸）连同其精英都已实现本体、图鉴与测试场，各形态都按既有精英规则配齐：精英体型更大、生命/移速/伤害/经验均不低于基础，并强化原有特性（护甲 6 → 12 层；投掷距离 150 → 200、间隔 2.4 → 1.9 秒、单次 12 → 22 点；飞行单位的翼展、移速与啄击伤害同步提升；火焰僵尸 46 → 380 血、雪人僵尸 52 → 430 血，抗性与状态抗性沿用小怪那一套）。停步位置后来整体下移到近距线下方：基础 150 → **85**、精英 200 → **113**（按 4/3 保持精英更靠外的相对关系），因此 `basketballElite.ranged.standoff` 现在是 113。**篮球僵尸与其精英已接入第 5 关「废弃球馆」的波次**（第 3 波起、共 8 波，第 4 波固定登场篮球僵尸精英）；**护甲僵尸、篮球僵尸与分裂僵尸随后一起构成第 6 关「隔离区」的全部波次**（11 波，第 1 波只有篮球僵尸，第 2 波加入分裂僵尸，第 3 波起三种混编，第 4 波固定登场篮球僵尸精英）；**护甲僵尸精英随后随第 7 关「装甲坟场」正式登场**（第 4 波固定，12 层装甲 / 735 血）；**飞鸟僵尸与飞鸟僵尸精英随后随第 8 关「环城高架」进入波次**（飞鸟覆盖 10 波、第 4 波固定飞鸟精英，是首个飞行精英）；**火焰僵尸与火焰僵尸精英随后随第 9 关「焦土防线」进入波次**（全部 11 波只由快跑 / 护甲 / 火焰三种小怪混编，第 4 波固定登场 `flameElite`，798 血）；**雪人僵尸与雪人僵尸精英随后随第 10 关「冰火交界」进入波次**（全部 11 波只由普通 / 火焰 / 雪人三种小怪混编，按「普通 → 火焰 → 雪人」的顺序登场，第 4 波固定登场 `snowmanElite`，946 血）；**雷电僵尸与雷电僵尸精英随后随第 11 关「高压电厂」进入波次**（全部 12 波只由火焰 / 雪人 / 雷电三种小怪混编，按「火焰 → 雪人 → 雷电」的顺序登场，第 4 波固定登场 `thunderElite`，964 血）；**轮椅僵尸与轮椅僵尸精英随后随第 12 关「旧城疗养院」进入波次**（全部 12 波只由护甲 / 火焰 / 轮椅三种小怪混编，按「护甲 → 火焰 → 轮椅」的顺序登场，第 4 波固定登场 `wheelchairElite`，1300 血，是目前最硬的精英）；**傀儡僵尸与傀儡僵尸精英已完成本体、图鉴与测试场，尚未接入任何关卡**（120 / 620 血，远程抛掷 + 阈值召唤）。图鉴列表每页 4 张，小怪与精英各 13 种（分裂幼体与傀儡等 `codexHidden` 派生单位不收录）后自动分成 4 页，分页逻辑无需改动。
+- **新增小怪的特殊机制**（护甲僵尸、篮球僵尸、飞鸟僵尸、火焰僵尸、雪人僵尸、雷电僵尸、毒蜂、轮椅僵尸、寒霜兽、傀儡僵尸、蜥蜴僵尸）连同其精英都已实现本体、图鉴与测试场，各形态都按既有精英规则配齐：精英体型更大、生命/移速/伤害/经验均不低于基础，并强化原有特性（护甲 6 → 12 层；投掷距离 150 → 200、间隔 2.4 → 1.9 秒、单次 12 → 22 点；飞行单位的翼展、移速与啄击伤害同步提升；火焰僵尸 46 → 380 血、雪人僵尸 52 → 430 血，抗性与状态抗性沿用小怪那一套）。停步位置后来整体下移到近距线下方：基础 150 → **85**、精英 200 → **113**（按 4/3 保持精英更靠外的相对关系），因此 `basketballElite.ranged.standoff` 现在是 113。**篮球僵尸与其精英已接入第 5 关「废弃球馆」的波次**（第 3 波起、共 8 波，第 4 波固定登场篮球僵尸精英）；**护甲僵尸、篮球僵尸与分裂僵尸随后一起构成第 6 关「隔离区」的全部波次**（11 波，第 1 波只有篮球僵尸，第 2 波加入分裂僵尸，第 3 波起三种混编，第 4 波固定登场篮球僵尸精英）；**护甲僵尸精英随后随第 7 关「装甲坟场」正式登场**（第 4 波固定，12 层装甲 / 735 血）；**飞鸟僵尸与飞鸟僵尸精英随后随第 8 关「环城高架」进入波次**（飞鸟覆盖 10 波、第 4 波固定飞鸟精英，是首个飞行精英）；**火焰僵尸与火焰僵尸精英随后随第 9 关「焦土防线」进入波次**（全部 11 波只由快跑 / 护甲 / 火焰三种小怪混编，第 4 波固定登场 `flameElite`，798 血）；**雪人僵尸与雪人僵尸精英随后随第 10 关「冰火交界」进入波次**（全部 11 波只由普通 / 火焰 / 雪人三种小怪混编，按「普通 → 火焰 → 雪人」的顺序登场，第 4 波固定登场 `snowmanElite`，946 血）；**雷电僵尸与雷电僵尸精英随后随第 11 关「高压电厂」进入波次**（全部 12 波只由火焰 / 雪人 / 雷电三种小怪混编，按「火焰 → 雪人 → 雷电」的顺序登场，第 4 波固定登场 `thunderElite`，964 血）；**轮椅僵尸与轮椅僵尸精英随后随第 12 关「旧城疗养院」进入波次**（全部 12 波只由护甲 / 火焰 / 轮椅三种小怪混编，按「护甲 → 火焰 → 轮椅」的顺序登场，第 4 波固定登场 `wheelchairElite`，1300 血，是目前最硬的精英）；**傀儡僵尸与傀儡僵尸精英已完成本体、图鉴与测试场，尚未接入任何关卡**（120 / 620 血，远程抛掷 + 阈值召唤）；**蜥蜴僵尸与蜥蜴僵尸精英同样尚未接入任何关卡**（60 / 400 血，冰系 ×1.5 / 电系 ×0.5，没有任何状态抗性）。图鉴列表每页 4 张，小怪与精英各 14 种（分裂幼体与傀儡等 `codexHidden` 派生单位不收录）后自动分成 4 页，分页逻辑无需改动。
 
 当前实现：第 1 关 5 波，第 4 波从普通、快跑、分裂僵尸精英中随机登场 1 只，尸潮领主在第 5 波（本波中段）与小怪同场出现；第 2 关 10 波，快跑僵尸精英在第 4 波登场，尸潮领主在第 7 波与小怪同场出现，之后第 8～10 波继续；第 3、4 关同为第 7 波首领与小怪同场，第 4 波固定登场分裂僵尸精英；第 5 关同样第 7 波首领同场，第 4 波固定登场篮球僵尸精英；第 6 关 11 波，第 7 波首领同场，之后第 8～11 波继续；第 7 关 12 波，第 4 波固定登场护甲僵尸精英，第 7 波首领同场，之后还有第 8～12 波；第 8 关 12 波，第 4 波固定登场飞鸟僵尸精英，第 7 波首领同场，之后还有第 8～12 波；第 9 关 11 波，第 4 波固定登场火焰僵尸精英，第 7 波首领同场，之后还有第 8～11 波；第 10 关 11 波、第 4 波固定登场雪人僵尸精英，第 7 波首领同场，之后还有第 8～11 波；第 11 关 12 波、第 4 波固定登场雷电僵尸精英，第 7 波首领同场，之后还有第 8～12 波；第 12 关 12 波、第 4 波固定登场轮椅僵尸精英，第 7 波首领同场，之后还有第 8～12 波。不要沿用旧的“首领出现在最后一波且届时停刷小怪”的逻辑。
 
@@ -292,9 +292,9 @@
 - 展示只进技能图鉴：`Game.getSkillGroups()` 把 `element` 与可选的 `elementNote` 带进分组，`render.js` 在列表行按属性配色显示「N 属性」、在详情页用 `badge` 画出属性徽标与说明；步枪一行额外标注「冰子弹为冰属性 · 火子弹为火属性」。**战斗 HUD、伤害数字与战场特效都不显示属性**。
 - 本轮刻意**不改任何数值与平衡**：敌人当时不写 `element` 字段，六种属性之间的伤害完全相同，`skillDefaults` 全部数值保持原样（**属性克制已在后续一轮实装**，现在部分敌人会通过 `damageTakenByElement` 吃倍率，但 `config.enemies` 里依旧不写 `element` 字段）。
 
-### 属性克制（已实现 9 组）
+### 属性克制（已实现 11 组）
 
-- 抗性写在**敌人配置**上：`config.enemies[].damageTakenByElement` 是「属性 id → 受伤倍率」的表，`1.5` 表示弱点（多受 50%）、`.5` 表示减免（少受 50%）、`0` 表示完全免疫，缺省 1。当前共 10 组、覆盖 20 种形态：**篮球僵尸 / 篮球僵尸精英** `{ electric: 1.5 }`；**分裂僵尸精英 / 分裂僵尸精英幼体** `{ fire: 1.5 }`；**护甲僵尸 / 护甲僵尸精英** `{ physical: .5 }`；**火焰僵尸 / 火焰僵尸精英** `{ fire: .5, ice: 1.5 }`；**雪人僵尸 / 雪人僵尸精英** `{ ice: .5, fire: 1.5 }`；**雷电僵尸** `{ electric: .5 }` 与**雷电僵尸精英** `{ electric: 0 }`（完全免疫电系伤害）；**毒蜂 / 毒蜂精英** `{ wind: 1.5, energy: .5 }`（受风系伤害 +50%、能量伤害 −50%；毒蜂是飞行单位，风系的旋风加农够不到它，实际吃得到风系加成的只有压缩气刃）；**轮椅僵尸 / 轮椅僵尸精英** `{ fire: 1.5 }`（额外承受 50% 火系伤害，并且第一次引入「条件回血」：`regenPerSecond` 6 / 14 配 `regenBelowHpRatio: .5`，只在生命低于一半时回血、最多回到一半）；**寒霜兽 / 寒霜兽精英** `{ fire: 3 }`（额外承受 200% 火系伤害，是当前唯一 ×3 的弱点；它们同时免疫冻结、麻痹、燃烧、冻伤、击退与牵引，所以火系只剩温压弹 / 燃油弹的直接结算吃得到，燃烧每秒伤害依旧不走倍率）；**傀儡僵尸 / 傀儡僵尸精英** `{ energy: .5, physical: 1.5 }` 与 `{ energy: 0, physical: 1.5 }`（受物理伤害 +50%，小怪能量减半、精英完全免疫能量 —— 与雷电精英同一套「倍率为 0 就写免疫」的口径）。
+- 抗性写在**敌人配置**上：`config.enemies[].damageTakenByElement` 是「属性 id → 受伤倍率」的表，`1.5` 表示弱点（多受 50%）、`.5` 表示减免（少受 50%）、`0` 表示完全免疫，缺省 1。当前共 11 组、覆盖 22 种形态：**篮球僵尸 / 篮球僵尸精英** `{ electric: 1.5 }`；**分裂僵尸精英 / 分裂僵尸精英幼体** `{ fire: 1.5 }`；**护甲僵尸 / 护甲僵尸精英** `{ physical: .5 }`；**火焰僵尸 / 火焰僵尸精英** `{ fire: .5, ice: 1.5 }`；**雪人僵尸 / 雪人僵尸精英** `{ ice: .5, fire: 1.5 }`；**雷电僵尸** `{ electric: .5 }` 与**雷电僵尸精英** `{ electric: 0 }`（完全免疫电系伤害）；**毒蜂 / 毒蜂精英** `{ wind: 1.5, energy: .5 }`（受风系伤害 +50%、能量伤害 −50%；毒蜂是飞行单位，风系的旋风加农够不到它，实际吃得到风系加成的只有压缩气刃）；**轮椅僵尸 / 轮椅僵尸精英** `{ fire: 1.5 }`（额外承受 50% 火系伤害，并且第一次引入「条件回血」：`regenPerSecond` 6 / 14 配 `regenBelowHpRatio: .5`，只在生命低于一半时回血、最多回到一半）；**寒霜兽 / 寒霜兽精英** `{ fire: 3 }`（额外承受 200% 火系伤害，是当前唯一 ×3 的弱点；它们同时免疫冻结、麻痹、燃烧、冻伤、击退与牵引，所以火系只剩温压弹 / 燃油弹的直接结算吃得到，燃烧每秒伤害依旧不走倍率）；**傀儡僵尸 / 傀儡僵尸精英** `{ energy: .5, physical: 1.5 }` 与 `{ energy: 0, physical: 1.5 }`（受物理伤害 +50%，小怪能量减半、精英完全免疫能量 —— 与雷电精英同一套「倍率为 0 就写免疫」的口径）；**蜥蜴僵尸 / 蜥蜴僵尸精英** `{ ice: 1.5, electric: .5 }`（受冰系伤害 +50%、电系伤害 −50%，两种形态抗性完全相同；它没有任何 `statusImmune` / `statusDurationScale`，所以是属性表里唯一一组「只改伤害倍率、不动状态」的抗性组合）。
 - 唯一读取入口是 `Game.getElementDamageScale(enemy, element)`，只在 `Game.damageEnemy` 里使用，并且**排在护甲格挡之后**：被格挡的命中直接返回、不结算倍率，因此**属性不影响装甲层数与剥甲速度**，破甲后才按倍率掉血（倍率为 `0` 时破甲后也一滴血不掉）。倍率与致残射线的 `damageTakenMultiplier` **相乘**，不受减速 / 燃烧 / 重伤等状态影响。
 - **回血仍然由既有机制提供**：分裂僵尸精英与精英幼体本来就有 `regenPerSecond`（8 / 3 点每秒，燃烧结算后按 `dt` 回血、不超过最大生命、受重伤压制），本次没有改动这两个数值，只是把「怕火」和它们放在一起形成「自愈 + 火系弱点」的定位。
 - **燃烧状态的每秒伤害不走属性倍率**：`update.js` 直接结算 `enemy.burn`（不经 `damageEnemy`），所以火系弱点目前只放大温压弹冲击 / 爆炸、燃油弹灼烧与结束爆炸这类直接结算的伤害。要让燃烧也吃克制成，需要给 `applyBurn` 增加来源属性并把它带进回血/灼烧结算，属于后续可选扩展。
@@ -557,6 +557,10 @@
   **渲染**：`drawPuppetRig` 在僵尸身体上叠木制操控架 + 两对提线 + 两颗木珠肩关节 + 举起的木质小傀儡（精英换金色操控架与亮金木珠），`isPuppet` 与 `isPuppetDoll` 的衬衫三元链各插一档紫色布衣；`drawPuppetDollBody` 是**第二个完全自定义的地面身体**（头身木偶、圆球关节、三根垂下的断线），与寒霜兽一样画完即 `return`，不走僵尸双腿；投掷物新增 `shot: "doll"` 分支（`drawDollFigure` 共用于手上小傀儡与飞行中的投掷物，木纹球头 + 十字接缝），与篮球 / 毒刺同帧分流。
   **图鉴**：属性行显示「能量系伤害 −50% / 免疫」与「物理系伤害 +50%」，并在「属性克制」「状态抗性」之后新增第三行「召唤」——`enemySummonTraits` 把阈值与子体名拼成「生命 50% / 25% 时各脱离一只傀儡」（紫色，落在 528 基线，面板下沿 548 内）；精英没有召唤字段所以不画这一行。
   验证：新增 `tmp/check-puppet.js` 共 **107** 项断言（三个单位的分类 / 派生单位隐藏 / 远程与召唤字段 / 傀儡与普通僵尸逐项同级 / 精英无召唤字段、能量 ×0 与物理 ×1.5 的实际伤害（100 → 0 / 150）与小怪的能量 ×0.5、护甲先格挡、停步线 100 与 130 且抵达同帧开始抛掷、投掷物带 `type: doll` 与自身强调色、8 秒落地 3 次且每次只扣一次伤害、**50% / 25% 两个阈值各放一只、61 与 31 不触发、第三只不会出现、两只落在本体两侧并夹在战场内、被冻结时照常召唤、精英一只都不放**、傀儡的移速 / 啃墙 / 击杀计数、图鉴两行属性 + 召唤行文案与基线、操控架 / 两对提线 / 木珠 / 手上小傀儡 / 精英金色变体 / 傀儡的木头身体与三根断线 / 不画僵尸躯干、投掷物木偶造型与篮球分支分流、测试场生成与提示），`tmp/check-resist.js` 的抗性表从 9 组 18 种扩到 **10 组 20 种**（149 → **157** 项），`tmp/check-frostbeast.js` / `check-wasp.js` / `check-wheelchair.js` 的图鉴计数从「各 12 种分 3 页」改为「各 13 种分 4 页」。回归合计 **3444** 项断言通过（42 个前端脚本里只剩 `tmp/smoke-whirlwind.js` 的一条「关卡列表行高仍容得下序号 / 名称 / `?`」失败，由第 12 关加入后行高收到 34.2 引起，本轮没有触碰关卡与列表几何；check-puppet 107 / check-resist 157 / check-frostbeast 109 / check-status 178 / check-frostbite 101 / check-wasp 114 / check-wheelchair 89 / check-thunder 86 / check-elements 114 / smoke-whirlwind 527 / check-chain 78 / check-hail 80 / check-fuel 125 / check-airblade 86 / check-drone 95 / check-flying 90 / check-test-panel 26 / check-unlock 15 / check-level8 66 / check-level9 77 / check-level10 76 / check-level11 97 / check-level12 97 / check-hp-scale 97），各关通关模拟与三个数值脚本都没有变化（三种新单位不在任何 `mix` 里）。画面用 `tmp/trace-draw.js puppet`（两只傀儡僵尸 + 精英 + 两只傀儡 + 一枚普通僵尸 + 两枚投掷物）+ `tmp/replay-draw.py` 回放出 `tmp/puppet.png`，两种形态的图鉴详情页也各回放了一张；回放时发现并修掉一处几何缺陷：手上小傀儡的提线把整帧相位当成了摆动量，导致一根线斜飞到画面外。
+- 新增**蜥蜴僵尸与蜥蜴僵尸精英**，是第一组「只改伤害倍率、不动状态」的抗性组合（冰系 ×1.5、电系 ×0.5），也是第一个**四足爬行**的外观。**蜥蜴僵尸**（60 血 / 移速 32 / 半径 16 / 撞击 12 / 16 经验）只带 `damageTakenByElement: { ice: 1.5, electric: .5 }`，没有任何 `statusImmune` / `statusDurationScale`；**蜥蜴僵尸精英**（400 / 38 / 21 / 19 / 34）抗性逐字相同 —— 「精英与小怪特性相同」这条要求整个落在数据层面，两者只有数值与体型差异。
+  **渲染**：`drawLizardBody` 是第四个完全自定义的身体（宽扁脑袋 + 两侧各两根鳞刺 + 浅色背脊与 4 道鳞纹 + 四足外张各带三根爪 + 甩向一侧的长尾 + 鼻尖与嘴线），与寒霜兽、傀儡一样画完即 `return`，不走僵尸的躯干与双腿；`isLizard` 一并包含精英 id，金色识别光环、减速 / 硬控虚线环与冻结冰壳照旧复用通用分支。造型按 1.43 / 1.05 的图鉴外扩校对过：头顶 1.4 × 半径、尾巴最右 1.51 × 半径，138 像素的缩略图与 280 像素的详情图都放得下。
+  **图鉴**：详情页只画「属性克制」一行（「冰系伤害 +50%」用冰系配色、「电系伤害 −50%」用电系配色，同在 516 基线），不画「状态抗性」与「召唤」；小怪与精英各 14 种，仍自动分成 4 页。
+  验证：新增 `tmp/check-lizard.js` 共 **105** 项断言（两形态的分类 / 抗性字段逐字一致 / 精英数值全面更强且不夹带护甲飞行远程分裂回血召唤 / 移速介于普通与快跑之间 / 停步线按半径贴墙 / 冰 100 → 150、电 100 → 50、其余四系 100 / 护甲先格挡再结算倍率 / 九种状态倍率全为 1 且点燃、冻伤、冻结、麻痹、减速、击退、牵引、重伤全部生效（装甲照旧先吃掉一层）/ 干冰弹 28 → 42、冰雹每跳 ×1.5、电磁穿刺 72 → 36 而麻痹照常、温压弹 32 + 58、气刃 34 与重伤 / 3 秒按 1 秒节奏啃墙 / 图鉴只有两行属性且不越界 / 尾巴 / 四足 / 12 根爪 / 鳞刺 / 背脊线与鳞纹 / 眼睛与鼻孔 / 精英换色与金色光环 / 不画僵尸双腿与破衣服 / 图鉴格不溢出 / 测试场生成与提示），`tmp/check-resist.js` 的抗性表从 10 组 20 种扩到 **11 组 22 种**（157 → **171** 项）；`check-frostbeast` / `check-puppet` / `check-wasp` / `check-wheelchair` 的图鉴计数改为「各 14 种分 4 页」。回归合计 **43 个 `check-*.js`、3376 项断言全部通过**，`tmp/smoke-whirlwind.js` 527 项里仍只剩那条「关卡列表行高 34.2」的既有失败（第 12 关加入后行高收窄，本轮没有触碰关卡与列表几何）；`node --check` 与 `git diff --check` 通过。画面用 `tmp/trace-draw.js lizard`（普通僵尸做尺寸对照 + 两只蜥蜴 + 减速中 / 冰冻中的蜥蜴 + 精英）+ `tmp/replay-draw.py` 回放出 `tmp/lizard.png`，两种形态的图鉴详情页也各回放了一张。
 - 已使用 `node --check` 检查 `src/` 下全部 JavaScript 文件。
 - 已使用 `git diff --check` 检查补丁空白字符。
 - Windows Git 出现的 `LF will be replaced by CRLF` 仅为换行符转换提示，不影响运行。
@@ -822,7 +826,7 @@ git diff --check
 - `src/accounts.js` 缓存 `equipment`、`equipmentBusy`、`equipmentBusySlot`、`equipmentError`、`equipmentNotice`；`applyMe` 应用装备，`forgetAccount` 清空装备；`upgradeEquipment` 走异步接口，401 回 guest，网络失败保留缓存并提示。
 - `Game.openEquipment` / `Game.backToAttributes` / `Game.upgradeEquipment` 是界面切换与升级入口；卡片、按钮、返回按钮几何由 `Game.getEquipmentCardRect` / `Game.getEquipmentUpgradeRect` / `config.equipmentUI` 统一给出。
 - 属性面板底部为「装备 / 宝石 / 城墙 / 返回」四按钮；装备界面为 2 列 × 3 行、140×106 卡片，显示部位、`Lv.N / 100`、攻击、元素、金币与图纸消耗、强化按钮；底部改为「装备背包 / 返回属性」双按钮，状态行显示成功 / 错误或「关卡奖励产出」。`drawHud` 在装备界面跳过。
-- 新增装备背包界面（`config.equipmentBagUI`）：六部位页签、摘要（部位等级 / 当前元素 / 背包件数）与六个固定元素行（名称、`×N`、已装备标记或「装备」按钮）；换装成功后在页面内提示并立即刷新属性。入口只有「属性 → 装备 → 装备背包」，战斗中不能换装。
+- 新增装备背包界面（`config.equipmentBagUI`）：六部位页签、摘要（部位等级 / 当前元素 / 背包件数）与六个固定元素行（名称、`×N`、已装备标记或「装备」按钮）；换装成功后在页面内提示并立即刷新属性。入口是「角色 → 装备强化 → 装备背包」，角色界面背包「装备」页签点部位方格也能直接换装（见第 18 节）；战斗中不能换装。
 - 第 18 节起：属性面板改为只读页（底部只有「返回角色」），装备与城墙入口统一收进角色界面，装备界面底部按钮文案改为「装备背包 / 返回角色」。
 - 账户中心资源区最终为 4 列 × 3 行网格，展示金币、钻石、零件、六种图纸、钢材与稀土（城墙系统加入后从 3×3 扩展为 4×3）。
 
@@ -955,8 +959,8 @@ git diff --check
 ### 16.6 验证
 
 - `tmp/check-gems.js`：覆盖五档数值、12 种词条汇总、仅镶嵌生效、六槽上限、卸下、锁定 / 解锁、锁定不入计划、一键合成一组与多组、取消不发请求、确认弹窗 / 分页 / 词条预览、红色封顶、UI 几何、401 / 网络 / 登出。
-- `tmp/check_db.py`：schema 6、`gems.locked` 默认值、锁定写库、一键合成批量消耗与锁定保护、无候选错误、镶嵌 / 卸下 / 红色上限 / 级联删除。
-- `tmp/check_api.py`：`/api/me` 宝石为空、注入、锁定 / 解锁、镶嵌、六槽上限、卸下、一键合成、无候选 422、非法参数、持久化、静态 `gems.js`。
+- `tmp/check_db.py`：schema 6、`gems.locked` 默认值、锁定写库、一键合成批量消耗与锁定保护、无候选错误、镶嵌 / 卸下 / 红色上限 / 级联删除、**同词条冲突 / 高品质直替 / 指定槽位替换 / 非法槽位**。
+- `tmp/check_api.py`：`/api/me` 宝石为空、注入（`affixId`）、锁定 / 解锁、镶嵌（`slotIndex`）、同词条唯一、满槽替换、非法槽位与未知词条、卸下、一键合成、无候选 422、非法参数、持久化、静态 `gems.js`。
 - `tmp/check-accounts.js`：宝石加载 / 登出清理、钻石资源名。
 - `tmp/check_equipment.js` / `tmp/check_wall.js` / `tmp/check_attributes.js`：属性面板四入口与宝石说明。
 - 截图 `tmp/gems-screen.png`（锁定标志）与 `tmp/gems-synthesis.png`（一键合成弹窗）；`tmp/trace-draw.js` 新增 `account gemsSynth` 场景。
@@ -966,7 +970,7 @@ git diff --check
 - 新账户宝石背包为空；未锁定的 5 颗灰色手臂宝石会出现在一键合成预览，确认后合成 1 颗绿色手臂宝石，部位不变、词条随机、5 颗被消耗。
 - 锁定宝石显示 🔒，且无论背包中有多少颗，都不会被一键合成预览列出或消耗；解锁后立即重新进入预览。
 - 取消确认窗口不发出合成请求；确定后一次处理全部可合成组，10 颗灰色会产出 2 颗绿色。
-- 6 个槽位依次填满，第 7 颗返回槽位已满；卸下后对应加成立即消失。
+- 6 个槽位依次填满，第 7 颗返回槽位已满（词条不冲突时由界面提供替换入口）；同词条低品质被拒绝、更高品质直接替换原槽位；卸下后对应加成立即消失。
 - 只有已镶嵌宝石计入属性；背包宝石不影响攻击 / 元素 / 冷却 / 防线 / 暴击 / 暴伤 / 负面时间。
 - 红色宝石不能继续合成；不足 5 颗、不同部位、不同品质均不能合成。
 - 未登录、401、网络失败、busy 均有正确提示且不产生错误扣减。
@@ -1036,6 +1040,9 @@ menu ──「角色」──> character ──「属性」──> attributes（
                      │                    └─「返回角色」──> character
                      ├─「城墙强化」──> wall ──「返回角色」──> character
                      ├─ 装备方块 ──> 宝石浮层（S.characterGems）
+                     ├─ 宝石页签方格 ──> 宝石详情浮层（S.characterGemDetail）──「镶嵌」──> 直接镶嵌 / 直接替换
+                     │                                     └─ 槽位已满 ──> 宝石浮层替换模式（S.characterGemReplace）
+                     ├─ 装备页签方格 ──> 装备详情浮层（S.characterEquipItem）──「替换」──> equipEquipment
                      └─ 背包页签 宝石 / 装备 / 资源；宝石页签「一键合成」──> 合成确认浮层（S.gemSynthesisOpen）
 ```
 
@@ -1053,48 +1060,56 @@ menu ──「角色」──> character ──「属性」──> attributes（
 | 装备格 | `slotGrid { x:[45,187], y:[150,216,282], size:62, infoWidth:62 }` | 2 列 × 3 行正方形；格内图标 + 部位名 + 元素圆点 + `Lv.N`，右侧信息列元素系 / 攻击 / 元素加成 |
 | 强化入口 | `actionEquip {36,346,138,34}`、`actionWall {186,346,138,34}` | 主标「装备强化 / 城墙强化」，副行 `金币 N` / `Lv.N · 钢材 N` |
 | 背包标题 | `bagTitleY 396` | 「背包 · 宝石 / 装备 / 资源」 |
-| 宝石页签 | `gemCells {34,404,size 44,gap 4,columns 6,rows 2}`、`bagPager`、`bagLock {offsetX 30,w 14,h 14}`、`bagAction {262,380,62,20}` | 12 格/页的宝石方格（三角 + 词条名 + 数值 + 部位短名 + 锁按钮）+ 分页 + 「一键合成」 |
-| 装备页签 | `equipCells {106,404,size 44,gap 4,columns 3,rows 2}` | 六部位方格（部位短名 / 元素圆点 / 图标 / `Lv.N` / 背包件数） |
+| 宝石页签 | `gemCells {34,404,size 44,gap 4,columns 6,rows 2}`、`bagPager`、`bagLock {offsetX 30,w 14,h 14}`、`bagAction {262,380,62,20}` | 12 格/页的宝石方格（三角 + 词条名 + 数值 + 部位短名 + 锁按钮），点格打开宝石详情；+ 分页 + 「一键合成」 |
+| 装备页签 | `equipCells {34,404,size 44,gap 4,columns 6,rows 2}`、`equipPager {190/236,380,20,20}` | 12 格/页的背包装备方格（部位短名 + 装备图标 + 元素名，已装备条目绿框 + 绿点），点格打开装备详情，格子外分页 |
 | 资源页签 | `resourceCells {40,406,size 44,gap 4,columns 6,rows 2}` | 数量非零的资源方格（图标居中 + 右下角数量，零值不显示），容量 12 |
 | 状态行 | `statusY 508` | 错误（红）/ 成功（绿）/ 提示（灰） |
 | 页签 | `tabs {36,514,92,36,gap 6}` | 宝石 / 装备 / 资源 |
-| 宝石浮层 | `gemPanel {30,96,300,432}`、`gemRows {40,184,280,44×6}`、`gemUnsocket {offsetX 212}`、`gemPanelClose {118,474,132,34}` | 六行固定（空槽占行）+ 说明 + 关闭 |
+| 宝石浮层 | `gemPanel {30,96,300,432}`、`gemRows {40,184,280,44×6}`、`gemUnsocket {offsetX 212}`、`gemPanelClose {118,474,132,34}` | 六行固定（空槽占行）+ 说明 + 关闭；替换模式下每行按钮变为「替换」 |
+| 宝石详情 | `gemDetail.panel {44,176,272,256}`、`titleY 236`、`iconY 274`、`lineY [312,332]`、`hintY 356`、`socket {58,376,118,34}`、`close {184,376,118,34}` | 品质与词条、部位、槽位状态、提示行、镶嵌 / 关闭 |
+| 装备详情 | `equipDetail.panel {44,176,272,256}`、`titleY 236`、`iconY 274`、`lineY [312,332]`、`hintY 356`、`replace {58,376,118,34}`、`close {184,376,118,34}` | 装备图标、部位 · 元素、`Lv.N`、状态一行、替换 / 关闭（不再列出六种元素） |
 
 - **装备图标**：`drawEquipmentGlyph(kind, cx, cy, size, color)` 用纯 Canvas 路径画六个部位（护臂 + 两条皮扣、背心、头盔、长裤、靴子、手套），颜色取装备元素色，未登录 / 未获取用灰阶；只在 `render.js` 内使用，不影响数据层。
-- **宝石/装备/资源方格**：三个背包页签统一用方格展示，几何分别由 `config.characterUI.gemCells`（6 列 × 2 行，12 格/页）、`equipCells`（3 列 × 2 行）与 `resourceCells`（6 列 × 2 行）给出，矩形一律由 `Game.getCharacterGemCellRect` / `getCharacterEquipCellRect` / `getCharacterResourceCellRect` 计算；宝石方格的锁按钮由 `bagLock` 偏移到格子右上角（14 × 14）。
+- **宝石/装备/资源方格**：三个背包页签统一用方格展示，几何分别由 `config.characterUI.gemCells`（6 列 × 2 行，12 格/页）、`equipCells`（6 列 × 2 行，与宝石方格同起点）与 `resourceCells`（6 列 × 2 行）给出，矩形一律由 `Game.getCharacterGemCellRect` / `getCharacterEquipCellRect` / `getCharacterResourceCellRect` 计算；宝石方格的锁按钮由 `bagLock` 偏移到格子右上角（14 × 14）。装备方格按 `Game.equipment.getBagRows()` 逐件列出（部位顺序 → id），格内是部位短名、装备图标与元素名，已装备条目用绿框 + 右上绿点标出，分页与宝石页签同一行（`equipPager`）。
 - **宝石图标**：`drawGemIcon(cx, cy, size, color)` 画**按品质着色的三角形**（顶面高光 + 左亮右暗两片切面 + 一道棱线），颜色来自 `config.gems.qualities`，镶嵌浮层、背包方格与「一键合成」确认窗口共用同一份绘制。
 - **资源图标**：`drawResourceIcon(id, cx, cy, size, color)` 按资源 id 分流 —— 金币画带内圈的硬币、钻石画菱形、零件画六齿齿轮、钢材复用 `drawSteelIcon`（金属锭）、稀土复用 `drawRareEarthIcon`（金色圆锥）、六种图纸画同款卷纸（右上折角 + 三条横线）并用部位色区分。资源页签用 6 列 × 2 行的 44 × 44 方格（`config.characterUI.resourceCells`），图标居中、数量写在格内右下角；**数量为 0 的资源不绘制**（`Game.getCharacterResources()` 过滤），全为 0 时只显示「暂无资源 · 关卡奖励会产出资源」，超过 12 项时状态行改提示「共 N 项 · 仅显示前 12 项」。
-- **宝石浮层**：六行从上往下固定排列，已镶嵌行显示品质名、词条、🔒（锁定时）与「卸下」；空槽行显示「＋ 空槽 N」与「在下方宝石背包点击宝石即可镶嵌」；副标题显示 `Lv.N · 元素系 · N / 6`；底部说明与「关闭」。
-- **交互优先级**（`input.js`）：合成确认浮层 > 宝石浮层 > 常规（返回 / 属性 / 装备格 / 强化入口 / 页签 / 分页 / 一键合成 / 锁 / 镶嵌），浮层打开时其余点击一律吞掉。
+- **宝石浮层**：六行从上往下固定排列，已镶嵌行显示品质名、词条、🔒（锁定时）与「卸下」；空槽行显示「＋ 空槽 N」与「在下方宝石背包点击宝石即可镶嵌」；副标题显示 `Lv.N · 元素系 · N / 6`；底部说明与「关闭」。**替换模式**（`S.characterGemReplace` 非空）下副标题改为待镶嵌宝石的品质与词条，六行按钮变成「替换」，底部提示「选择要替换的宝石 · 点关闭取消替换」，点任一行即把待镶嵌宝石换进该槽。
+- **宝石详情**：点击宝石页签方格不再直接镶嵌，而是打开 `S.characterGemDetail` 浮层 —— 三角图标、品质、词条、部位、`槽位 · N / 6 · 状态`（可镶嵌到空槽 / 可直接替换同词条宝石 / 槽位已满 · 需选择替换 / 同词条宝石需更高品质），底部提示与「镶嵌」「关闭」两个按钮。按钮与提示由 `Game.gems.planSocket(gemId)` 决定：`place` 直接镶嵌、`replace` 直接替换同词条低品质宝石、`pick` 转入替换模式、`blocked` 置灰并提示需要更高品质。
+- **装备详情**：点击装备页签的方格打开 `S.characterEquipItem` 浮层，数据来自 `Game.equipment.getBagRows()` 里的同一件装备 —— 装备图标、`部位 · 元素系`、`Lv.N`、状态一行（当前装备 / 可替换）与「替换」「关闭」两个按钮，不再列出六种元素或持有数量。点「替换」调用 `Game.replaceCharacterEquipment(itemId)` → `Game.accounts.equipEquipment`，成功后留在浮层并提示「已换装」（换装交换 `element_id`，格内条目会变成换下来的旧元素）；已装备的条目按钮显示「已装备」且不发请求。
+- **交互优先级**（`input.js`）：合成确认浮层 > 宝石详情 > 装备详情 > 宝石浮层 > 常规（返回 / 属性 / 装备格 / 强化入口 / 页签 / 装备页签方格与分页 / 宝石分页 / 一键合成 / 锁 / 宝石方格），浮层打开时其余点击一律吞掉，点浮层外收起。
 
 ### 18.3 数据入口
 
 - `src/gems.js` 新增 `getBag()`：过滤 `slotIndex === null` 的宝石并按「品质降序 → 部位顺序 → id」排序，供宝石页签跨部位展示。
-- `src/equipment.js` 新增 `getBagOverview()`：六部位各一行（等级、元素、背包元素计数），只做展示聚合，不参与属性。
+- `src/gems.js` 新增 `planSocket(gemId)`：纯只读推演，返回 `{ ok, mode, slotIndex, replacedId, message }`，`mode` 为 `place` / `replace` / `pick` / `blocked` / `socketed` / `missing`；服务端 `gems.socket` 是权威规则，前端只用于按钮文案与替换入口判断。
+- `src/equipment.js` 新增 `getBagRows()`：逐件输出背包装备（部位名 / 短名 / 颜色、元素名 / 颜色、部位等级、是否当前装备），按「部位顺序 → id」排序，只做展示聚合、不参与属性；`getBagPart(partId)` 继续供装备背包界面按部位取六种元素。
 - 资源页签读 `Game.getCharacterResources()`（= `Game.accounts.getResourceList()` 过滤掉数量为 0 的项）；装备格读 `Game.equipment.getSlots()`。
-- 镶嵌 / 卸下 / 锁定 / 一键合成全部复用既有账户层接口（`Game.accounts.socketGem` / `unsocketGem` / `toggleGemLock` / `synthesizeAllGems`），不新增请求路径。
+- 镶嵌 / 卸下 / 锁定 / 一键合成全部复用既有账户层接口（`Game.accounts.socketGem(gemId, slotIndex?)` / `unsocketGem` / `toggleGemLock` / `synthesizeAllGems`），换装复用 `equipEquipment`，不新增请求路径；服务端 `/api/me/gems/socket` 新增可选 `slotIndex`，`/api/me/gems/grant` 新增可选 `affixId`（调试注入指定词条）。
 
 ### 18.4 状态与几何接口
 
-- 新增状态：`S.characterPart`（选中部位，默认 `arm`）、`S.characterTab`（`gem` / `equipment` / `resource`，默认 `gem`）、`S.characterGemPage`、`S.characterGems`（浮层部位 id 或 `null`），均由 `Game.reset` 重置。
-- 新增状态函数：`openCharacter` / `selectCharacterPart` / `setCharacterTab` / `openCharacterGems` / `closeCharacterGems` / `backToCharacter` / `getCharacterGemRows` / `getCharacterGemPageCount` / `getCharacterGemPage` / `setCharacterGemPage`。
-- 新增几何 getter（render 与 input 共用）：`getCharacterSlotRect` / `getCharacterSlotInfoRect` / `getCharacterActionRect` / `getCharacterHeaderRect` / `getCharacterTabRect` / `getCharacterBagRowRect` / `getCharacterBagLineRect` / `getCharacterResourceCellRect` / `getCharacterGemLockRect` / `getCharacterGemPagerRect` / `getCharacterBagActionRect` / `getCharacterGemPanel` / `getCharacterGemSlotRowRect` / `getCharacterGemUnsocketRect` / `getCharacterGemCloseRect`。
-- `drawHud` 的跳过列表用 `character` 替换 `gems`；`Game.draw` 用 `if (S.screen === "character") Game.drawCharacter();`。
+- 新增状态：`S.characterPart`（选中部位，默认 `arm`）、`S.characterTab`（`gem` / `equipment` / `resource`，默认 `gem`）、`S.characterGemPage`、`S.characterGems`（浮层部位 id 或 `null`）、`S.characterGemDetail`（详情宝石 id）、`S.characterGemReplace`（替换模式待镶嵌宝石 id）、`S.characterEquipItem`（详情装备 id）、`S.characterEquipPage`（装备页签页码），均由 `Game.reset` 重置；`openCharacter` / `backToCharacter` / `openAttributes` / `closeCharacterGems` / `setCharacterTab` 一并清空浮层状态。
+- 新增状态函数：`openCharacter` / `selectCharacterPart` / `setCharacterTab` / `openCharacterGems` / `closeCharacterGems` / `backToCharacter` / `getCharacterGemRows` / `getCharacterGemPageCount` / `getCharacterGemPage` / `setCharacterGemPage` / `openCharacterGemDetail` / `closeCharacterGemDetail` / `getCharacterGemDetail` / `getCharacterGemReplace` / `socketCharacterGem` / `replaceCharacterGem` / `openCharacterEquip` / `closeCharacterEquip` / `getCharacterEquipDetail` / `getCharacterEquipRows` / `getCharacterEquipPageCount` / `getCharacterEquipPage` / `setCharacterEquipPage` / `replaceCharacterEquipment`。
+- 新增几何 getter（render 与 input 共用）：`getCharacterSlotRect` / `getCharacterSlotInfoRect` / `getCharacterActionRect` / `getCharacterHeaderRect` / `getCharacterTabRect` / `getCharacterResourceCellRect` / `getCharacterGemLockRect` / `getCharacterGemPagerRect` / `getCharacterBagActionRect` / `getCharacterGemPanel` / `getCharacterGemSlotRowRect` / `getCharacterGemUnsocketRect` / `getCharacterGemCloseRect` / `getCharacterGemDetailPanel` / `getCharacterGemDetailSocketRect` / `getCharacterGemDetailCloseRect` / `getCharacterEquipPagerRect` / `getCharacterEquipDetailPanel` / `getCharacterEquipReplaceRect` / `getCharacterEquipCloseRect`。
+- `drawHud` 的跳过列表用 `character` 替换 `gems`；`Game.draw` 用 `if (S.screen === "character") Game.drawCharacter();`，`drawCharacter` 末尾按「宝石浮层 → 装备详情 → 宝石详情 → 合成确认」顺序叠加浮层。
 
 ### 18.5 验证
 
-- 新增 `tmp/check-character.js` **193 项**：配置与接口、几何（正方形 2×3、资源方格正方形且不重叠、各区夹在面板 / 浮层内）、导航（角色 ↔ 属性 ↔ 装备 / 城墙、旧属性入口不响应）、装备格与浮层（六行固定、空槽、卸下、关闭、点击浮层外收起、busy 置灰）、三个页签（文案与数量；资源页签零值隐藏、无资源时只显示提示）、锁定与一键合成（确认 / 取消 / 无候选不请求）、未登录 / 401 / 离线（零请求、文案、缓存清空）。
-- `tmp/check-gems.js` 重写 [6] 界面几何与 [7] 绘制点击改为角色界面与宝石浮层（保留数据层断言）**207 项**；`tmp/check-attributes.js`（菜单改名、属性面板只读、返回角色）、`tmp/check-equipment.js`（109 项）、`tmp/check-wall.js`（61 项）、`tmp/check-accounts.js`（164 项）同步更新。
-- 全量 35 个 `tmp/check-*.js` 与 8 个 `tmp/audit-*.js` 0 失败；`node --check src/*.js` 与 `git diff --check` 通过。
-- 出图：`tmp/character-screen.png`、`tmp/character-gems.png`、`tmp/character-equip.png`、`tmp/character-resource.png`、`tmp/character-guest.png`、`tmp/character-synth.png` 与更新后的 `tmp/attributes-screen.png`（`tmp/trace-draw.js account character|characterEquip|characterResource|characterGems|characterGuest|gemsSynth` + `tmp/replay-draw.py`）。
-- 后端与数据库未改动。
+- 新增 `tmp/check-character.js` **245 项**：配置与接口、几何（正方形 2×3、资源方格正方形且不重叠、宝石详情与装备详情面板的按钮均在面板内且互不重叠、装备方格与宝石方格同为 6 列 × 2 行 12 格且起点一致、各区夹在面板 / 浮层内）、导航（角色 ↔ 属性 ↔ 装备 / 城墙、旧属性入口不再响应）、装备格与浮层（六行固定、空槽、卸下、关闭、点击浮层外收起、busy 置灰）、装备页签（逐件方格、已装备绿标、点击开详情、点「替换」发请求且 `Lv` 不变、已装备条目不再请求、关闭、超过 12 件分页）、三个页签（文案与数量；资源页签零值隐藏、无资源时只显示提示）、锁定与一键合成（确认 / 取消 / 无候选不请求）、宝石详情（点格只开详情不发请求、点「镶嵌」才发请求、成功后收起）、未登录 / 401 / 离线（零请求、文案、缓存清空）。
+- `tmp/check-gems.js` **285 项**：除数据层外覆盖同词条唯一（同品质拒绝、更高品质直替原槽位、被替宝石回背包）、`planSocket` 四种模式、指定槽位替换与非法槽位、满槽「选择替换」全套 UI（详情 → 替换浮层 → 点行替换 → 请求带 `slotIndex`）、角色界面几何与绘制。
+- 后端：`tmp/check_db.py` **153 项**（同词条冲突、高品质替换、指定槽位替换、非法槽位；宝石槽位写入数据库）与 `tmp/check_api.py` **177 项**（`slotIndex` / `affixId` 参数、同词条唯一、满槽替换、非法槽位与未知词条）全部通过；`tmp/check-attributes.js`（菜单改名、属性面板只读、返回角色）、`tmp/check-equipment.js`（109 项）、`tmp/check-wall.js`（61 项）、`tmp/check-accounts.js`（164 项）同步更新。
+- 全量 35 个 `tmp/check-*.js` 与 8 个 `tmp/audit-*.js` 0 失败；`node --check src/*.js`、`python -m compileall server` 与 `git diff --check` 通过。
+- 出图：`tmp/character-screen.png`、`tmp/character-gem-detail.png`、`tmp/character-gem-replace.png`、`tmp/character-equip-replace.png`、`tmp/character-gems.png`、`tmp/character-equip.png`、`tmp/character-resource.png`、`tmp/character-guest.png`、`tmp/character-synth.png` 与 `tmp/attributes-screen.png`（`tmp/trace-draw.js account character|characterGemDetail|characterGemReplace|characterEquipReplace|characterEquip|characterResource|characterGems|characterGuest|gemsSynth` + `tmp/replay-draw.py`）。
 
 ### 18.6 验收标准
 
 - 首页点击「角色」进入角色界面；六个 62×62 方块按 2 列 × 3 行排布，图标、部位名、`Lv.N`、元素圆点与右侧加成信息完整可见。
 - 点击任一方块弹出该部位六行宝石（空槽占行）；「卸下」发一次 `/api/me/gems/unsocket`，成功后槽位清空、属性回落；「关闭」或浮层外点击收起。
 - 中部两个入口分别进入装备界面与城墙界面，两处「返回」都回到角色界面；右上角「属性」进入只读属性面板并返回角色界面。
-- 三个页签可切换：宝石页签用 **6 列 × 2 行的方格**（每页 12 格）展示未镶嵌宝石 —— 三角图标、词条名、数值、部位短名与右上角锁按钮，点击方格镶嵌、点锁按钮锁定，标题行保留分页与一键合成；装备页签用 **3 列 × 2 行的方格**展示六个部位（部位短名、元素圆点、图标、`Lv.N` 与背包件数）。
+- 三个页签可切换：宝石页签用 **6 列 × 2 行的方格**（每页 12 格）展示未镶嵌宝石 —— 三角图标、词条名、数值、部位短名与右上角锁按钮，点格先弹出详情（不发请求）、点「镶嵌」才落位，点锁按钮锁定，标题行保留分页与一键合成；装备页签同样用 **6 列 × 2 行的方格**（每页 12 格）逐件展示背包里的装备 —— 部位短名、装备图标、元素名与 `‹ n/m ›` 分页，当前已装备的那件用绿框 + 绿点标出。
+- 宝石镶嵌遵守同词条唯一：同一部位已镶嵌绿色冷却宝石时，再镶嵌冷却灰 / 绿宝石被拒绝并提示「同词条宝石不可重复镶嵌，需要更高品质」；镶嵌冷却蓝（或更高）宝石时直接替换那颗绿宝石所在槽位，被替换的宝石回到背包。
+- 槽位已满且词条不冲突时，「镶嵌」先打开该部位替换浮层，六行按钮均为「替换」，点其中一行才发请求并带上目标槽位；点「关闭」取消替换且不改动任何宝石。
+- 装备页签点击任一装备方格打开「装备详情」：只显示装备图标、`部位 · 元素系`、`Lv.N`、当前装备 / 可替换状态与「替换」「关闭」；点「替换」发一次 `/api/me/equipment/equip`，元素替换成功、`Lv.N` 保持不变、旧元素回到背包，已装备的条目按钮置灰且不发请求。
 - 资源页签以 6 列 × 2 行方格展示数量非零的资源：金币 / 钻石 / 零件 / 六种图纸 / 钢材 / 稀土各有对应图标，数量写在格内右下角；数量为 0 的资源不出现，全为 0 时只显示提示文案。
 - 宝石图标在镶嵌浮层、背包方格与合成确认窗口中都是按品质（灰 / 绿 / 蓝 / 紫 / 红）着色的三角形。
 - 未登录 / 离线：不发任何请求、按钮置灰、顶栏与状态行给出提示；401 回 guest 并清空宝石与加成。

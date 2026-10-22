@@ -188,6 +188,37 @@
     return found;
   }
 
+  function socketedOf(partId) {
+    var list = [];
+    getAll().forEach(function (gem) {
+      if (gem.partId === partId && gem.slotIndex !== null) list.push(decorate(gem));
+    });
+    return list;
+  }
+
+  function planSocket(gemId) {
+    var gem = findGem(gemId), sockets, used = [], duplicate = null, free = -1, index;
+    if (!gem) return { ok: false, mode: "missing", slotIndex: null, replacedId: null, message: "宝石不存在" };
+    if (gem.slotIndex !== null) return { ok: false, mode: "socketed", slotIndex: gem.slotIndex, replacedId: null, message: "宝石已镶嵌" };
+    sockets = socketedOf(gem.partId);
+    for (index = 0; index < C.gems.socketsPerPart; index++) used.push(false);
+    sockets.forEach(function (item) {
+      used[item.slotIndex] = true;
+      if (item.affix.id === gem.affix.id) duplicate = item;
+    });
+    for (index = 0; index < C.gems.socketsPerPart; index++) {
+      if (!used[index]) { free = index; break; }
+    }
+    if (duplicate) {
+      if (gem.quality > duplicate.quality) {
+        return { ok: true, mode: "replace", slotIndex: duplicate.slotIndex, replacedId: duplicate.id, message: "将替换同词条的" + duplicate.qualityName + "宝石" };
+      }
+      return { ok: false, mode: "blocked", slotIndex: duplicate.slotIndex, replacedId: duplicate.id, message: "已镶嵌同词条宝石，需要更高品质" };
+    }
+    if (free >= 0) return { ok: true, mode: "place", slotIndex: free, replacedId: null, message: "可镶嵌到空槽 " + (free + 1) };
+    return { ok: true, mode: "pick", slotIndex: null, replacedId: null, message: "宝石槽已满，请选择要替换的宝石" };
+  }
+
   function emptyTotals() {
     var elements = {};
     Object.keys(C.elements).forEach(function (id) { elements[id] = 0; });
@@ -252,6 +283,7 @@
     getSynthesisPlan: getSynthesisPlan,
     getSynthesisSummary: getSynthesisSummary,
     findGem: findGem,
+    planSocket: planSocket,
     qualityInfo: qualityInfo
   };
 })(window.Game = window.Game || {});

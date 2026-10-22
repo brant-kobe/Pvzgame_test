@@ -87,21 +87,41 @@ def _owned(db: Session, account_id: int, gem_id: int) -> models.Gem:
     return row
 
 
-def socket(db: Session, account_id: int, gem_id: int) -> dict:
-    row = _owned(db, account_id, gem_id)
-    if row.slot_index is not None:
-        return {"gems": payload(rows(db, account_id)), "gemId": row.id, "slotIndex": row.slot_index}
-    items = rows(db, account_id)
+def _socket_target(items, row: models.Gem, slot_index: int | None) -> tuple[int, models.Gem | None]:
+    socketed = [item for item in items if item.part_id == row.part_id and item.slot_index is not None]
+    duplicate = next((item for item in socketed if item.affix_id == row.affix_id), None)
+    if duplicate is not None:
+        if row.quality <= duplicate.quality:
+            raise ApiError(422, "gem_affix_conflict", "同词条宝石不可重复镶嵌，需要更高品质")
+        return duplicate.slot_index, duplicate
+    if slot_index is not None:
+        return slot_index, next((item for item in socketed if item.slot_index == slot_index), None)
     slot = first_free_slot(items, row.part_id)
     if slot is None:
-        raise ApiError(422, "gem_slots_full", "该部位宝石槽位已满")
-    row.slot_index = slot
+        raise ApiError(422, "gem_slots_full", "该部位宝石槽位已满，请选择要替换的宝石")
+    return slot, None
+
+
+def socket(db: Session, account_id: int, gem_id: int, slot_index: int | None = None) -> dict:
+    row = _owned(db, account_id, gem_id)
+    if row.slot_index is not None:
+        return {"gems": payload(rows(db, account_id)), "gemId": row.id, "slotIndex": row.slot_index, "replacedId": None}
+    if slot_index is not None:
+        slot_index = int(slot_index)
+        if slot_index < 0 or slot_index >= config.GEM_SOCKETS:
+            raise ApiError(422, "invalid_gem_slot", "宝石槽位不合法")
+    target, previous = _socket_target(rows(db, account_id), row, slot_index)
+    replaced = previous.id if previous is not None else None
+    if previous is not None:
+        previous.slot_index = None
+        db.flush()
+    row.slot_index = target
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
         raise ApiError(409, "gem_slot_conflict", "宝石槽位冲突，请重试")
-    return {"gems": payload(rows(db, account_id)), "gemId": row.id, "slotIndex": slot}
+    return {"gems": payload(rows(db, account_id)), "gemId": row.id, "slotIndex": target, "replacedId": replaced}
 
 
 def unsocket(db: Session, account_id: int, gem_id: int) -> dict:
@@ -187,17 +207,19 @@ def synthesize_all(db: Session, account_id: int) -> dict:
     }
 
 
-def grant(db: Session, account_id: int, part_id: str, quality: int, count: int) -> dict:
+def grant(db: Session, account_id: int, part_id: str, quality: int, count: int, affix_id: str | None = None) -> dict:
     if part_id not in config.EQUIPMENT_SLOTS:
         raise ApiError(422, "unknown_gem_part", "未知装备部位")
     quality = int(quality)
     if quality < 0 or quality > config.GEM_MAX_QUALITY:
         raise ApiError(422, "invalid_gem_quality", "宝石品质不合法")
+    if affix_id and affix_id not in config.GEM_AFFIXES:
+        raise ApiError(422, "unknown_gem_affix", "未知宝石词条")
     count = int(count)
     if count < 1 or count > config.GEM_MAX_GRANT:
         raise ApiError(422, "invalid_gem_count", "单次注入数量需要为 1 到 100")
     created = []
     for _ in range(count):
-        created.append(create(db, account_id, part_id, quality))
+        created.append(create(db, account_id, part_id, quality, affix_id or None))
     db.commit()
     return {"gems": payload(rows(db, account_id)), "granted": payload(created)}
