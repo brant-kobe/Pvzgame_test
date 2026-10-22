@@ -151,6 +151,21 @@
     { total: 100, interval: .3, mix: ["wheelchair", "flame", "armored", "wheelchair", "flame"], hpScale: 1.95 },
     { total: 116, interval: .28, mix: ["armored", "wheelchair", "flame", "armored", "wheelchair"], hpScale: 2.1 }
   ];
+  var levelThirteenWaves = [
+    { total: 12, interval: 1.55, mix: ["bird"] },
+    { total: 16, interval: 1.4, mix: ["bird", "armored"] },
+    { total: 20, interval: 1.25, mix: ["bird", "armored", "wasp"] },
+    { total: 26, interval: .55, mix: ["armored", "bird", "wasp", "bird"], elite: "waspElite" },
+    { total: 34, interval: .5, mix: ["wasp", "armored", "bird", "wasp"] },
+    { total: 46, interval: .45, mix: ["bird", "wasp", "armored", "bird"], hpScale: 1.25 },
+    { total: 58, interval: .42, mix: ["armored", "wasp", "bird", "armored"], boss: true, hpScale: 1.45 },
+    { total: 72, interval: .4, mix: ["wasp", "bird", "armored", "wasp", "bird"], hpScale: 1.65 },
+    { total: 88, interval: .38, mix: ["bird", "armored", "wasp", "armored", "bird"], hpScale: 1.85 },
+    { total: 106, interval: .36, mix: ["wasp", "bird", "armored", "wasp", "bird"], hpScale: 2.05 },
+    { total: 126, interval: .33, mix: ["armored", "wasp", "bird", "armored", "bird"], hpScale: 2.25 },
+    { total: 148, interval: .3, mix: ["bird", "wasp", "armored", "bird", "wasp"], hpScale: 2.45 },
+    { total: 172, interval: .28, mix: ["armored", "bird", "wasp", "armored", "bird"], hpScale: 2.65 }
+  ];
   Game.config = {
     width: 360, height: 640, maxLevel: 15, maxSkillSlots: 4, wallMaxHp: 1000, armorBlockWindow: .12, xpBase: 15, xpMultiplier: 1.13, xpBonus: 6, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12, flyingHover: 16,
     sprites: {
@@ -535,7 +550,8 @@
       { id: 9, name: "焦土防线", subtitle: "护甲与烈焰混编，后期节奏收紧", brief: "火焰僵尸免疫燃烧与冻结、火系伤害减半，前期放慢、后期明显加快。", unlocked: true, hpScale: 2.1, xpScale: .21, waves: levelNineWaves },
       { id: 10, name: "冰火交界", subtitle: "元素互克，控制手段大打折扣", brief: "火焰与雪人的抗性互补，只堆单一元素或只堆冰冻控制都会被卡住一半。", unlocked: true, hpScale: 2.2, xpScale: .22, waves: levelTenWaves },
       { id: 11, name: "高压电厂", subtitle: "电系受制，冰火再度交锋", brief: "雷电僵尸让电系技能减半、精英完全免疫，冰火互克仍需两手准备。", unlocked: true, hpScale: 2.35, xpScale: .2, waves: levelElevenWaves },
-      { id: 12, name: "旧城疗养院", subtitle: "护甲挡伤，轮椅半血回血", brief: "护甲挡伤、轮椅半血后持续回血、火焰免疫燃烧与冻结，三种机制同时压上。", unlocked: true, hpScale: 2.5, xpScale: .19, waves: levelTwelveWaves }
+      { id: 12, name: "旧城疗养院", subtitle: "护甲挡伤，轮椅半血回血", brief: "护甲挡伤、轮椅半血后持续回血、火焰免疫燃烧与冻结，三种机制同时压上。", unlocked: true, hpScale: 2.5, xpScale: .19, waves: levelTwelveWaves },
+      { id: 13, name: "蜂巢天台", subtitle: "飞鸟毒蜂压境，贴地技能失效", brief: "飞鸟与毒蜂全程悬空，贴地技能全部失效；护甲僵尸混在蜂群里，先剥甲再输出。", unlocked: true, hpScale: 2.75, xpScale: .16, waves: levelThirteenWaves }
     ],
     waves: levelOneWaves
   };
