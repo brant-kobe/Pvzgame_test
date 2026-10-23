@@ -2486,7 +2486,7 @@
       var rangedInfo = selectedEnemy.ranged, rangedAction = rangedInfo ? (rangedInfo.action || "投掷") : "";
       text((rangedInfo ? rangedAction + "伤害 " + rangedInfo.damage : "城墙伤害 " + selectedEnemy.damage) + "   ·   击杀经验 " + selectedEnemy.xp + "   ·   半径 " + selectedEnemy.radius, 44, 374, "bold 10px Segoe UI, Microsoft YaHei", C.colors.cyan);
       if (rangedInfo) text((selectedEnemy.flying ? "远程飞行单位" : "远程单位") + "   ·   每 " + rangedInfo.interval + " 秒" + rangedAction + "一次，距防线 " + rangedInfo.standoff + " 像素" + (selectedEnemy.flying ? "处悬停" : "处停下"), 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
-      else if (selectedEnemy.flying) text("飞行单位   ·   免疫装甲车、龙卷风与燃油弹等贴地技能", 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
+      else if (selectedEnemy.flying) text("飞行单位   ·   免疫装甲车、燃油弹等贴地技能，龙卷风例外", 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
       else if (selectedEnemy.armorCharges) text("装甲 " + selectedEnemy.armorCharges + " 层   ·   可抵挡等量的伤害与负面状态", 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
       else if (selectedEnemy.regenPerSecond) text("生命回复 " + selectedEnemy.regenPerSecond + " 点 / 秒" + (selectedEnemy.regenBelowHpRatio ? "   ·   仅在生命低于 " + Math.round(selectedEnemy.regenBelowHpRatio * 100) + "% 时生效" : "   ·   持续生效，受重伤压制"), 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
       text("单位特征", 44, 404, "bold 11px Segoe UI, Microsoft YaHei", C.colors.yellow);
