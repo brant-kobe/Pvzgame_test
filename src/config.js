@@ -32,32 +32,403 @@
     { total: 58, interval: .45, mix: ["runner", "splitter", "runner"] },
     { total: 62, interval: .42, mix: ["normal", "runner", "splitter"] }
   ];
+  var levelFourWaves = [
+    { total: 10, interval: 1.6, mix: ["normal"] },
+    { total: 14, interval: 1.45, mix: ["normal", "runner"] },
+    { total: 19, interval: 1.3, mix: ["normal", "runner", "splitter"] },
+    { total: 23, interval: .55, mix: ["normal", "runner", "splitter"], elite: "splitterElite" },
+    { total: 27, interval: .52, mix: ["splitter", "runner"] },
+    { total: 52, interval: .46, mix: ["normal", "splitter", "runner"], hpScale: 1.15 },
+    { total: 58, interval: .44, mix: ["runner", "splitter"], boss: true, hpScale: 1.25 },
+    { total: 66, interval: .42, mix: ["normal", "runner", "splitter"], hpScale: 1.4 },
+    { total: 74, interval: .4, mix: ["runner", "splitter", "runner"], hpScale: 1.5 },
+    { total: 84, interval: .38, mix: ["normal", "runner", "splitter"], hpScale: 1.6 }
+  ];
+  var levelFiveWaves = [
+    { total: 12, interval: 1.5, mix: ["normal"] },
+    { total: 16, interval: 1.35, mix: ["normal", "runner"] },
+    { total: 21, interval: 1.2, mix: ["normal", "basketball", "runner"] },
+    { total: 26, interval: .55, mix: ["normal", "runner", "basketball", "splitter"], elite: "basketballElite" },
+    { total: 30, interval: .5, mix: ["basketball", "runner", "splitter", "normal"] },
+    { total: 56, interval: .44, mix: ["normal", "basketball", "runner", "splitter"], hpScale: 1.2 },
+    { total: 62, interval: .42, mix: ["runner", "basketball", "splitter", "normal"], boss: true, hpScale: 1.3 },
+    { total: 70, interval: .4, mix: ["normal", "basketball", "runner", "splitter"], hpScale: 1.45 },
+    { total: 78, interval: .38, mix: ["basketball", "runner", "splitter", "normal"], hpScale: 1.55 },
+    { total: 88, interval: .36, mix: ["normal", "basketball", "runner", "splitter"], hpScale: 1.7 }
+  ];
+  var levelSixWaves = [
+    { total: 10, interval: 1.5, mix: ["basketball"] },
+    { total: 13, interval: 1.35, mix: ["basketball", "splitter"] },
+    { total: 17, interval: 1.2, mix: ["basketball", "splitter", "basketball", "armored"] },
+    { total: 22, interval: .55, mix: ["splitter", "basketball", "armored", "splitter"], elite: "basketballElite" },
+    { total: 27, interval: .5, mix: ["basketball", "splitter", "basketball", "armored"] },
+    { total: 36, interval: .46, mix: ["basketball", "armored", "splitter", "splitter", "basketball"], hpScale: 1.2 },
+    { total: 41, interval: .44, mix: ["splitter", "basketball", "armored", "basketball", "splitter"], boss: true, hpScale: 1.35 },
+    { total: 45, interval: .42, mix: ["basketball", "armored", "splitter", "basketball", "splitter"], hpScale: 1.5 },
+    { total: 50, interval: .4, mix: ["basketball", "splitter", "armored", "basketball", "splitter"], hpScale: 1.6 },
+    { total: 56, interval: .38, mix: ["basketball", "armored", "splitter", "basketball", "splitter"], hpScale: 1.75 },
+    { total: 63, interval: .36, mix: ["splitter", "basketball", "armored", "basketball", "splitter"], hpScale: 1.9 }
+  ];
+  var levelSevenWaves = [
+    { total: 10, interval: 1.5, mix: ["normal"] },
+    { total: 13, interval: 1.35, mix: ["normal", "splitter"] },
+    { total: 17, interval: 1.2, mix: ["normal", "armored", "splitter"] },
+    { total: 22, interval: .55, mix: ["splitter", "armored", "normal", "splitter"], elite: "armoredElite" },
+    { total: 26, interval: .5, mix: ["normal", "armored", "splitter", "normal"] },
+    { total: 38, interval: .46, mix: ["armored", "normal", "splitter", "splitter"], hpScale: 1.2 },
+    { total: 42, interval: .44, mix: ["normal", "splitter", "armored", "normal"], boss: true, hpScale: 1.35 },
+    { total: 47, interval: .42, mix: ["splitter", "armored", "normal", "splitter"], hpScale: 1.5 },
+    { total: 52, interval: .4, mix: ["normal", "armored", "splitter", "normal"], hpScale: 1.65 },
+    { total: 57, interval: .38, mix: ["armored", "splitter", "normal", "splitter"], hpScale: 1.8 },
+    { total: 63, interval: .36, mix: ["normal", "armored", "splitter", "normal"], hpScale: 1.95 },
+    { total: 69, interval: .34, mix: ["splitter", "normal", "armored", "splitter"], hpScale: 2.1 }
+  ];
+  var levelEightWaves = [
+    { total: 12, interval: 1.5, mix: ["runner"] },
+    { total: 16, interval: 1.35, mix: ["runner", "basketball"] },
+    { total: 22, interval: 1.2, mix: ["basketball", "runner", "bird"] },
+    { total: 32, interval: .5, mix: ["bird", "runner", "basketball", "bird"], elite: "birdElite" },
+    { total: 40, interval: .46, mix: ["runner", "bird", "basketball", "runner"] },
+    { total: 62, interval: .42, mix: ["bird", "basketball", "runner", "bird"], hpScale: 1.2 },
+    { total: 74, interval: .4, mix: ["runner", "bird", "basketball", "bird"], boss: true, hpScale: 1.35 },
+    { total: 92, interval: .38, mix: ["basketball", "runner", "bird", "runner"], hpScale: 1.5 },
+    { total: 108, interval: .36, mix: ["bird", "runner", "basketball", "bird"], hpScale: 1.65 },
+    { total: 126, interval: .34, mix: ["runner", "basketball", "bird", "runner"], hpScale: 1.8 },
+    { total: 146, interval: .32, mix: ["bird", "basketball", "runner", "bird"], hpScale: 1.95 },
+    { total: 168, interval: .3, mix: ["runner", "bird", "basketball", "runner"], hpScale: 2.1 }
+  ];
+  var levelNineWaves = [
+    { total: 10, interval: 1.65, mix: ["runner"] },
+    { total: 14, interval: 1.55, mix: ["runner", "armored"] },
+    { total: 20, interval: 1.45, mix: ["runner", "armored", "flame"] },
+    { total: 26, interval: 1.3, mix: ["runner", "armored", "flame", "runner"], elite: "flameElite" },
+    { total: 40, interval: .9, mix: ["runner", "flame", "armored", "runner"] },
+    { total: 64, interval: .62, mix: ["runner", "armored", "flame", "runner"], hpScale: 1.2 },
+    { total: 80, interval: .44, mix: ["armored", "runner", "flame", "runner"], boss: true, hpScale: 1.35 },
+    { total: 98, interval: .4, mix: ["runner", "flame", "armored", "flame", "runner"], hpScale: 1.5 },
+    { total: 118, interval: .36, mix: ["armored", "runner", "flame", "runner", "flame"], hpScale: 1.65 },
+    { total: 138, interval: .33, mix: ["runner", "flame", "armored", "runner", "flame"], hpScale: 1.8 },
+    { total: 168, interval: .3, mix: ["armored", "flame", "runner", "flame", "runner"], hpScale: 1.95 }
+  ];
+  var levelTenWaves = [
+    { total: 10, interval: 1.5, mix: ["normal"] },
+    { total: 14, interval: 1.35, mix: ["normal", "flame"] },
+    { total: 20, interval: 1.2, mix: ["normal", "flame", "snowman"] },
+    { total: 28, interval: .55, mix: ["normal", "flame", "snowman", "normal"], elite: "snowmanElite" },
+    { total: 38, interval: .5, mix: ["flame", "normal", "snowman", "normal"] },
+    { total: 56, interval: .45, mix: ["normal", "snowman", "flame", "normal"], hpScale: 1.2 },
+    { total: 72, interval: .42, mix: ["flame", "snowman", "normal", "normal"], boss: true, hpScale: 1.35 },
+    { total: 92, interval: .4, mix: ["normal", "flame", "snowman", "normal", "flame"], hpScale: 1.5 },
+    { total: 114, interval: .36, mix: ["snowman", "normal", "flame", "normal", "snowman"], hpScale: 1.65 },
+    { total: 138, interval: .33, mix: ["normal", "flame", "snowman", "normal", "flame"], hpScale: 1.8 },
+    { total: 162, interval: .3, mix: ["flame", "snowman", "normal", "flame", "snowman"], hpScale: 1.95 }
+  ];
+  var levelElevenWaves = [
+    { total: 12, interval: 1.5, mix: ["flame"] },
+    { total: 14, interval: 1.35, mix: ["flame", "snowman"] },
+    { total: 18, interval: 1.2, mix: ["flame", "snowman", "thunder"] },
+    { total: 24, interval: .55, mix: ["flame", "snowman", "thunder", "flame"], elite: "thunderElite" },
+    { total: 30, interval: .5, mix: ["snowman", "flame", "thunder", "flame"] },
+    { total: 42, interval: .45, mix: ["flame", "thunder", "snowman", "flame"], hpScale: 1.2 },
+    { total: 54, interval: .42, mix: ["thunder", "snowman", "flame", "thunder"], boss: true, hpScale: 1.35 },
+    { total: 66, interval: .4, mix: ["flame", "snowman", "thunder", "flame", "snowman"], hpScale: 1.5 },
+    { total: 82, interval: .38, mix: ["snowman", "thunder", "flame", "snowman", "thunder"], hpScale: 1.65 },
+    { total: 98, interval: .36, mix: ["flame", "snowman", "thunder", "flame", "snowman"], hpScale: 1.8 },
+    { total: 114, interval: .33, mix: ["thunder", "flame", "snowman", "thunder", "flame"], hpScale: 1.95 },
+    { total: 132, interval: .3, mix: ["snowman", "thunder", "flame", "snowman", "thunder"], hpScale: 2.1 }
+  ];
+  var levelTwelveWaves = [
+    { total: 12, interval: 1.55, mix: ["armored"] },
+    { total: 14, interval: 1.4, mix: ["armored", "flame"] },
+    { total: 18, interval: 1.25, mix: ["armored", "flame", "wheelchair"] },
+    { total: 22, interval: .55, mix: ["armored", "flame", "wheelchair", "armored"], elite: "wheelchairElite" },
+    { total: 28, interval: .5, mix: ["flame", "wheelchair", "armored", "flame"] },
+    { total: 40, interval: .45, mix: ["wheelchair", "armored", "flame", "wheelchair"], hpScale: 1.2 },
+    { total: 50, interval: .42, mix: ["armored", "wheelchair", "flame", "armored"], boss: true, hpScale: 1.35 },
+    { total: 60, interval: .4, mix: ["wheelchair", "flame", "armored", "wheelchair", "flame"], hpScale: 1.5 },
+    { total: 72, interval: .36, mix: ["armored", "wheelchair", "flame", "armored", "wheelchair"], hpScale: 1.65 },
+    { total: 86, interval: .33, mix: ["flame", "armored", "wheelchair", "flame", "armored"], hpScale: 1.8 },
+    { total: 100, interval: .3, mix: ["wheelchair", "flame", "armored", "wheelchair", "flame"], hpScale: 1.95 },
+    { total: 116, interval: .28, mix: ["armored", "wheelchair", "flame", "armored", "wheelchair"], hpScale: 2.1 }
+  ];
+  var levelThirteenWaves = [
+    { total: 12, interval: 1.55, mix: ["bird"] },
+    { total: 16, interval: 1.4, mix: ["bird", "armored"] },
+    { total: 20, interval: 1.25, mix: ["bird", "armored", "wasp"] },
+    { total: 26, interval: .55, mix: ["armored", "bird", "wasp", "bird"], elite: "waspElite" },
+    { total: 34, interval: .5, mix: ["wasp", "armored", "bird", "wasp"] },
+    { total: 46, interval: .45, mix: ["bird", "wasp", "armored", "bird"], hpScale: 1.25 },
+    { total: 58, interval: .42, mix: ["armored", "wasp", "bird", "armored"], boss: true, hpScale: 1.45 },
+    { total: 72, interval: .4, mix: ["wasp", "bird", "armored", "wasp", "bird"], hpScale: 1.65 },
+    { total: 88, interval: .38, mix: ["bird", "armored", "wasp", "armored", "bird"], hpScale: 1.85 },
+    { total: 106, interval: .36, mix: ["wasp", "bird", "armored", "wasp", "bird"], hpScale: 2.05 },
+    { total: 126, interval: .33, mix: ["armored", "wasp", "bird", "armored", "bird"], hpScale: 2.25 },
+    { total: 148, interval: .3, mix: ["bird", "wasp", "armored", "bird", "wasp"], hpScale: 2.45 },
+    { total: 172, interval: .28, mix: ["armored", "bird", "wasp", "armored", "bird"], hpScale: 2.65 }
+  ];
   Game.config = {
-    width: 360, height: 640, maxLevel: 10, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12,
+    width: 360, height: 640, maxLevel: 15, maxSkillSlots: 4, wallMaxHp: 1000, armorBlockWindow: .12, xpBase: 15, xpMultiplier: 1.13, xpBonus: 6, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12, flyingHover: 16,
     sprites: {
       playerBody: { src: ["assets/player-man.png", "assets/player-body.png", "assets/man.png"], width: 74, height: 131, anchorX: 37, anchorY: 78 },
       playerRifle: { src: "assets/player-rifle.png", width: 18, height: 46, anchorX: 9, anchorY: 38, mountX: -6, mountY: -40 }
     },
-    skillRing: { offsetX: 86, offsetY: -102 },
+    skillRing: { offsetX: 64, offsetY: -100 },
+    skillSlots: { offsetX: -54, y: 46, width: 48, height: 18, gap: 3 },
+    levelSelect: { panelX: 16, panelY: 42, panelWidth: 328, panelHeight: 578, listX: 30, listY: 144, listWidth: 300, rowHeight: 66, backY: 566, backHeight: 40, infoX: 150, infoSize: 20, briefX: 22, briefY: 72, briefWidth: 316, briefTop: 190, briefHeadingStep: 20, briefRowStep: 22, briefGroupGap: 6, briefBottom: 20, briefMinHeight: 340, briefCloseSize: 28 },
+    menu: {
+      panelX: 28, panelY: 80, panelWidth: 304, panelHeight: 474,
+      bannerY: 14, bannerHeight: 22, bannerLeft: 80,
+      accountCircle: { x: 44, y: 42, r: 22 },
+      buttons: {
+        start: { x: 98, y: 250, w: 164, h: 46 },
+        levelSelect: { x: 98, y: 306, w: 164, h: 42 },
+        testArena: { x: 98, y: 362, w: 164, h: 42 },
+        character: { x: 34, y: 480, w: 92, h: 44 },
+        skillCodex: { x: 132, y: 480, w: 92, h: 44 },
+        zombieCodex: { x: 230, y: 480, w: 92, h: 44 }
+      }
+    },
+    accountUI: {
+      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512, back: { x: 98, y: 514, w: 164, h: 36 },
+      login: {
+        userName: { x: 44, y: 196, w: 272, h: 40 },
+        password: { x: 44, y: 272, w: 272, h: 40 },
+        submit: { x: 44, y: 348, w: 272, h: 44 },
+        switchMode: { x: 44, y: 404, w: 272, h: 34 }
+      },
+      account: {
+        cardY: 126, cardHeight: 80, resourceY: 220, resourceHeight: 80,
+        recordY: 330, recordStep: 20,
+        importButton: { x: 44, y: 424, w: 128, h: 34 },
+        logoutButton: { x: 188, y: 424, w: 128, h: 34 },
+        deleteButton: { x: 44, y: 466, w: 272, h: 34 }
+      }
+    },
+    attributesUI: {
+      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
+      titleY: 118, subtitleY: 144,
+      statX: [44, 188], statY: [192, 236, 280],
+      elementTitleY: 326,
+      elementX: [56, 160, 264], elementY: [360, 392], elementOrder: ["physical", "fire", "ice", "electric", "wind", "energy"],
+      noteY: 444,
+      back: { x: 98, y: 514, w: 164, h: 36 }
+    },
+    characterUI: {
+      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
+      back: { x: 28, y: 64, w: 56, h: 26 },
+      badge: { x: 104, y: 68, w: 152, h: 20 },
+      attributes: { x: 268, y: 64, w: 62, h: 26 },
+      titleY: 112, subtitleY: 136,
+      slotGrid: { x: [45, 187], y: [150, 216, 282], size: 62, infoWidth: 62 },
+      actionEquip: { x: 36, y: 346, w: 138, h: 34 },
+      actionWall: { x: 186, y: 346, w: 138, h: 34 },
+      bagTitleY: 396,
+      gemCells: { x: 34, y: 404, size: 44, gap: 4, columns: 6, rows: 2 },
+      equipCells: { x: 34, y: 404, size: 44, gap: 4, columns: 6, rows: 2 },
+      resourceCells: { x: 40, y: 406, size: 44, gap: 4, columns: 6, rows: 2 },
+      bagPager: { prev: { x: 190, y: 380, w: 20, h: 20 }, next: { x: 236, y: 380, w: 20, h: 20 } },
+      bagLock: { offsetX: 30, offsetY: 0, w: 14, h: 14 },
+      bagAction: { x: 262, y: 380, w: 62, h: 20 },
+      statusY: 508,
+      tabs: { x: 36, y: 514, w: 92, h: 36, gap: 6 },
+      gemPanel: { x: 30, y: 96, w: 300, h: 432 },
+      gemPanelTitleY: 152, gemPanelSubtitleY: 172,
+      gemRows: { x: 40, y: 184, w: 280, height: 44, rows: 6 },
+      gemUnsocket: { offsetX: 212, offsetY: 10, w: 62, h: 24 },
+      gemPanelNoteY: 462,
+      gemPanelClose: { x: 118, y: 474, w: 132, h: 34 },
+      gemDetail: {
+        panel: { x: 44, y: 176, w: 272, h: 256 },
+        titleY: 236, iconY: 274, lineY: [312, 332], hintY: 356,
+        socket: { x: 58, y: 376, w: 118, h: 34 },
+        close: { x: 184, y: 376, w: 118, h: 34 }
+      },
+      equipDetail: {
+        panel: { x: 44, y: 176, w: 272, h: 256 },
+        titleY: 236, iconY: 274, lineY: [312, 332], hintY: 356,
+        replace: { x: 58, y: 376, w: 118, h: 34 },
+        close: { x: 184, y: 376, w: 118, h: 34 }
+      },
+      equipPager: { prev: { x: 190, y: 380, w: 20, h: 20 }, next: { x: 236, y: 380, w: 20, h: 20 } }
+    },
+    equipmentUI: {
+      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
+      titleY: 112, subtitleY: 136, resourceY: 153,
+      cardX: [36, 184], cardY: [164, 276, 388], cardWidth: 140, cardHeight: 106,
+      noteY: 506,
+      bag: { x: 36, y: 514, w: 134, h: 36 },
+      back: { x: 190, y: 514, w: 134, h: 36 }
+    },
+    equipmentBagUI: {
+      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
+      titleY: 112, subtitleY: 136,
+      partTabs: { x: 32, y: 152, w: 46, h: 28, gap: 4 },
+      summaryY: 200,
+      listX: 34, listY: 210, listWidth: 292, rowHeight: 38,
+      noteY: 476,
+      equip: { offsetX: 196, offsetY: 4, w: 88, h: 26 },
+      back: { x: 98, y: 514, w: 164, h: 36 }
+    },
+    wallUI: {
+      panelX: 22, panelY: 56, panelWidth: 316, panelHeight: 512,
+      titleY: 112, subtitleY: 136, resourceY: 156,
+      mainCard: { x: 36, y: 172, w: 288, h: 108 },
+      actionCard: { x: 36, y: 294, w: 288, h: 166 },
+      actionButton: { x: 54, y: 410, w: 252, h: 34 },
+      noteY: 482,
+      back: { x: 98, y: 514, w: 164, h: 36 }
+    },
+    gemSynthesisUI: {
+      panelX: 28, panelY: 92, panelWidth: 304, panelHeight: 420,
+      titleY: 148, subtitleY: 168,
+      listX: 40, listY: 178, listWidth: 280, rowHeight: 56, rows: 4,
+      gemsX: 50, gemsY: 13, gemSize: 18, gemGap: 21,
+      pagerPrev: { x: 210, y: 402, w: 26, h: 22 },
+      pagerNext: { x: 242, y: 402, w: 26, h: 22 },
+      detailY: 434, detailSubY: 450,
+      confirm: { x: 178, y: 470, w: 70, h: 30 },
+      cancel: { x: 256, y: 470, w: 70, h: 30 }
+    },
+    accounts: { apiBase: "", healthPath: "/api/health", timeoutMs: 4000, usernameMin: 2, usernameMax: 16, passwordMin: 6, passwordMax: 64, legacyKey: "blockline.progress", maxRecords: 5, maxStatusNote: 26 },
+    resources: [
+      { id: "coin", name: "金币", color: "#ffd166" },
+      { id: "gem", name: "钻石", color: "#68d8ff" },
+      { id: "tech", name: "零件", color: "#63e6a0" },
+      { id: "blueprintArm", name: "手臂图纸", color: "#68d8ff" },
+      { id: "blueprintClothes", name: "衣服图纸", color: "#63e6a0" },
+      { id: "blueprintHelmet", name: "头盔图纸", color: "#ffd166" },
+      { id: "blueprintPants", name: "裤子图纸", color: "#9ab0bc" },
+      { id: "blueprintShoes", name: "鞋子图纸", color: "#c9a1ff" },
+      { id: "blueprintGloves", name: "手套图纸", color: "#ff9b52" },
+      { id: "steel", name: "钢材", color: "#c8d6dd" },
+      { id: "rareEarth", name: "稀土", color: "#f2c14e" }
+    ],
+    rewardTiers: [
+      { id: 0, name: "参与奖励" },
+      { id: 1, name: "升级奖励" },
+      { id: 2, name: "5 级奖励" },
+      { id: 3, name: "通关奖励" }
+    ],
+    resultUI: {
+      panelX: 24, panelY: 80, panelWidth: 312, panelHeight: 404,
+      titleY: 124, subtitleY: 152, statsY: 178,
+      rewardTitleY: 208, rewardRowY: 232, rewardRowStep: 22,
+      nextLevelY: 344, progressHintY: 366, rewardHintY: 388,
+      restart: { x: 42, y: 420, w: 130, h: 44 },
+      back: { x: 188, y: 420, w: 130, h: 44 }
+    },
+    equipment: {
+      maxLevel: 100,
+      slots: [
+        { id: "arm", name: "手臂", short: "臂", color: "#68d8ff", blueprintId: "blueprintArm" },
+        { id: "clothes", name: "衣服", short: "衣", color: "#63e6a0", blueprintId: "blueprintClothes" },
+        { id: "helmet", name: "头盔", short: "盔", color: "#ffd166", blueprintId: "blueprintHelmet" },
+        { id: "pants", name: "裤子", short: "裤", color: "#9ab0bc", blueprintId: "blueprintPants" },
+        { id: "shoes", name: "鞋子", short: "鞋", color: "#c9a1ff", blueprintId: "blueprintShoes" },
+        { id: "gloves", name: "手套", short: "手", color: "#ff9b52", blueprintId: "blueprintGloves" }
+      ]
+    },
+    wall: { maxLevel: 200, hpPerLevel: 200, breakthroughStep: 10, rareEarthBase: 2 },
+    gems: {
+      maxQuality: 4, socketsPerPart: 6, synthesisCost: 5,
+      qualities: [
+        { id: 0, name: "灰色", short: "灰", color: "#9aa8b2" },
+        { id: 1, name: "绿色", short: "绿", color: "#63e6a0" },
+        { id: 2, name: "蓝色", short: "蓝", color: "#68d8ff" },
+        { id: 3, name: "紫色", short: "紫", color: "#c9a1ff" },
+        { id: 4, name: "红色", short: "红", color: "#ff6b6b" }
+      ]
+    },
+    bossHealth: { bars: 3, width: 108, barHeight: 9, offsetY: 12, headExtent: 1.78, track: "rgba(255, 107, 107, .42)" },
+    ranges: { far: 480, mid: 320, near: 125 },
+    rifleRange: "far",
+    rifleFreezeDuration: .35,
+    skillRangeHoldMs: 350,
     colors: { bg: "#0b202c", text: "#f4f8fb", muted: "#9ab0bc", green: "#63e6a0", yellow: "#ffd166", red: "#ff6b6b", cyan: "#68d8ff", ice: "#58aaff", fire: "#ff9b52", purple: "#c9a1ff" },
+    elements: {
+      physical: { name: "物理", color: "#d6e6f2", detail: "常规动能伤害，不附带元素效果。" },
+      energy: { name: "能量", color: "#68d8ff", detail: "高能光束伤害。" },
+      electric: { name: "电", color: "#c9a1ff", detail: "电击与闪电伤害。" },
+      ice: { name: "冰", color: "#58aaff", detail: "低温与冻结伤害。" },
+      fire: { name: "火", color: "#ff9b52", detail: "高温与燃烧伤害。" },
+      wind: { name: "风", color: "#63e6a0", detail: "气流与切割伤害。" }
+    },
+    attributes: {
+      base: {
+        attack: 100,
+        elementAttack: { physical: 100, energy: 100, electric: 100, ice: 100, fire: 100, wind: 100 },
+        cooldownReduction: 0,
+        wallHpBonus: 0,
+        critRate: .08,
+        critDamage: 1.5,
+        statusDurationMultiplier: 1
+      },
+      caps: { cooldownReduction: .5, critRate: .95, critDamage: 5, statusDurationMultiplier: 2 }
+    },
+    statusCategories: {
+      damage: { name: "伤害", detail: "持续掉血的负面状态，不限制行动。" },
+      soft: { name: "软控", detail: "限制移动但不打断攻击：减速、击退与牵引。" },
+      hard: { name: "硬控", detail: "被控期间完全无法移动与攻击。" },
+      debuff: { name: "削弱", detail: "不限制行动，只削弱敌人能力。" }
+    },
+    statusEffects: {
+      burn: { name: "燃烧", category: "damage", color: "#ff9b52", label: "燃" },
+      frostbite: { name: "冻伤", category: "damage", color: "#58aaff", label: "霜" },
+      slow: { name: "减速", category: "soft", color: "#8fb4c4" },
+      knockback: { name: "击退", category: "soft", color: "#d8b06a", scaleLabel: "击退距离" },
+      pull: { name: "牵引", category: "soft", color: "#9fe6ff", scaleLabel: "牵引速度" },
+      stun: { name: "眩晕", category: "hard", color: "#ffd166", label: "晕" },
+      freeze: { name: "冻结", category: "hard", color: "#8ce9ff", label: "冻" },
+      paralysis: { name: "麻痹", category: "hard", color: "#c9a1ff", label: "麻" },
+      wound: { name: "重伤", category: "debuff", color: "#5ef2a0" }
+    },
     enemies: {
       normal: { name: "普通僵尸", codexCategory: "minion", description: "尸潮中的基础单位，生命与速度均衡，会持续向防线推进。", tactics: "优先利用自动锁定快速清理；单体威胁低，数量增加后会给城墙造成压力。", hp: 28, speed: 20, radius: 14, damage: 10, xp: 8, color: "#6eaa7b", accent: "#b1e4a0" },
       runner: { name: "快跑僵尸", codexCategory: "minion", description: "体型轻巧、生命较低，但移动速度明显快于普通僵尸。", tactics: "尽早击杀以免快速逼近城墙；齐射、连发和冰冻效果都能有效应对。", hp: 16, speed: 42, radius: 11, damage: 7, xp: 7, color: "#e5a052", accent: "#ffe0a7" },
       splitter: { name: "分裂僵尸", codexCategory: "minion", description: "两个头共用一个身体的变异僵尸，被击杀后会分裂成两个更小的分裂幼体。", tactics: "分裂会立刻补充敌人数量，建议用穿透、齐射或范围技能一次清理本体与幼体，尽量在它们靠近城墙前解决。", hp: 60, speed: 22, radius: 16, damage: 10, xp: 12, color: "#6f6398", accent: "#c9b6ff", splitInto: "splitterChild", splitCount: 2 },
       splitterChild: { name: "分裂僵尸幼体", codexCategory: "minion", codexHidden: true, description: "分裂僵尸死亡后产生的单头幼体，体型和生命较低，但移动更快。", tactics: "数量较多，注意不要让它们同时抵达防线；范围伤害能高效清除。", hp: 18, speed: 30, radius: 9, damage: 5, xp: 3, color: "#8478ad", accent: "#d8ccff" },
+      armored: { name: "护甲僵尸", codexCategory: "minion", description: "身上焊着废旧装甲板的僵尸，装甲能替他挡下伤害，也能挡下燃烧、冰冻、减速、眩晕、麻痹和击退等负面状态。", tactics: "装甲次数有限，用高射速武器或范围技能先削掉装甲层数，再集中输出；装甲还在时控制类词条基本无效，别指望减速拖住它。它对物理伤害减免 50%，改用非物理技能。", hp: 55, speed: 18, radius: 16, damage: 12, xp: 16, color: "#79899a", accent: "#d6e6f2", armorCharges: 6, damageTakenByElement: { physical: .5 } },
+      basketball: { name: "篮球僵尸", codexCategory: "minion", description: "抱着篮球的僵尸，会在离防线一段距离处停下，不断把篮球砸向城墙。", tactics: "它不会贴到城墙，靠城墙前的减速和近战拦不住；应在它进入投掷距离前用中远距离技能或步枪提前点掉。它怕电（+50%），电磁穿刺与跃迁电子能更快点掉它。", hp: 40, speed: 26, radius: 14, damage: 10, xp: 12, color: "#c9762a", accent: "#ffd08a", ranged: { standoff: 85, interval: 2.4, projectileSpeed: 210, projectileRadius: 9, damage: 12 }, damageTakenByElement: { electric: 1.5 } },
       normalElite: { name: "普通僵尸精英", codexCategory: "elite", description: "普通僵尸的精英强化形态，体型更大，生命、移速和攻击力全面提升，仍以稳定推进为主要特性。", tactics: "精英单位更耐打且对城墙威胁更高，应集中火力尽早消灭。", hp: 420, speed: 26, radius: 22, damage: 20, xp: 35, color: "#647847", accent: "#ffd166" },
       runnerElite: { name: "快跑僵尸精英", codexCategory: "elite", description: "快跑僵尸的精英强化形态，保留高速冲锋特性，并拥有更大的体型、更高的生命和更强的攻击。", tactics: "速度与耐久兼备，出现后应优先集火；冰冻效果可以压制其推进速度。", hp: 300, speed: 54, radius: 19, damage: 16, xp: 30, color: "#a86735", accent: "#ffe08a" },
-      splitterElite: { name: "分裂僵尸精英", codexCategory: "elite", description: "分裂僵尸的精英形态，体型更大并持续回复生命；死亡后分裂出两个同样会自愈的精英幼体。", tactics: "自愈会拉长战斗时间，需要集中持续输出；击杀本体后立即处理两个精英幼体，避免它们回满生命。", hp: 620, speed: 27, radius: 25, damage: 22, xp: 55, color: "#5d4f8a", accent: "#ffd166", splitInto: "splitterEliteChild", splitCount: 2, regenPerSecond: 8 },
-      splitterEliteChild: { name: "分裂僵尸精英幼体", codexCategory: "elite", codexHidden: true, description: "分裂僵尸精英死亡后产生的精英幼体，体型较小但保留精英特征并会持续回复生命。", tactics: "尽快击杀防止回血堆积，冰冻、眩晕和爆发伤害都很有效。", hp: 100, speed: 34, radius: 12, damage: 10, xp: 10, color: "#7767a5", accent: "#ffe08a", regenPerSecond: 3 },
+      splitterElite: { name: "分裂僵尸精英", codexCategory: "elite", description: "分裂僵尸的精英形态，体型更大并持续回复生命；死亡后分裂出两个同样会自愈的精英幼体。", tactics: "自愈会拉长战斗时间，需要集中持续输出；击杀本体后立即处理两个精英幼体，避免它们回满生命。它与幼体都怕火（+50%）。", hp: 620, speed: 27, radius: 25, damage: 22, xp: 55, color: "#5d4f8a", accent: "#ffd166", splitInto: "splitterEliteChild", splitCount: 2, regenPerSecond: 8, damageTakenByElement: { fire: 1.5 } },
+      splitterEliteChild: { name: "分裂僵尸精英幼体", codexCategory: "elite", codexHidden: true, description: "分裂僵尸精英死亡后产生的精英幼体，体型较小但保留精英特征并会持续回复生命。", tactics: "尽快击杀防止回血堆积，冰冻、眩晕和爆发伤害都很有效；它同样怕火（+50%）。", hp: 100, speed: 34, radius: 12, damage: 10, xp: 10, color: "#7767a5", accent: "#ffe08a", regenPerSecond: 3, damageTakenByElement: { fire: 1.5 } },
+      armoredElite: { name: "护甲僵尸精英", codexCategory: "elite", description: "护甲僵尸的精英形态，体型更大，装甲板层数翻倍，推进速度与撞击力度同步提升。", tactics: "装甲层数更多，高射速武器与范围技能剥甲更快；破甲前不要指望燃烧、冰冻、眩晕或击退能拖住它。它同样减免 50% 物理伤害。", hp: 420, speed: 22, radius: 22, damage: 20, xp: 35, color: "#5f7080", accent: "#ffd166", armorCharges: 12, damageTakenByElement: { physical: .5 } },
+      basketballElite: { name: "篮球僵尸精英", codexCategory: "elite", description: "篮球僵尸的精英形态，站得更远、抛得更快、砸得更重，同样不会靠近城墙。", tactics: "它停在更远的位置，靠防线前的减速与近战完全拦不住；应当用中远距离技能或提前集火在它出手前解决。它同样怕电（+50%），用电系技能收益最高。", hp: 320, speed: 30, radius: 19, damage: 16, xp: 30, color: "#a85f1f", accent: "#ffd166", ranged: { standoff: 113, interval: 1.9, projectileSpeed: 230, projectileRadius: 12, damage: 22 }, damageTakenByElement: { electric: 1.5 } },
+      bird: { name: "飞鸟僵尸", codexCategory: "minion", description: "被尸群驱赶着飞行的黑色怪鸟，一路飞到城墙前才开始啄击防线；它全程停在半空，贴地推进的装甲车与燃油弹都碰不到它，但龙卷风照样能把它卷进去。", tactics: "装甲车与燃油弹对它无效，但旋风加农的龙卷风能卷住它；步枪、干冰弹、温压弹、冰雹、气刃、无人机、电链、空袭与射线也打得到，趁早击落。", hp: 24, speed: 36, radius: 12, damage: 9, xp: 10, color: "#12171c", accent: "#9fb2bd", flying: true, attackInterval: .7 },
+      birdElite: { name: "飞鸟僵尸精英", codexCategory: "elite", description: "飞鸟僵尸的精英形态，翼展更大、俯冲更快，撞击防线的力度也更高，同样免疫一切贴地推进的伤害。", tactics: "它同样无视装甲车与燃油弹，龙卷风仍能卷住它；需要集中步枪火力或用空中技能处理，撞击伤害高于小怪，别让它反复啄击城墙。", hp: 300, speed: 46, radius: 17, damage: 16, xp: 30, color: "#0b0f14", accent: "#ffd166", flying: true, attackInterval: .6 },
+      flame: { name: "火焰僵尸", codexCategory: "minion", description: "周身燃着不灭火焰的僵尸，高温让皮肉焦硬：火系伤害减半，燃烧与冻结完全无效，只有冰系能重创它。", tactics: "火系技能对它几乎无效：减伤 50% 且无法点燃、冻不住；改用干冰弹、冰雹发生器等冰系技能，伤害 ×1.5，也更容易在它贴脸前解决。", hp: 46, speed: 24, radius: 15, damage: 11, xp: 13, color: "#c2451f", accent: "#ffb347", damageTakenByElement: { fire: .5, ice: 1.5 }, statusImmune: { burn: true, freeze: true } },
+      snowman: { name: "雪人僵尸", codexCategory: "minion", description: "由积雪堆成的僵尸，寒气护体：冰系伤害减半、冻结时间减半，但冰雪之躯遇火会被打出 1.5 倍伤害。", tactics: "用火系对付它：温压弹、燃油弹与火场伤害 ×1.5，还能正常点燃；冰系技能伤害减半且只能冻住一半时间，别用它扛线。", hp: 52, speed: 17, radius: 16, damage: 12, xp: 14, color: "#bcd9e4", accent: "#9fe8ff", damageTakenByElement: { ice: .5, fire: 1.5 }, statusDurationScale: { freeze: .5 } },
+      flameElite: { name: "火焰僵尸精英", codexCategory: "elite", description: "火焰僵尸的精英形态，体型更大、火焰更旺：同样免疫燃烧与冻结、火系伤害减半，冰系伤害则额外 ×1.5。", tactics: "它比小怪更耐打，火系与冻结依然对它无效；冰雹发生器虽然冻不住它，但每次砸击都按冰系 ×1.5 结算伤害。", hp: 380, speed: 30, radius: 21, damage: 18, xp: 33, color: "#a13616", accent: "#ffd166", damageTakenByElement: { fire: .5, ice: 1.5 }, statusImmune: { burn: true, freeze: true } },
+      snowmanElite: { name: "雪人僵尸精英", codexCategory: "elite", description: "雪人僵尸的精英形态，冰雪外壳更厚：冰系伤害减半、冻结时间减半，火系伤害则额外 ×1.5。", tactics: "火系依然是最优解，温压弹与燃油弹的持续灼烧能最快融掉它；冰系技能在这里收益最差，冻结时间还要再打对折。", hp: 430, speed: 22, radius: 22, damage: 19, xp: 34, color: "#9fc4d4", accent: "#ffd166", damageTakenByElement: { ice: .5, fire: 1.5 }, statusDurationScale: { freeze: .5 } },
+      thunder: { name: "雷电僵尸", codexCategory: "minion", description: "体内积蓄着高压电流的僵尸，周身不断迸出电火花：电系伤害减半，被电击后麻痹时间也只有一半。", tactics: "电系技能对它收益最低：电磁穿刺与跃迁电子伤害减半、麻痹只持续一半时间；改用物理、冰系或火系技能，它没有别的抗性。", hp: 48, speed: 22, radius: 15, damage: 12, xp: 15, color: "#6b5bb5", accent: "#d8c6ff", damageTakenByElement: { electric: .5 }, statusDurationScale: { paralysis: .5 } },
+      thunderElite: { name: "雷电僵尸精英", codexCategory: "elite", description: "雷电僵尸的精英形态，体型更大、周身电流更加暴烈：完全免疫电系伤害，也完全免疫麻痹。", tactics: "电系对它完全无效：伤害归零、也麻痹不了它；改用物理、冰系或火系技能处理，它除此之外没有任何抗性。", hp: 410, speed: 28, radius: 21, damage: 19, xp: 33, color: "#4c3f8f", accent: "#ffd166", damageTakenByElement: { electric: 0 }, statusImmune: { paralysis: true } },
+      wasp: { name: "毒蜂", codexCategory: "minion", description: "被尸群惊起的巨型毒蜂，全程悬在半空向防线射出毒刺：额外承受 50% 风系伤害，能量伤害则减半。", tactics: "它是飞行单位，装甲车与燃油弹都碰不到，但龙卷风能卷住并把它拖进风眼；风系气刃伤害 ×1.5，高能射线的能量伤害要减半，用步枪或冰 / 火技能更稳。", hp: 30, speed: 32, radius: 13, damage: 9, xp: 14, color: "#1d2126", accent: "#a8e05f", flying: true, ranged: { standoff: 85, interval: 2.2, projectileSpeed: 240, projectileRadius: 8, damage: 13, shot: "stinger", action: "针刺" }, damageTakenByElement: { wind: 1.5, energy: .5 } },
+      waspElite: { name: "毒蜂精英", codexCategory: "elite", description: "毒蜂的精英形态，体型与翼展更大，停在更远处以更快的节奏射出更重的毒刺，抗性不变。", tactics: "它停在距防线 113 像素处，靠防线前的减速与近战拦不住；装甲车与燃油弹打不到，龙卷风能卷住它。风系 ×1.5、能量 ×0.5，用气刃或物理技能点掉。", hp: 260, speed: 36, radius: 18, damage: 14, xp: 32, color: "#141821", accent: "#ffd166", flying: true, ranged: { standoff: 113, interval: 1.8, projectileSpeed: 260, projectileRadius: 10, damage: 18, shot: "stinger", action: "针刺" }, damageTakenByElement: { wind: 1.5, energy: .5 } },
+      wheelchair: { name: "轮椅僵尸", codexCategory: "minion", description: "坐在轮椅上的僵尸，靠着轮椅缓慢挪向防线，生命掉到一半以下时车上的输液装置会持续为他回血：额外承受 50% 火系伤害。", tactics: "它推进得很慢，可以用中远距离技能提前消耗；火系伤害 ×1.5，而且重伤能把回血压到一半、「禁疗」期间几乎回不动，别让它一直挂在半血。", hp: 90, speed: 14, radius: 17, damage: 14, xp: 18, color: "#5b6a7a", accent: "#7ef0a8", damageTakenByElement: { fire: 1.5 }, regenPerSecond: 6, regenBelowHpRatio: .5 },
+      wheelchairElite: { name: "轮椅僵尸精英", codexCategory: "elite", description: "轮椅僵尸的精英形态，轮椅更厚重、输液更急：生命低于一半后每秒回复的生命是小怪的两倍多，火系弱点不变。", tactics: "血厚且回血更快，必须一口气打穿半血以下的回复段；温压弹与燃油弹的持续火伤 ×1.5，压缩气刃的重伤能让它的回复直接减半。", hp: 520, speed: 17, radius: 22, damage: 22, xp: 38, color: "#414c5c", accent: "#ffd166", damageTakenByElement: { fire: 1.5 }, regenPerSecond: 14, regenBelowHpRatio: .5 },
+      frostBeast: { name: "寒霜兽", codexCategory: "minion", description: "披着冰壳的巨型乌龟，挪动得极慢，也推不动、拉不走：完全免疫冻结、麻痹、燃烧、冻伤、击退与牵引，代价是额外承受 200% 火系伤害。", tactics: "冰冻、燃烧、麻痹、冻伤、击退与牵引全都无效，只有眩晕还能控住它；温压弹与燃油弹的直伤 ×3 最快。", hp: 200, speed: 12, radius: 22, damage: 18, xp: 26, color: "#87b6c9", accent: "#a9e8ff", damageTakenByElement: { fire: 3 }, statusImmune: { burn: true, freeze: true, paralysis: true, frostbite: true, knockback: true, pull: true } },
+      frostBeastElite: { name: "寒霜兽精英", codexCategory: "elite", description: "寒霜兽的精英形态，冰壳更厚、体型更大：同样免疫冻结、麻痹、燃烧、冻伤、击退与牵引，也照样额外承受 200% 火系伤害。", tactics: "它更耐打但一样慢，冰冻、燃烧、麻痹、冻伤、击退与牵引依旧无效，只有眩晕能短暂控住它；温压弹直伤 ×3 最快。", hp: 760, speed: 15, radius: 27, damage: 26, xp: 52, color: "#5f8ba1", accent: "#ffd166", damageTakenByElement: { fire: 3 }, statusImmune: { burn: true, freeze: true, paralysis: true, frostbite: true, knockback: true, pull: true } },
+      puppet: { name: "傀儡僵尸", codexCategory: "minion", description: "身上缠满提线的僵尸，靠木制操控架牵着自己行动：能量伤害减半、额外承受 50% 物理伤害，生命跌破一半与四分之一时各脱手放出一只傀儡。", tactics: "它停在中距离抛掷傀儡、不会贴墙，物理伤害 ×1.5 是主攻方向；两只傀儡与普通僵尸同级。", hp: 120, speed: 18, radius: 17, damage: 13, xp: 22, color: "#5b4a6e", accent: "#c8a8ff", ranged: { standoff: 100, interval: 2.6, projectileSpeed: 200, projectileRadius: 8, damage: 13, shot: "doll", action: "抛掷" }, damageTakenByElement: { energy: .5, physical: 1.5 }, summonHpRatios: [.5, .25], summonType: "puppetDoll" },
+      puppetElite: { name: "傀儡僵尸精英", codexCategory: "elite", description: "傀儡僵尸的精英形态，操控架更粗、抛出的傀儡更重：完全免疫能量伤害，物理伤害额外 ×1.5，但不再放出傀儡。", tactics: "能量系对它完全无效，改用物理或冰火技能；它射得更远更重，但不会放傀儡，可以安心集火。", hp: 620, speed: 22, radius: 22, damage: 20, xp: 44, color: "#42335a", accent: "#ffd166", ranged: { standoff: 130, interval: 2.1, projectileSpeed: 220, projectileRadius: 11, damage: 20, shot: "doll", action: "抛掷" }, damageTakenByElement: { energy: 0, physical: 1.5 } },
+      puppetDoll: { name: "傀儡", codexCategory: "minion", codexHidden: true, description: "傀儡僵尸脱手掉落的木偶，行动与普通僵尸完全一致，只是换了一副木头身体。", tactics: "生命与威胁都等同普通僵尸，顺手清掉即可，别让它们跟着本体一起到墙下。", hp: 28, speed: 20, radius: 14, damage: 10, xp: 8, color: "#8a6a45", accent: "#e6c08a" },
+      lizard: { name: "蜥蜴僵尸", codexCategory: "minion", description: "披着绝缘鳞甲的四足蜥蜴，贴地快速爬向防线：电系伤害减半，但冷血之躯额外承受 50% 冰系伤害。", tactics: "它爬得不慢，又几乎不吃电系伤害；改用干冰弹、冰雹发生器这类冰系技能，伤害 +50% 还能冻住它。", hp: 60, speed: 32, radius: 16, damage: 12, xp: 16, color: "#5f8148", accent: "#d8f27a", damageTakenByElement: { ice: 1.5, electric: .5 } },
+      lizardElite: { name: "蜥蜴僵尸精英", codexCategory: "elite", description: "蜥蜴僵尸的精英形态，鳞甲更厚、体型更大、爬得更快，抗性完全不变：电系伤害减半，冰系伤害额外 +50%。", tactics: "抗性没变：冰系依旧 +50% 还能冻住它，电系收益最差，用冰系或物理爆发尽早拦下。", hp: 400, speed: 38, radius: 21, damage: 19, xp: 34, color: "#45663a", accent: "#ffd166", damageTakenByElement: { ice: 1.5, electric: .5 } },
       boss: { name: "尸潮领主", codexCategory: "boss", description: "关卡首领，体型巨大、生命值极高；生命低于一半时进入狂暴状态，移动速度提升。", tactics: "持续输出并留意其接近城墙；燃烧、暴击与高伤害构筑有助于缩短战斗时间。", hp: 3000, speed: 10, radius: 34, damage: 24, xp: 100, color: "#9d5264", accent: "#ffb0bc" }
     },
     skillDefaults: {
       thermobaric: { unlocked: false, level: 0, fireInterval: 5, projectileSpeed: 250, projectileRadius: 8, impactDamage: 32, impactKnockback: 24, explosionDamage: 58, explosionRadius: 68, explosionKnockback: 42, burnDps: 10, burnDuration: 2.5, pierce: 0, burst: 0 },
-      dryIce: { unlocked: false, level: 0, fireInterval: 3.5, projectileSpeed: 300, projectileRadius: 7, damage: 28, knockback: 12, pierce: 3, freezeDuration: 0, slowFactor: .58, splitCount: 0, spread: 0, burst: 0 },
-      armoredCar: { unlocked: false, level: 0, fireInterval: 6.3, speed: 140, carWidth: 34, carLength: 64, damage: 4, hitInterval: .16, slowFactor: .55, slowDuration: 1.2, stunChance: 0, stunDuration: .6, extraCars: 0, sizeLevel: 0 },
-      bombardment: { unlocked: false, level: 0, fireInterval: 11, bombSpeed: 560, damage: 180, blastRadius: 82, centerRadius: 30, knockback: 105, extraBombs: 0, stunDuration: 0, centerDamageMultiplier: 1, thermonuclear: false, heatDuration: 4, heatDps: 25, heatSlowFactor: .5 },
+      dryIce: { unlocked: false, level: 0, fireInterval: 3.5, projectileSpeed: 300, projectileRadius: 7, damage: 28, knockback: 12, pierce: 3, slowDuration: 0, slowFactor: .58, freezeDuration: 0, splitCount: 0, spread: 0, burst: 0, frostbiteEnabled: false, frostbiteDps: 1.5, frostbiteDuration: 5, frostbiteMaxStacks: 10 },
+      armoredCar: { unlocked: false, level: 0, fireInterval: 6.3, speed: 100, carWidth: 42, carLength: 80, damage: 4, hitInterval: .12, slowFactor: .55, slowDuration: 1.2, stunChance: 0, stunDuration: .6, extraCars: 0, sizeLevel: 0, groundOnly: true },
+      bombardment: { unlocked: false, level: 0, fireInterval: 11, bombSpeed: 560, damage: 180, blastRadius: 45, centerRadius: 17, knockback: 105, extraBombs: 0, stunDuration: 0, centerDamageMultiplier: 1, thermonuclear: false, heatDuration: 4, heatDps: 25, heatSlowFactor: .5, bombDropDelay: .42, bombMinSeparationRatio: .9, bombAltScoreRatio: .45 },
       electromagnetic: { unlocked: false, level: 0, fireInterval: 3, damage: 72, stunDuration: 2.5, extraTargets: 0, explosion: false, explosionDamage: 44, explosionRadius: 54, matrix: false, matrixDuration: 4, matrixDps: 12, matrixRadius: 38, matrixSlowFactor: .5 },
-      highEnergyBeam: { unlocked: false, level: 0, fireInterval: 3, damage: 6, baseDamageHits: 20, bonusDamageHits: 0, damageHits: 20, beamWidth: 16, duration: 4, slowEnabled: false, slowFactor: .1, slowDuration: 1, crippleEnabled: false, damageTakenMultiplier: 1.25, damageTakenDuration: 5, overcharged: false }
+      highEnergyBeam: { unlocked: false, level: 0, fireInterval: 3, damage: 6, baseDamageHits: 20, bonusDamageHits: 0, damageHits: 20, beamWidth: 16, duration: 4, slowEnabled: false, slowFactor: .1, slowDuration: 1, crippleEnabled: false, damageTakenMultiplier: 1.25, damageTakenDuration: 5, overcharged: false },
+      whirlwindCannon: { unlocked: false, level: 0, fireInterval: 12, duration: 10, speed: 72, radius: 40, damage: 20, hitInterval: .35, pullSpeed: 18, clusterRadius: 58, clusterWeight: 130, threatWeight: 60, clusterJitter: .55, extraTornadoes: 0, stormGather: false, stormDuration: 2, stormRadiusScale: 1.7, stormDamageScale: 1, stormPullScale: 1.2 },
+      hailGenerator: { unlocked: false, level: 0, fireInterval: 6, duration: 1.5, radius: 46, damage: 16, hitInterval: .25, slowFactor: .35, slowDuration: 1.1, freezeDuration: .6, extraHails: 0, explodeOnEnd: false, explosionRadius: 62, explosionFreezeDuration: 1.5, frostbiteEnabled: false, frostbiteDps: 1.2, frostbiteDuration: 5, frostbiteMaxStacks: 10 },
+      fuelBomb: { unlocked: false, level: 0, fireInterval: 5, flightTime: .5, arcHeight: 22, radius: 52, duration: 1, damage: 13, hitInterval: .25, burnDps: 7, burnDuration: 3, slowFactor: 1, slowDuration: 0, extraShells: 0, extraDamageScale: .7, explodeOnEnd: false, explosionDamageScale: 2.6, explosionRadiusScale: 1.35, groundOnly: true },
+      airBlade: { unlocked: false, level: 0, fireInterval: 4.5, projectileSpeed: 400, projectileRadius: 9, damage: 34, knockback: 26, pierce: 3, spread: 0, burst: 0, woundDuration: 5, woundFactor: .5, woundExtraDuration: 0, woundExtraFactor: 0 },
+      drone: { unlocked: false, level: 0, fireInterval: 9, duration: 6, speed: 96, radius: 20, damage: 18, hitInterval: .35, clusterRadius: 52, clusterWeight: 110, threatWeight: 55, clusterJitter: .6, sizeLevel: 0, stunDuration: 0, bladeEnabled: false },
+      chainLightning: { unlocked: false, level: 0, fireInterval: 7, damage: 26, bounces: 5, stunDuration: 1.2, jumpDelay: .08, extraChains: 0, burnEnabled: false, burnDps: 10, burnDuration: 3 }
     },
     traits: [
       { id: "damage", name: "增伤", rarity: "普通", max: 5, icon: "✦", desc: "子弹伤害 +25%", detail: "每级使所有步枪子弹伤害提高 25%，最高 5 级。稳定提升清理普通敌人和攻击首领的效率。", apply: function (p) { p.damage *= 1.25; } },
@@ -69,7 +440,7 @@
       { id: "crit", name: "暴击", rarity: "普通", max: 5, icon: "♦", desc: "暴击率 +12%", detail: "每级增加 12% 暴击率，最高 5 级。暴击子弹造成基础伤害的 1.5 倍；可与弱点打击叠加。", apply: function (p) { p.crit += .12; } },
       { id: "weakpoint", name: "弱点打击", rarity: "稀有", max: 3, icon: "☄", desc: "暴击伤害 +50%", detail: "每级使暴击伤害倍率增加 0.5，最高 3 级。与暴击率配合时收益更高。", apply: function (p) { p.critDamage += .5; } },
       { id: "burn", name: "燃烧弹", rarity: "稀有", max: 3, icon: "♨", desc: "命中后附加持续伤害", detail: "将子弹切换为火焰属性，命中后施加持续燃烧；燃烧伤害和持续时间随等级提升，最高 3 级。", apply: function (p) { p.burn += 1; p.bulletType = "fire"; } },
-      { id: "freeze", name: "冰冻弹", rarity: "稀有", max: 3, icon: "❄", desc: "命中后减缓敌人移动", detail: "将子弹切换为冰冻属性，命中后减缓敌人移动；减速持续时间随等级提升，最高 3 级。", apply: function (p) { p.freeze += .12; p.bulletType = "ice"; } }
+      { id: "freeze", name: "冰冻弹", rarity: "稀有", max: 3, icon: "❄", desc: "命中后冻结并减速", detail: "将子弹切换为冰冻属性，命中后短暂冻结敌人（0.35 秒）并减缓其移动；减速持续时间随等级提升，最高 3 级。", apply: function (p) { p.freeze += .12; p.bulletType = "ice"; } }
     ],
     skillTraits: [
       { id: "unlockThermobaric", skillId: "thermobaric", unlocksSkill: true, name: "温压弹", rarity: "稀有", max: 1, icon: "♨", desc: "解锁温压弹技能", detail: "首次获取后解锁温压弹，技能槽显示 Lv1；之后可获取温压弹专属词条继续升级。", apply: function () {} },
@@ -80,7 +451,8 @@
       { id: "thermoKnockback", skillId: "thermobaric", name: "击退强化", rarity: "稀有", max: 3, icon: "⇢", desc: "温压弹击退距离 +25%", detail: "每级强化温压弹命中冲击和爆炸冲击的击退距离 25%，最高 3 级。", apply: function (p) { p.skills.thermobaric.impactKnockback *= 1.25; p.skills.thermobaric.explosionKnockback *= 1.25; } },
       { id: "thermoImpact", skillId: "thermobaric", name: "冲击伤害增加", rarity: "稀有", max: 5, icon: "✦", desc: "温压弹冲击伤害 +25%", detail: "每级提升温压弹炮弹直接命中的冲击伤害 25%，最高 5 级；爆炸伤害由爆炸增伤强化。", apply: function (p) { p.skills.thermobaric.impactDamage *= 1.25; } },
       { id: "unlockDryIce", skillId: "dryIce", unlocksSkill: true, name: "干冰弹", rarity: "稀有", max: 1, icon: "❄", desc: "解锁干冰弹技能", detail: "首次获取后解锁干冰弹，技能槽显示 Lv1；之后可获取干冰弹专属词条继续升级。", apply: function () {} },
-      { id: "iceFreeze", skillId: "dryIce", name: "冰冻", rarity: "稀有", max: 4, icon: "❄", desc: "干冰弹命中后减速", detail: "命中后冻结敌人移动，每级增加减速持续时间并增强减速效果，最高 4 级。", apply: function (p) { var skill = p.skills.dryIce; skill.freezeDuration += .55; skill.slowFactor = Math.max(.25, skill.slowFactor - .06); } },
+      { id: "iceFreeze", skillId: "dryIce", name: "冰冻", rarity: "稀有", max: 4, icon: "❄", desc: "干冰弹命中后冻结并减速", detail: "命中后冻结敌人 0.5 秒并大幅减速，每级增加冻结与减速的持续时间，并增强减速效果，最高 4 级。", apply: function (p) { var skill = p.skills.dryIce; skill.slowDuration += .55; skill.freezeDuration += .5; skill.slowFactor = Math.max(.25, skill.slowFactor - .06); } },
+      { id: "iceFrostbite", skillId: "dryIce", name: "干冰冻伤", rarity: "稀有", max: 1, icon: "❉", desc: "命中叠加冻伤，最多 10 层", detail: "干冰弹命中的每个目标叠加 1 层冻伤：每层每秒造成 1.5 点伤害、持续 5 秒，最多叠加 10 层，冻伤每秒的总伤害 = 单层伤害 × 当前层数。叠满后再命中会把剩余时间最短的一层刷新为满时长。该冻伤与冰雹发生器的冻伤分别记层、互不干扰，也不走属性倍率。", apply: function (p) { p.skills.dryIce.frostbiteEnabled = true; } },
       { id: "iceDamage", skillId: "dryIce", name: "干冰弹增伤", rarity: "稀有", max: 5, icon: "✦", desc: "干冰弹伤害 +25%", detail: "每级提升干冰弹及其分裂冰弹的命中伤害 25%，最高 5 级。", apply: function (p) { p.skills.dryIce.damage *= 1.25; } },
       { id: "icePierce", skillId: "dryIce", name: "干冰弹穿透", rarity: "稀有", max: 4, icon: "↠", desc: "干冰弹穿透 +1", detail: "每级增加 1 次额外穿透；基础干冰弹已可穿透 3 次。", apply: function (p) { p.skills.dryIce.pierce += 1; } },
       { id: "iceSplit", skillId: "dryIce", name: "分裂小冰弹", rarity: "稀有", max: 3, icon: "❄", desc: "干冰弹命中后分裂", detail: "干冰弹首次命中后分裂出 2 枚小冰弹，每级再增加 2 枚，最高 3 级；小冰弹造成部分伤害。", apply: function (p) { p.skills.dryIce.splitCount += 2; } },
@@ -97,7 +469,7 @@
       { id: "bombardmentExtra", skillId: "bombardment", name: "连续轰炸", rarity: "稀有", max: 2, icon: "✹", desc: "额外投下一枚炸弹", detail: "每级使一次空投轰炸额外投下一枚炸弹，依次轰击自动选定的敌群区域，最高 2 级。", apply: function (p) { p.skills.bombardment.extraBombs++; } },
       { id: "bombardmentRadius", skillId: "bombardment", name: "轰炸扩张", rarity: "稀有", max: 1, icon: "◉", desc: "爆炸范围 +105%", detail: "空投轰炸爆炸半径扩大 105%。", apply: function (p) { p.skills.bombardment.blastRadius *= 2.05; } },
       { id: "bombardmentStun", skillId: "bombardment", name: "轰炸震荡", rarity: "稀有", max: 1, icon: "⚡", desc: "爆炸造成眩晕", detail: "空投轰炸命中范围内的敌人时使其眩晕 1.5 秒。", apply: function (p) { p.skills.bombardment.stunDuration = 1.5; } },
-      { id: "bombardmentPrecision", skillId: "bombardment", name: "精准打击", rarity: "稀有", max: 1, icon: "◎", desc: "轰炸中心伤害 +200%", detail: "轰炸中心 30 像素范围内的敌人受到 3 倍伤害。", apply: function (p) { p.skills.bombardment.centerDamageMultiplier = 3; } },
+      { id: "bombardmentPrecision", skillId: "bombardment", name: "精准打击", rarity: "稀有", max: 1, icon: "◎", desc: "轰炸中心伤害 +200%", detail: "轰炸中心 17 像素范围内的敌人受到 3 倍伤害。", apply: function (p) { p.skills.bombardment.centerDamageMultiplier = 3; } },
       { id: "bombardmentThermonuclear", skillId: "bombardment", name: "热核轰炸", rarity: "稀有", max: 1, icon: "♨", desc: "留下灼烧减速区域", detail: "爆炸后留下持续 4 秒的热核区域，每秒造成 25 点伤害并将敌人移速降低 50%。", apply: function (p) { p.skills.bombardment.thermonuclear = true; } },
       { id: "unlockElectromagnetic", skillId: "electromagnetic", unlocksSkill: true, name: "电磁穿刺", rarity: "稀有", max: 1, icon: "ϟ", desc: "解锁电磁穿刺技能", detail: "首次获取后解锁电磁穿刺，技能槽显示 Lv.1；技能就绪后自动召唤闪电劈击敌人并施加麻痹。", apply: function () {} },
       { id: "electromagneticDamage", skillId: "electromagnetic", name: "电磁增伤", rarity: "稀有", max: 1, icon: "✦", desc: "电磁穿刺伤害 +80%", detail: "每级使电磁穿刺的闪电伤害提高 80%。", apply: function (p) { p.skills.electromagnetic.damage *= 1.8; } },
@@ -110,20 +482,76 @@
       { id: "highEnergyBeamSlow", skillId: "highEnergyBeam", name: "减速射线", rarity: "稀有", max: 1, icon: "❄", desc: "命中目标减速 90%，持续 1 秒", detail: "高能射线命中目标后使其移动速度降低 90%，持续 1 秒。", apply: function (p) { p.skills.highEnergyBeam.slowEnabled = true; p.skills.highEnergyBeam.slowFactor = .1; p.skills.highEnergyBeam.slowDuration = 1; } },
       { id: "highEnergyBeamCripple", skillId: "highEnergyBeam", name: "致残射线", rarity: "稀有", max: 1, icon: "ϟ", desc: "命中目标受到的伤害 +25%，持续 5 秒", detail: "高能射线命中目标后，使其受到的所有伤害提高 25%，持续 5 秒。", apply: function (p) { p.skills.highEnergyBeam.crippleEnabled = true; p.skills.highEnergyBeam.damageTakenMultiplier = 1.25; p.skills.highEnergyBeam.damageTakenDuration = 5; } },
       { id: "highEnergyBeamCharge", skillId: "highEnergyBeam", name: "充能", rarity: "稀有", max: 1, icon: "＋", desc: "射线伤害次数 +5", detail: "高能射线持续时间内造成的伤害次数增加 5 次。", apply: function (p) { var skill = p.skills.highEnergyBeam; skill.bonusDamageHits += 5; skill.damageHits = (skill.baseDamageHits + skill.bonusDamageHits) * (skill.overcharged ? 2 : 1); } },
-      { id: "highEnergyBeamOverload", skillId: "highEnergyBeam", name: "超能过载", rarity: "稀有", max: 1, icon: "ϟ", desc: "射线伤害次数翻倍，冷却 +50%", detail: "高能射线伤害次数翻倍，技能冷却时间增加 50%。", apply: function (p) { var skill = p.skills.highEnergyBeam; skill.overcharged = true; skill.damageHits = (skill.baseDamageHits + skill.bonusDamageHits) * 2; skill.fireInterval *= 1.5; } }
+      { id: "highEnergyBeamOverload", skillId: "highEnergyBeam", name: "超能过载", rarity: "稀有", max: 1, icon: "ϟ", desc: "射线伤害次数翻倍，冷却 +50%", detail: "高能射线伤害次数翻倍，技能冷却时间增加 50%。", apply: function (p) { var skill = p.skills.highEnergyBeam; skill.overcharged = true; skill.damageHits = (skill.baseDamageHits + skill.bonusDamageHits) * 2; skill.fireInterval *= 1.5; } },
+      { id: "unlockWhirlwindCannon", skillId: "whirlwindCannon", unlocksSkill: true, name: "旋风加农", rarity: "稀有", max: 1, icon: "☈", desc: "解锁旋风加农技能", detail: "首次获取后解锁旋风加农，技能槽显示 Lv.1；幻形会召唤龙卷风主动扑向敌人密集处，持续 10 秒后消失并进入冷却。", apply: function () {} },
+      { id: "whirlwindDamage", skillId: "whirlwindCannon", name: "旋风增伤", rarity: "稀有", max: 3, icon: "✦", desc: "龙卷风伤害 +60%", detail: "每级使龙卷风每次命中的伤害提高 60%，最高 3 级。", apply: function (p) { p.skills.whirlwindCannon.damage *= 1.6; } },
+      { id: "whirlwindPull", skillId: "whirlwindCannon", name: "风力加强", rarity: "稀有", max: 3, icon: "≋", desc: "龙卷风牵引速度 +50%", detail: "每级使龙卷风把命中目标拉向风眼的速度提高 50%，最高 3 级；牵引不会打断敌人自身的推进。", apply: function (p) { p.skills.whirlwindCannon.pullSpeed *= 1.5; } },
+      { id: "whirlwindTurbo", skillId: "whirlwindCannon", name: "涡轮增压", rarity: "稀有", max: 3, icon: "⚡", desc: "持续时间 +40%，伤害 +20%", detail: "每级使龙卷风持续时间延长 40%，同时使每次命中的伤害提高 20%，最高 3 级。", apply: function (p) { var skill = p.skills.whirlwindCannon; skill.duration *= 1.4; skill.damage *= 1.2; } },
+      { id: "whirlwindTwin", skillId: "whirlwindCannon", name: "双重旋风", rarity: "稀有", max: 1, icon: "✣", desc: "同时召唤两个龙卷风，持续时间 -50%", detail: "额外召唤一个龙卷风，两个龙卷风在战场不同区域各自游走；持续时间缩短 50%。", apply: function (p) { var skill = p.skills.whirlwindCannon; skill.extraTornadoes += 1; skill.duration *= .5; } },
+      { id: "whirlwindStorm", skillId: "whirlwindCannon", name: "风暴聚集", rarity: "稀有", max: 1, icon: "◉", desc: "消失位置留下 2 秒大龙卷风", detail: "龙卷风持续时间结束并进入冷却时，会在消失位置释放一个体型更大、牵引更强的静止龙卷风，持续 2 秒；双重旋风下每个龙卷风各自留下一个。", apply: function (p) { p.skills.whirlwindCannon.stormGather = true; } },
+      { id: "unlockHailGenerator", skillId: "hailGenerator", unlocksSkill: true, name: "冰雹发生器", rarity: "稀有", max: 1, icon: "❆", desc: "解锁冰雹发生器技能", detail: "首次获取后解锁冰雹发生器，技能槽显示 Lv.1；技能就绪后自动在敌人最密集处释放冰雹，持续砸击并冻结范围内的敌人。", apply: function () {} },
+      { id: "hailDamage", skillId: "hailGenerator", name: "冰雹增伤", rarity: "稀有", max: 3, icon: "✦", desc: "冰雹伤害 +60%", detail: "每级使冰雹发生器每次砸击的伤害提高 60%，最高 3 级；不改变砸击频率与持续时间。", apply: function (p) { p.skills.hailGenerator.damage *= 1.6; } },
+      { id: "hailExtra", skillId: "hailGenerator", name: "连环冰雹", rarity: "稀有", max: 2, icon: "✣", desc: "每轮额外释放 1 个冰雹", detail: "每级在一次冰雹发生器释放中额外生成 1 团冰雹，最高 2 级；多余的冰雹会自动落在另一个敌群，只有单团敌人时则偏开一点落点。", apply: function (p) { p.skills.hailGenerator.extraHails += 1; } },
+      { id: "hailDuration", skillId: "hailGenerator", name: "冰雹延续", rarity: "稀有", max: 2, icon: "↻", desc: "持续时间 +2 秒", detail: "每级使每团冰雹的持续时间延长 2 秒，最高 2 级；砸击间隔不变，因此总伤害随持续时间线性提高。", apply: function (p) { p.skills.hailGenerator.duration += 2; } },
+      { id: "hailRadius", skillId: "hailGenerator", name: "冰雹扩张", rarity: "稀有", max: 1, icon: "◉", desc: "冰雹范围 +100%", detail: "冰雹发生器的覆盖半径扩大 100%（46 → 92 像素），伤害判定、冰雾特效与冰霜爆炸的范围一起放大。", apply: function (p) { p.skills.hailGenerator.radius *= 2; } },
+      { id: "hailFrost", skillId: "hailGenerator", name: "冰霜爆炸", rarity: "稀有", max: 1, icon: "❄", desc: "冰雹结束后炸开冰霜并冻结", detail: "每团冰雹消失时在原地炸开一圈冰霜，把范围内的敌人冻结 1.5 秒；这部分只控制、不造成伤害。", apply: function (p) { p.skills.hailGenerator.explodeOnEnd = true; } },
+      { id: "hailFrostbite", skillId: "hailGenerator", name: "冰雹冻伤", rarity: "稀有", max: 1, icon: "❉", desc: "每次砸击叠加冻伤，最多 10 层", detail: "冰雹发生器每次砸击（每 0.25 秒一次）都会为范围内的每个敌人叠加 1 层冻伤：每层每秒造成 1.2 点伤害、持续 5 秒，最多叠加 10 层，冻伤每秒的总伤害 = 单层伤害 × 当前层数。冰雹的冻伤与干冰弹的冻伤分别记层、各自计时，互不干扰。", apply: function (p) { p.skills.hailGenerator.frostbiteEnabled = true; } },
+      { id: "unlockFuelBomb", skillId: "fuelBomb", unlocksSkill: true, name: "燃油弹", rarity: "稀有", max: 1, icon: "⛽", desc: "解锁燃油弹技能", detail: "首次获取后解锁燃油弹，技能槽显示 Lv.1；技能就绪后自动向敌人最密集处投出一枚燃油弹，落地炸开一片持续灼烧的圆形火场。", apply: function () {} },
+      { id: "fuelDamage", skillId: "fuelBomb", name: "燃油增伤", rarity: "稀有", max: 3, icon: "✦", desc: "灼烧伤害 +60%", detail: "每级使火场每次灼烧的伤害与附加点燃的每秒伤害都提高 60%，最高 3 级；结束爆炸的伤害按灼烧伤害换算，因此同步提高。", apply: function (p) { p.skills.fuelBomb.damage *= 1.6; p.skills.fuelBomb.burnDps *= 1.6; } },
+      { id: "fuelExtra", skillId: "fuelBomb", name: "燃油+1", rarity: "稀有", max: 2, icon: "✣", desc: "额外投出 1 枚无距离限制的燃油弹", detail: "每级在每次释放中额外投出 1 枚燃油弹，最高 2 级；额外燃油弹不受近距离触发限制，会飞向场上任意位置的敌群，但灼烧、点燃与结束爆炸的伤害都降低 30%。", apply: function (p) { p.skills.fuelBomb.extraShells += 1; } },
+      { id: "fuelRadius", skillId: "fuelBomb", name: "燃油扩张", rarity: "稀有", max: 2, icon: "◉", desc: "灼烧范围 +50%", detail: "每级使火场半径扩大 50%，最高 2 级；伤害判定、火焰特效与结束爆炸的范围一起放大。", apply: function (p) { p.skills.fuelBomb.radius *= 1.5; } },
+      { id: "fuelSlow", skillId: "fuelBomb", name: "燃油凝滞", rarity: "稀有", max: 1, icon: "❄", desc: "灼烧区域附带 50% 减速", detail: "火场内的敌人移速降低 50%，每次灼烧都会刷新，离开火场后仍持续 1.5 秒。", apply: function (p) { p.skills.fuelBomb.slowFactor = .5; p.skills.fuelBomb.slowDuration = 1.5; } },
+      { id: "fuelBlast", skillId: "fuelBomb", name: "燃油爆炸", rarity: "稀有", max: 1, icon: "✹", desc: "灼烧结束后发生爆炸", detail: "火场消失时在原地炸开，对更大范围内的敌人造成一次爆炸伤害并再次点燃它们。", apply: function (p) { p.skills.fuelBomb.explodeOnEnd = true; } },
+      { id: "fuelDuration", skillId: "fuelBomb", name: "燃油延续", rarity: "稀有", max: 2, icon: "↻", desc: "持续时间 +1 秒", detail: "每级使火场持续时间延长 1 秒，最高 2 级；灼烧间隔不变，因此总伤害随持续时间线性提高。", apply: function (p) { p.skills.fuelBomb.duration += 1; } },
+      { id: "unlockAirBlade", skillId: "airBlade", unlocksSkill: true, name: "压缩气刃", rarity: "稀有", max: 1, icon: "☾", desc: "解锁压缩气刃技能", detail: "首次获取后解锁压缩气刃，技能槽显示 Lv.1；幻形会朝中距离的敌人甩出绿色月牙气刃，穿透多个目标并留下重伤。", apply: function () {} },
+      { id: "airBladeDamage", skillId: "airBlade", name: "气刃增伤", rarity: "稀有", max: 3, icon: "✦", desc: "气刃伤害 +60%", detail: "每级使压缩气刃每次命中的伤害提高 60%，最高 3 级；不改变击退与重伤效果。", apply: function (p) { p.skills.airBlade.damage *= 1.6; } },
+      { id: "airBladeVolley", skillId: "airBlade", name: "气刃齐射", rarity: "稀有", max: 2, icon: "✣", desc: "每轮多甩出 2 道气刃", detail: "每级在一次压缩气刃释放中额外甩出 2 道气刃，形成扇形覆盖，最高 2 级；同轮气刃共用一次冷却。", apply: function (p) { p.skills.airBlade.spread += 2; } },
+      { id: "airBladeBurst", skillId: "airBlade", name: "气刃连发", rarity: "稀有", max: 2, icon: "➤", desc: "额外释放一次压缩气刃", detail: "每级在一次压缩气刃攻击周期中追加 1 轮释放，最高 2 级；每轮重新索敌，并优先选择与本轮已发气刃方向差异较大的目标。", apply: function (p) { p.skills.airBlade.burst += 1; } },
+      { id: "airBladePierce", skillId: "airBlade", name: "气刃穿透", rarity: "稀有", max: 2, icon: "↠", desc: "气刃穿透 +3", detail: "每级使每道气刃额外穿透 3 个目标，最高 2 级；基础气刃已可穿透 3 个目标。", apply: function (p) { p.skills.airBlade.pierce += 3; } },
+      { id: "airBladeKnockback", skillId: "airBlade", name: "气刃重击", rarity: "稀有", max: 2, icon: "⇢", desc: "气刃击退距离 +50%", detail: "每级使压缩气刃命中时的击退距离提高 50%，最高 2 级。", apply: function (p) { p.skills.airBlade.knockback *= 1.5; } },
+      { id: "airBladeWound", skillId: "airBlade", name: "禁疗", rarity: "稀有", max: 1, icon: "✖", desc: "命中后额外 40% 重伤，持续 1 秒", detail: "气刃命中时在原有的 50% 重伤之上再叠加 40% 的重伤效果，持续 1 秒；这 1 秒内目标的回血被压制 90%，之后回到 50%。", apply: function (p) { p.skills.airBlade.woundExtraDuration = 1; p.skills.airBlade.woundExtraFactor = .4; } },
+      { id: "unlockDrone", skillId: "drone", unlocksSkill: true, name: "无人机", rarity: "稀有", max: 1, icon: "◎", desc: "解锁无人机技能", detail: "首次获取后解锁无人机，技能槽显示 Lv.1；幻形会放出一架圆形飞行器，在战场上飞向敌人最密集处，撞到僵尸就持续造成伤害。", apply: function () {} },
+      { id: "droneDamage", skillId: "drone", name: "无人机增伤", rarity: "稀有", max: 3, icon: "✦", desc: "无人机伤害 +60%", detail: "每级使无人机每次撞击的伤害提高 60%，最高 3 级；不影响撞击频率与持续时间。", apply: function (p) { p.skills.drone.damage *= 1.6; } },
+      { id: "droneSpeed", skillId: "drone", name: "高速飞行", rarity: "稀有", max: 2, icon: "⚡", desc: "飞行速度 +35%，伤害 +20%", detail: "每级使无人机的飞行速度提高 35%、撞击伤害提高 20%，最高 2 级；飞得更快意味着同一段时间内能撞到更多敌人。", apply: function (p) { p.skills.drone.speed *= 1.35; p.skills.drone.damage *= 1.2; } },
+      { id: "droneBlade", skillId: "drone", name: "无人机气刃", rarity: "稀有", max: 1, icon: "☾", desc: "命中后甩出一道无穿透的纯伤害气刃", detail: "无人机每次撞到目标时，都会从机身朝该目标甩出一道不穿透的气刃（穿透为 0，只打 1 个目标）。这道气刃只有伤害：不施加任何状态、也不击退目标，伤害值沿用压缩气刃当前的伤害（压缩气刃的增伤词条会同步提高它）。", apply: function (p) { p.skills.drone.bladeEnabled = true; } },
+      { id: "droneDuration", skillId: "drone", name: "持续飞行", rarity: "稀有", max: 2, icon: "↻", desc: "持续时间 +50%", detail: "每级使无人机的持续时间延长 50%，最高 2 级；撞击频率不变，因此总伤害随持续时间线性提高。", apply: function (p) { p.skills.drone.duration *= 1.5; } },
+      { id: "droneStun", skillId: "drone", name: "无人机震荡", rarity: "稀有", max: 1, icon: "⚡", desc: "命中后眩晕 1 秒", detail: "无人机撞到目标时使其眩晕 1 秒；无人机悬停在敌群里会不断刷新眩晕，把整团敌人按在原地。", apply: function (p) { p.skills.drone.stunDuration = 1; } },
+      { id: "droneSize", skillId: "drone", name: "大型无人机", rarity: "稀有", max: 2, icon: "◍", desc: "无人机体型 +30%", detail: "每级同步增大无人机机身与撞击判定范围 30%，最高 2 级；体型更大的无人机一次能同时撞到更多敌人。", apply: function (p) { p.skills.drone.sizeLevel += 1; } },
+      { id: "unlockChainLightning", skillId: "chainLightning", unlocksSkill: true, name: "跃迁电子", rarity: "稀有", max: 1, icon: "☇", desc: "解锁跃迁电子技能", detail: "首次获取后解锁跃迁电子，技能槽显示 Lv.1；幻形会朝中距离的敌人射出一条紫色电链，命中后依次弹射到最近的未命中目标，每个被电链打到的目标都会受到伤害并被麻痹。", apply: function () {} },
+      { id: "chainDamage", skillId: "chainLightning", name: "跃迁增伤", rarity: "稀有", max: 3, icon: "✦", desc: "电链伤害 +60%", detail: "每级使跃迁电子每次命中（含全部弹射）的伤害提高 60%，最高 3 级；不改变麻痹时长与弹射次数。", apply: function (p) { p.skills.chainLightning.damage *= 1.6; } },
+      { id: "chainStun", skillId: "chainLightning", name: "麻痹增伤", rarity: "稀有", max: 2, icon: "⚡", desc: "麻痹时间 +1 秒，伤害 +30%", detail: "每级使命中目标的麻痹时间延长 1 秒、电链伤害提高 30%，最高 2 级；麻痹期间敌人既不移动也不攻击城墙。", apply: function (p) { p.skills.chainLightning.stunDuration += 1; p.skills.chainLightning.damage *= 1.3; } },
+      { id: "chainBounce", skillId: "chainLightning", name: "多重越导", rarity: "稀有", max: 2, icon: "↻", desc: "弹射次数 +2", detail: "每级使电链的弹射次数增加 2 次，最高 2 级；基础 5 次弹射最多命中 6 个目标，满级 9 次弹射最多命中 10 个目标。", apply: function (p) { p.skills.chainLightning.bounces += 2; } },
+      { id: "chainExtra", skillId: "chainLightning", name: "复合电子", rarity: "稀有", max: 1, icon: "✣", desc: "额外释放一条跃迁电子", detail: "每次释放时额外射出一条电链，两条电链会优先落在不同的目标上，并按顺序各自弹射；它们共用一次冷却。", apply: function (p) { p.skills.chainLightning.extraChains += 1; } },
+      { id: "chainBurn", skillId: "chainLightning", name: "跃迁燃烧", rarity: "稀有", max: 1, icon: "♨", desc: "命中后附加燃烧", detail: "电链命中的每个目标都会被点燃，每秒受到 10 点燃烧伤害、持续 3 秒；燃烧与麻痹一样会先被护甲僵尸的装甲格挡。", apply: function (p) { p.skills.chainLightning.burnEnabled = true; } }
     ],
     coreSkills: [
-      { id: "bombardment", name: "空投轰炸", icon: "✹", status: "已实装", detail: "冷却就绪后自动索敌，优先轰炸预计爆炸时敌人更密集的区域；炸弹落地造成高额范围伤害与击退，并可强化伤害、连续投弹、爆炸范围、眩晕、中心伤害及热核灼烧减速区域。" },
-      { id: "thermobaric", name: "温压弹", icon: "♨", status: "已实装", detail: "幻形自动发射红色炮弹。命中后造成冲击伤害与击退，穿透耗尽后发生范围爆炸，对范围内敌人造成爆炸伤害并施加燃烧。" },
-      { id: "dryIce", name: "干冰弹", icon: "❄", status: "已实装", detail: "幻形自动发射蓝色圆锥弹，初始可额外穿透 3 个目标。命中造成伤害与微弱击退，可通过冰冻、分裂、齐射和连发词条强化。" },
-      { id: "armoredCar", name: "装甲车", icon: "▰", status: "已实装", detail: "自动从城墙前方派遣装甲车驶向尸潮，沿途多段碾压并减速敌人；可强化伤害、派遣数量、减速、眩晕与车身尺寸。" },
-      { id: "electromagnetic", name: "电磁穿刺", icon: "ϟ", status: "已实装", detail: "自动从天而降闪电劈向敌人，造成伤害并施加麻痹；可通过分流、爆炸、麻痹增伤和电磁矩阵词条强化。" },
-      { id: "highEnergyBeam", name: "高能射线", icon: "ϟ", status: "已实装", detail: "幻形自动朝覆盖敌人最多的方向发射蓝色宽光束，贯穿全场并持续 4 秒、造成 20 次低额伤害；可强化伤害、减速与致残效果，也可增加脉冲次数或过载翻倍。" }
+      { id: "bombardment", name: "空投轰炸", icon: "✹", color: "#ffd166", range: "far", element: "physical", status: "已实装", detail: "冷却就绪后自动索敌，优先轰炸预计爆炸时敌人更密集的区域；炸弹落地造成高额范围伤害与击退，并可强化伤害、连续投弹、爆炸范围、眩晕、中心伤害及热核灼烧减速区域。" },
+      { id: "thermobaric", name: "温压弹", icon: "♨", color: "#ff9b52", range: "mid", element: "fire", status: "已实装", detail: "幻形自动发射红色炮弹。命中后造成冲击伤害与击退，穿透耗尽后发生范围爆炸，对范围内敌人造成爆炸伤害并施加燃烧。" },
+      { id: "dryIce", name: "干冰弹", icon: "❄", color: "#58aaff", range: "mid", element: "ice", status: "已实装", detail: "幻形自动发射蓝色圆锥弹，初始可额外穿透 3 个目标。命中造成伤害与微弱击退，可通过冰冻、冻伤、分裂、齐射和连发词条强化。" },
+      { id: "armoredCar", name: "装甲车", icon: "▰", color: "#63e6a0", range: "far", element: "physical", status: "已实装", detail: "自动从城墙前方派遣装甲车驶向尸潮，沿途多段碾压并减速敌人；可强化伤害、派遣数量、减速、眩晕与车身尺寸。" },
+      { id: "electromagnetic", name: "电磁穿刺", icon: "ϟ", color: "#68d8ff", range: "mid", element: "electric", status: "已实装", detail: "自动从天而降闪电劈向敌人，造成伤害并施加麻痹；可通过分流、爆炸、麻痹增伤和电磁矩阵词条强化。" },
+      { id: "highEnergyBeam", name: "高能射线", icon: "ϟ", color: "#51cfff", range: "far", element: "energy", status: "已实装", detail: "幻形自动朝覆盖敌人最多的方向发射蓝色宽光束，贯穿全场并持续 4 秒、造成 20 次低额伤害；可强化伤害、减速与致残效果，也可增加脉冲次数或过载翻倍。" },
+      { id: "whirlwindCannon", name: "旋风加农", icon: "☈", color: "#9fe6ff", range: "mid", element: "wind", status: "已实装", detail: "幻形召唤龙卷风主动扑向敌人最密集的位置，并优先照顾靠近城墙的敌群；持续 10 秒，沿途对接触到的敌人持续造成伤害并施加轻微牵引，持续时间结束后龙卷风消失并进入冷却。龙卷风不是贴地技能，飞鸟僵尸与毒蜂这类飞行单位同样会被卷入、掉血并被牵引。可强化伤害、牵引、持续时间与数量，也可在消失位置留下大龙卷风。" },
+      { id: "hailGenerator", name: "冰雹发生器", icon: "❆", color: "#8ce9ff", range: "mid", element: "ice", status: "已实装", detail: "在敌人最密集处释放一团持续 1.5 秒的冰雹，反复砸击范围内敌人并冻结、减速它们；可强化伤害、数量、持续时间与覆盖范围，也可在冰雹消失时炸开一圈只冻结不伤害的冰霜，或让每次砸击叠加冻伤。" },
+      { id: "fuelBomb", name: "燃油弹", icon: "⛽", color: "#ff7043", range: "near", element: "fire", status: "已实装", detail: "向防线前方投出一枚燃油弹，落地炸开一片持续 1 秒的圆形火场，反复灼烧范围内敌人并附加点燃；可强化灼烧伤害、额外投弹、覆盖范围、减速、结束爆炸与持续时间。贴地技能，打不到飞鸟僵尸。" },
+      { id: "airBlade", name: "压缩气刃", icon: "☾", color: "#5ef2a0", range: "mid", element: "wind", status: "已实装", detail: "幻形甩出绿色月牙形气刃，沿直线穿透 3 个目标，造成伤害与轻微击退，并让命中目标在 5 秒内只回复一半生命；可强化伤害、齐射数量、连发轮次、穿透层数、击退距离与重伤强度。" },
+      { id: "drone", name: "无人机", icon: "◎", color: "#a6c8ff", range: "mid", element: "physical", status: "已实装", detail: "放出一架圆形飞行器在战场上巡航，主动飞向敌人最密集、最靠近防线的位置，撞到僵尸就持续造成伤害；可强化伤害、飞行速度、持续时间与机身尺寸，也能在撞击时甩出一道只有伤害的无穿透气刃或震晕目标。它是飞行单位，能撞到飞鸟僵尸。" },
+      { id: "chainLightning", name: "跃迁电子", icon: "☇", color: "#b98cff", range: "mid", element: "electric", status: "已实装", detail: "幻形朝中距离的敌人射出一条紫色电链，命中后依次弹射到最近的未命中目标，基础弹射 5 次、最多命中 6 个目标；每个被电链打到的目标都受到伤害并被麻痹，只从电链路径上经过、没有被选中的僵尸不会受伤。可强化伤害、麻痹时长与弹射次数，也能额外释放一条电链或让命中目标燃烧。" }
     ],
     levels: [
-      { id: 1, name: "街区警戒线", subtitle: "基础尸潮防守", unlocked: true, hpScale: 1, xpScale: 1.76, waves: levelOneWaves },
-      { id: 2, name: "地铁入口", subtitle: "分裂僵尸与更密集的波次", unlocked: false, hpScale: 1, xpScale: .63, waves: levelTwoWaves },
-      { id: 3, name: "封锁工厂", subtitle: "更密集的尸潮与分裂精英", unlocked: false, hpScale: 1.35, xpScale: .43, waves: levelThreeWaves }
+      { id: 1, name: "街区警戒线", subtitle: "基础尸潮防守", brief: "基础教学关：普通、快跑与分裂僵尸轮番上场，第 4 波随机出现一只精英。", unlocked: true, hpScale: 1, xpScale: 1.76, waves: levelOneWaves },
+      { id: 2, name: "地铁入口", subtitle: "分裂僵尸与更密集的波次", brief: "分裂僵尸首次成规模登场，被击杀后会分裂出两只幼体，需要及时清场。", unlocked: true, hpScale: 1, xpScale: .63, waves: levelTwoWaves },
+      { id: 3, name: "封锁工厂", subtitle: "更密集的尸潮与分裂精英", brief: "尸潮密度与个体生命同步上调，第 4 波固定登场分裂僵尸精英。", unlocked: true, hpScale: 1.35, xpScale: .43, waves: levelThreeWaves },
+      { id: 4, name: "熔炉核心", subtitle: "后期尸潮成倍压上，个体更硬", brief: "前五波与第 3 关一致，后五波投放量与生命值同时加码，考验持续输出。", unlocked: true, hpScale: 1.35, xpScale: .34, waves: levelFourWaves },
+      { id: 5, name: "废弃球馆", subtitle: "篮球僵尸远程砸墙，尸潮更密更硬", brief: "篮球僵尸会停在远处把篮球砸向城墙，必须在它进入投掷距离前点掉。", unlocked: true, hpScale: 1.6, xpScale: .32, waves: levelFiveWaves },
+      { id: 6, name: "隔离区", subtitle: "护甲、分裂与远程混编，尸潮更长", brief: "护甲僵尸加入混编：装甲会吃掉伤害与负面状态，先剥甲再输出。", unlocked: true, hpScale: 1.68, xpScale: .29, waves: levelSixWaves },
+      { id: 7, name: "装甲坟场", subtitle: "护甲僵尸成群推进，装甲精英坐镇", brief: "不投放快跑与远程单位，压力全部来自推进缓慢但极难啃的护甲群体。", unlocked: true, hpScale: 1.75, xpScale: .26, waves: levelSevenWaves },
+      { id: 8, name: "环城高架", subtitle: "飞鸟与快跑压境，贴地技能失效", brief: "飞鸟全程停在半空，装甲车与燃油弹打不到，旋风加农能把它们卷进风眼。", unlocked: true, hpScale: 2, xpScale: .165, waves: levelEightWaves },
+      { id: 9, name: "焦土防线", subtitle: "护甲与烈焰混编，后期节奏收紧", brief: "火焰僵尸免疫燃烧与冻结、火系伤害减半，前期放慢、后期明显加快。", unlocked: true, hpScale: 2.1, xpScale: .21, waves: levelNineWaves },
+      { id: 10, name: "冰火交界", subtitle: "元素互克，控制手段大打折扣", brief: "火焰与雪人的抗性互补，只堆单一元素或只堆冰冻控制都会被卡住一半。", unlocked: true, hpScale: 2.2, xpScale: .22, waves: levelTenWaves },
+      { id: 11, name: "高压电厂", subtitle: "电系受制，冰火再度交锋", brief: "雷电僵尸让电系技能减半、精英完全免疫，冰火互克仍需两手准备。", unlocked: true, hpScale: 2.35, xpScale: .2, waves: levelElevenWaves },
+      { id: 12, name: "旧城疗养院", subtitle: "护甲挡伤，轮椅半血回血", brief: "护甲挡伤、轮椅半血后持续回血、火焰免疫燃烧与冻结，三种机制同时压上。", unlocked: true, hpScale: 2.5, xpScale: .19, waves: levelTwelveWaves },
+      { id: 13, name: "蜂巢天台", subtitle: "飞鸟毒蜂压境，贴地技能失效", brief: "飞鸟与毒蜂全程悬空，装甲车与燃油弹失效，龙卷风仍能卷住它们；先剥甲再输出。", unlocked: true, hpScale: 2.75, xpScale: .16, waves: levelThirteenWaves }
     ],
     waves: levelOneWaves
   };

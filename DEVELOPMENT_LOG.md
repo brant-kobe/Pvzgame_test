@@ -1,5 +1,7 @@
 # 开发日志：分裂僵尸、精英与装甲车支援
 
+> 这是一份**按日期记录的历史日志**（最后一篇停在 2026-10-03），每条记录只描述当时的实现与数值，其中被后续改动覆盖的数字不会回填。**当前生效的规则与数值以 `README.md`、`DEVELOPMENT_PLAN.md`、`AGENTS.md` 与 `src/config.js` 为准**；新增功能时优先同步这三份文档，本日志仅在需要留档时追加。
+
 ## 2026-09-29 · 阶段 A 已实现（分裂僵尸与精英）
 
 阶段 A（分裂僵尸、分裂僵尸精英）已按下方计划实现并验证；阶段 B（装甲车支援）已于 2026-10-02 实现并完成冒烟验证。
@@ -186,7 +188,7 @@ git diff --check
 ### 四、结构调整计划（先于内容）
 
 1. **波次按关卡存储**：在 `config.js` 中把 `waves` 移到关卡维度，例如 `C.levelWaves = { 1: [...现有 5 波...], 2: [...10 波...] }`（或在每个 `levels` 条目加 `waves` 字段）。保留 `C.waves` 作为第 1 关别名以兼容旧引用，逐步迁移。
-2. **统一取波接口**：新增 `Game.getLevelWaves(levelId)`；`Game.reset`/`Game.start` 把当前关卡的波次存入 `S.session.waves`；之后 `update.js`（`spawnWaveEnemy`、主更新、胜利判定）与 `render.js`（HUD“第 N / M 波”）一律读 `S.session.waves`，不再直接读 `C.waves`。
+2. **统一取波接口**：新增 `Game.getLevelWaves(levelId)`；`Game.reset`/`Game.start` 把当前关卡的波次存入 `S.session.waves`；之后 `update.js`（`spawnWaveEnemy`、主更新、胜利判定）与 `render.js`（HUD“第 N / M 波”）一律读 `S.session.waves`，不再直接读 `C.waves`。（最终未采用 `Game.getLevelWaves`：波次直接用 `config.levels[].waves`，由 `Game.reset` 存入 `S.session.waves`。）
 3. **解锁机制**：新增 `Game.isLevelUnlocked(id)` = 静态 `unlocked: true` 或 `localStorage` 记录“前一关已通关”；第 1 关胜利时写入解锁记录。`Game.start` 改用该动态判断。
 4. **输入泛化**：选关界面按 `C.levels` 遍历生成点击区，点击已解锁关卡调用 `Game.start(level.id)`；菜单“开始战斗”改为进入**当前已解锁的最新一关**（或仍固定第 1 关，待确认，默认最新已解锁）。
 5. **HUD/结算**：波次显示来自当前关卡 `waves.length`；胜利结算追加“已解锁第 3 关（待开放）”之类的提示（按 D3）。
@@ -408,3 +410,109 @@ git diff --check
 ## 2026-10-03 · HUD 显示关卡编号
 
 - 战斗 HUD 关卡标题调整为“关卡数字 关卡名称”，例如“3 封锁工厂”。
+
+---
+
+## 2026-10-16 · 账户与数据层（全栈）
+
+- 项目从纯前端单机扩展为全栈：新增 `server/`（FastAPI + SQLAlchemy + SQLite，Python 3.13 的 `.venv`）承载账户、登录会话、关卡进度与每关统计；前端新增 `src/accounts.js` 作为账户数据的唯一入口（内存缓存 + 异步落库），游戏本体仍是零依赖原生 JS。
+- 数据库 `data/blockline.db`：`accounts` / `sessions` / `level_progress`（`completed_at`、`best_time`、`best_kills`、`attempts`、`wins`）/ `resources` / `schema_version`；连接统一 `foreign_keys=ON`、WAL、`busy_timeout`。密码用 PBKDF2-SHA256（20 万次迭代 + 16 字节随机盐）哈希，会话 token 只以 sha256 存库、经 HttpOnly + SameSite=Strict Cookie 下发，30 天有效期并滑动续期。
+- 接口：`/api/health`、`/api/auth/{register,login,logout}`、`/api/me`、`/api/me/progress`、`/api/me/resources`、`DELETE /api/me`；统一 `{"error":{"code","message"}}` 错误体，写接口校验同源。
+- 界面：菜单底部新增「账户：未登录 / 用户名」按钮（菜单几何收进 `config.menu`）；新增登录 / 注册界面与账户中心（用户名、注册时间、通关进度、最近 5 关最佳用时与击杀、资源占位、导入旧进度 / 注销 / 删除账户），表单由 `#account-dialog` DOM 浮层承载；菜单、关卡选择与结算界面显示状态横幅，结算界面标注成绩是否已保存。
+- 进度写入从 localStorage 改为账户层：`Game.winLevel` 与失守统一走 `Game.reportRun` / `Game.loseLevel`，通关与失败都会上报（失败只累加尝试次数）；未登录 / 离线时成绩只存在于本次会话、刷新即失效，旧键 `blockline.progress` 仅作为「导入旧进度」的一次性来源。
+- 验证：数据层 35 项、接口 45 项、前端账户层 111 项断言全部通过；`tmp/` 下 34 个回归脚本全部通过；画面用 `tmp/trace-draw.js account <界面>` + `tmp/replay-draw.py` 出图核对；真实服务在 `127.0.0.1:8787` 起服后 `/api/health` 为 200，而 `data/` 与 `server/` 下的文件返回 404。
+
+---
+
+## 2026-10-17 · 角色属性系统（第一阶段）
+
+- 新增 `src/attributes.js`（`Game.attributes`）：基础值 + 外部修正，`setModifiers` / `clearModifiers` / `applyPlayer` / `applyWall` / `get` 等接口；`Game.reset` 开局应用，测试场 9999 城墙不被覆盖，测试场「清空构筑」保留属性加成。
+- 属性改为：攻击力 100（数值、无上限）、六系攻击力各 100（数值、无上限）、防线血量 1000、暴击率 8%、暴击伤害 150%、冷却缩减 0%（上限 50%）、负面时间 100%（上限 200%）；后续装备直接加数字。
+- 伤害结算：护甲格挡 → 攻击倍率 → 元素倍率 → 敌人属性抗性 → 致残易伤；燃烧/冻伤按攻击力与火/冰倍率缩放 DPS，时长乘负面时间；三种硬控、减速与重伤同样吃负面时间。冷却缩减只作用于技能冷却，暴击仍只作用于步枪。
+- 首页重排：左上角圆形账户按钮；中间从上到下为标题、开始战斗、选择关卡、进入测试场；底部从左到右为属性面板、技能图鉴、僵尸图鉴；账户横幅移到圆钮右侧并限制宽度。新增只读属性面板，攻击力与六系显示纯数字。
+- 验证：新增 `tmp/check-attributes.js` **109 项**断言通过；`tmp/check-accounts.js` 修复回退遗留引用后 **117 项**通过；35 个 `check-*.js`、`tmp/smoke-whirlwind.js`、`node --check`、`git diff --check` 全部通过；数据层 `check_db.py` **36 项**、接口 `check_api.py` **46 项**也按当前 schema 重新通过；画面用 `tmp/trace-draw.js account menu|attributes` + `tmp/replay-draw.py` 出图核对（`tmp/menu-attributes.png`、`tmp/attributes-screen.png`）。
+- 本轮不修改 `server/`、数据库 schema、资源产出与账号存档；装备与属性持久化留给下一阶段。
+
+---
+
+## 2026-10-18 · 装备系统（六部位 · 100 级）
+
+- 新增 `equipment` 表与 `server/app/equipment.py`：六部位（手臂 / 衣服 / 头盔 / 裤子 / 鞋子 / 手套）各一件，首次创建时六系洗牌随机、之后元素固定；等级 Lv.1～100，攻击与元素均为 `10 + 5 × (level - 1)`；`schema_version` 升到 2，旧库由 `create_all()` 补建表并在 `/api/me` 补齐装备。
+- 新增 `POST /api/me/equipment/upgrade`：服务端校验部位、满级与材料，扣除金币 + 部位专属图纸并升级。金币 `80 + 40 × (当前等级 - 1)`，图纸 `10 × 当前等级`（Lv.1→2 为 80 + 10，Lv.99→100 为 4000 + 990）；`nextCost` 由服务端返回，前端不重复维护价格。
+- 新增 `src/equipment.js`（`Game.equipment`）：六件装备的攻击求和、元素按属性分别求和后调用 `Game.attributes.setModifiers`，登录时应用、登出 / 401 时清空；账户层新增装备缓存、busy、错误与升级接口。
+- 属性面板底部改为「装备 / 返回」双按钮；新增 2×3 装备卡片界面，显示等级 / 100、攻击、元素、金币与图纸消耗、强化按钮和状态提示；账户中心资源区改为 9 项网格（金币 / 宝石 / 零件 + 六种图纸）。本轮资源产出仍未接入，界面标注「产出待接入」。
+- 验证：`tmp/check_db.py` 48 项、`tmp/check_api.py` 64 项、`tmp/check-equipment.js` 76 项、`tmp/check-accounts.js` 130 项全部通过；`check-attributes.js`、`smoke-whirlwind.js` 与既有脚本通过；`node --check`、`git diff --check`、`compileall` 通过；截图 `tmp/equipment-screen.png`、`tmp/account-screen.png`。
+
+---
+
+## 2026-10-19 · 城墙材料系统（钢材 / 稀土 · 200 级）
+
+- 新增 `wall_state` 表与 `server/app/wall.py`：城墙 Lv.1～200，基础血量 1000、每级 +200（Lv.200 为 40,800）；`schema_version` 升到 3，旧库由 `create_all()` 补建表并在 `/api/me` 创建 Lv.1 状态。
+- 新增 `POST /api/me/wall/upgrade`：`action: "level"` 消耗 `20 × 当前等级` 钢材并升级；`action: "breakthrough"` 只在 10/20/…/190 节点可用，第 N 次消耗 `2 × N` 稀土，**等级与血量不变**；Lv.200 封顶。错误码覆盖满级、未突破、未到节点、材料不足与非法操作。
+- 新增资源 `steel` / `rareEarth`；`src/attributes.js` 增加独立的 `setWallHpBonus`，`src/wall.js` 汇总城墙血量并同步当前城墙（测试场 9999 跳过、战斗中按比例保留）；`src/accounts.js` 增加城墙缓存与 `upgradeWall` / `getWall`，登出 / 401 清空。
+- 属性面板底部改为「装备 / 城墙 / 返回」三按钮；新增城墙界面（等级、血量、下一突破节点进度、单一动作卡、材料数量与状态提示）；账户中心资源区扩为 4 列 × 3 行、11 项资源。本轮钢材 / 稀土产出仍未接入，界面标注「产出待接入」。
+- 城墙界面加入材料图标：钢材为灰白色长方体、稀土为金色圆锥，顶部资源行、动作卡与按钮统一复用；普通等级只显示「强化」，到达突破节点时同一张动作卡切换为「突破」，不再常驻不可用的突破按钮。
+- 验证：`tmp/check_db.py` 62 项、`tmp/check_api.py` 88 项、`tmp/check-wall.js` 62 项、`tmp/check-accounts.js` 139 项、`tmp/check-equipment.js` 76 项全部通过；`check-attributes.js`、`check-wall-hp.js`、`smoke-whirlwind.js` 与既有脚本通过；`node --check`、`git diff --check`、`compileall` 通过；截图 `tmp/wall-screen.png`、`tmp/wall-normal-screen.png`、`tmp/account-screen.png`。
+
+---
+
+## 2026-10-19 · 装备宝石系统（6 部位 × 6 槽位）
+
+- 新增 `gems` 表与 `server/app/gems.py`：`id` / `account_id` / `part_id` / `quality`（0～4）/ `affix_id` / `slot_index`（0～5 或 `NULL`），唯一约束 `(account_id, part_id, slot_index)`；`schema_version` 升到 **4**，旧库由 `create_all()` 自动补表，旧账户宝石为空。
+- 六件装备各 6 槽，宝石按部位绑定；只有已镶嵌宝石提供属性。品质灰 / 绿 / 蓝 / 紫 / 红，每颗 1 条随机词条；攻击与元素 +10/+20/+30/+40/+50，冷却与暴击 +1%/+2%/+3%/+4%/+5%，暴伤与负面时间 +10%/+20%/+30%/+40%/+50%，防线血量 +200/+400/+600/+800/+1000。
+- 新增 `/api/me/gems/socket`、`/unsocket`、`/synthesize` 与调试用 `/grant`；同部位同品质 5 颗**未镶嵌**宝石自动合成 1 颗高一档同部位宝石，词条重新随机，红色封顶；已镶嵌宝石不参与合成。
+- 新增 `src/gems.js`（`Game.gems`）与 `src/attributes.js` 的独立 `setGemModifiers` / `clearGemModifiers`；宝石加成不能写进装备或城墙修正。`src/accounts.js` 增加宝石缓存与 socket / unsocket / synthesize，登出 / 401 清空。
+- 属性面板底部改为「装备 / 宝石 / 城墙 / 返回」四按钮；新增宝石界面：六部位页签、六槽位、分页背包、品质切换合成栏、六边形宝石图标与状态提示。账户资源 `gem` 的显示名改为「钻石」，与新宝石系统区分。
+- 本轮不做宝石正式产出；新账户宝石背包为空，只能用 `/api/me/gems/grant` 调试注入。
+- 验证：`tmp/check_db.py` **88 项**、`tmp/check_api.py` **115 项**、`tmp/check-gems.js` **122 项**、`tmp/check-wall.js` **63 项**、`tmp/check-accounts.js` **147 项**、`tmp/check-equipment.js` **76 项**全部通过；38 个 `check-*.js` 全部通过；`node --check`、`git diff --check`、`compileall` 通过；截图 `tmp/gems-screen.png`。
+
+---
+
+## 2026-10-20 · 宝石锁定与一键合成确认
+
+- 宝石改为**手动一键合成**：主界面保留「一键合成」按钮，点击后弹出确认窗口，按「部位 × 品质」分页列出全部可合成组（每组 5 颗未镶嵌宝石 → 1 颗高一档），点击任意宝石可在窗口下方预览该宝石词条；点「确定」一次合成全部组，点「取消」关闭且不发出请求。原品质左右切换与单组合成入口从界面移除，`/synthesize` 单组接口保留给旧测试。
+- 新增宝石锁定：`gems` 表增加 `locked` 列，背包行右侧锁按钮可锁定 / 解锁，锁定宝石显示 🔒；一键合成的候选、预览与批量消耗都会跳过锁定宝石，锁定状态在镶嵌 / 卸下后保持。
+- 新增 `POST /api/me/gems/synthesize-all` 与 `POST /api/me/gems/lock`；`server/app/gems.py` 增加合成计划、批量合成与锁定逻辑；旧库启动时由 `database.create_all()` 用 `ALTER TABLE` 补 `locked` 列，`SCHEMA_VERSION` 升到 **6**。
+- 前端新增 `config.gemSynthesisUI` 弹窗几何与 `Game.getGemSynthesisPlan` / `drawGemSynthesis` / `toggleGemLock` / `synthesizeAllGems`；`Game.gems` 增加 `getSynthesisPlan`、`getSynthesisSummary`、`findGem`，合成计划只收未镶嵌且未锁定的宝石。
+- 验证：`tmp/check_db.py` **142 项**、`tmp/check_api.py` **164 项**、`tmp/check-gems.js` **181 项**全部通过，39 个 `check-*.js` 全部通过；`node --check`、`git diff --check`、`compileall` 通过；真实库副本迁移后 `gems.locked` 列存在；截图 `tmp/gems-screen.png`（锁定标志）与 `tmp/gems-synthesis.png`（一键合成弹窗）。
+---
+
+## 2026-10-21 · 角色界面（角色大厅）
+
+- 首页底部左侧入口由「属性面板」改为「角色」（`config.menu.buttons.character`），新增 `character` 界面：上半部分是 2 列 × 3 行的 62 × 62 正方形装备格，格内用 `drawEquipmentGlyph` 画出六个部位的装备图标（护臂 / 背心 / 头盔 / 长裤 / 靴子 / 手套）、部位名、元素圆点与 `Lv.N`，右侧信息列显示元素系、攻击与元素加成；中部为「装备强化 / 城墙强化」两个入口；下半部分是背包，最下方三个页签「宝石 / 装备 / 资源」。
+- 点击装备方块弹出该部位**宝石浮层**：六行槽位从上往下固定排列（空槽也占行），显示品质、词条、🔒 与「卸下」按钮；「关闭」或点击浮层外收起。空槽行提示在下方宝石背包点击宝石镶嵌。
+- 宝石页签跨部位列出账户全部未镶嵌宝石（`Game.gems.getBag()` 新增），行内可锁定、点击镶嵌，标题行右侧是 `‹ n/m ›` 分页与「一键合成」（复用原有确认浮层）；装备页签用新增的 `Game.equipment.getBagOverview()` 按部位显示等级、元素与背包元素计数；资源页签显示 11 项资源数量。
+- **独立宝石界面移除**：删除 `config.gemUI`、`Game.drawGemsPanel`、`Game.openGems` / `selectGemPart` / `getGemPartTabRect` / `getGemSocketRect` / `getGemInventory*` / `getGemSynthesisButtonRect` 与 `S.gemPart` / `S.gemPage`；宝石操作的守卫改为 `screen === "character"`，合成确认浮层（`gemSynthesisUI` / `drawGemSynthesis`）保留复用。
+- 属性面板退为**只读页**：`config.attributesUI` 只留面板与返回按钮，底部文案「返回角色」，`Game.backToCharacter` 统一回角色界面；装备界面与城墙界面的「返回」也改为回到角色界面。
+- 新增 `config.characterUI`（面板、顶栏、装备格、强化入口、背包三种行布局、状态行、页签、宝石浮层）与一整套 `Game.getCharacter*Rect()` 几何接口，render 与 input 共用；新增状态 `S.characterPart` / `S.characterTab` / `S.characterGemPage` / `S.characterGems`，`Game.reset` 重置。
+- 验证：新增 `tmp/check-character.js` **184 项**全部通过；`tmp/check-gems.js` 重写界面段后 **207 项**、`tmp/check-attributes.js`、`tmp/check-equipment.js` **109 项**、`tmp/check-wall.js` **61 项**、`tmp/check-accounts.js` **164 项**同步更新；全量 35 个 `check-*.js` 与 8 个 `audit-*.js` 0 失败；`node --check` 与 `git diff --check` 通过；出图 `tmp/character-screen.png`、`character-gems.png`、`character-equip.png`、`character-resource.png`、`character-guest.png`、`character-synth.png` 与 `attributes-screen.png`。后端未改动。
+---
+
+## 2026-10-22 · 资源方格与三角形宝石
+
+- 资源页签改为**方格**：6 列 × 2 行、每格 44 × 44（`config.characterUI.resourceCells`），格内用新增的 `drawResourceIcon` 画对应图标 —— 金币（带内圈的硬币）、钻石（菱形）、零件（六齿齿轮）、钢材（复用 `drawSteelIcon` 金属锭）、稀土（复用 `drawRareEarthIcon` 金色圆锥）、六种图纸（同款卷纸 + 右上折角，按部位色区分）；数量写在格内右下角。
+- **数量为 0 的资源不绘制**：新增 `Game.getCharacterResources()`（= `Game.accounts.getResourceList()` 过滤零值），全为 0 时只显示「暂无资源 · 关卡奖励会产出资源」；超过 12 项时状态行提示「共 N 项 · 仅显示前 12 项」。`Game.getCharacterResourceCellRect` 改为按 `size/gap/columns` 计算正方形格子。
+- 宝石页签与装备页签也改为**方格**：宝石页签 6 列 × 2 行、每页 12 格（`config.characterUI.gemCells`），每格画三角宝石、词条名与数值、左上角部位短名，右上角 14 × 14 锁按钮（点格子镶嵌、点锁按钮锁定），标题行保留分页与一键合成；装备页签 3 列 × 2 行（`config.characterUI.equipCells`），每格画部位短名、元素圆点、装备图标、`Lv.N` 与背包件数。`Game.getCharacterBagRowRect` / `getCharacterBagLineRect` 与 `config.characterUI.bag` / `bagLines` 一并删除，改用 `getCharacterGemCellRect` / `getCharacterEquipCellRect`。
+- 宝石图标由六边形改为**按品质着色的三角形**（灰 / 绿 / 蓝 / 紫 / 红，带顶面高光与左右切面），镶嵌浮层、背包方格与「一键合成」确认窗口共用同一份 `drawGemIcon`。
+- 验证：`tmp/check-character.js` 184 → **193 项**（新增方格正方形与不重叠、零值资源隐藏、数量文案、无资源提示等断言）；`tmp/check-gems.js` 239 项通过；全量 35 个 `check-*.js` 与 8 个 `audit-*.js` 0 失败，`node --check` 与 `git diff --check` 通过；出图更新 `tmp/character-resource.png`、`tmp/character-screen.png`、`tmp/character-equip.png`、`tmp/character-guest.png`、`tmp/character-guest-equip.png`、`tmp/character-guest-resource.png`、`tmp/character-gems.png`、`tmp/character-synth.png`。后端未改动。
+
+---
+
+## 2026-10-22 · 宝石详情、同词条约束与装备替换
+
+- 点击背包宝石不再直接镶嵌，先弹出**宝石详情**（`S.characterGemDetail`、`config.characterUI.gemDetail`）：品质与词条、所属部位、`槽位 · N / 6 · 状态`、提示行与「镶嵌」「关闭」两个按钮；点「镶嵌」才落位，成功后收起浮层并在状态行提示「宝石已镶嵌 / 已替换宝石」。
+- 新增只读推演 `Game.gems.planSocket(gemId)`，返回 `place` / `replace` / `pick` / `blocked` / `socketed` / `missing` 六种模式，详情按钮文案与是否可点都由它决定。
+- **同词条唯一**：同一部位同一条词条只能存在一颗 —— 同词条且品质不高于已镶嵌那颗时拒绝（`gem_affix_conflict`，提示「同词条宝石不可重复镶嵌，需要更高品质」）；更高品质直接替换那颗宝石所在的槽位（原宝石回背包），详情按钮显示「替换镶嵌」；槽位已满且词条不冲突时置 `S.characterGemReplace` 打开该部位宝石浮层的**替换模式**（副标题换成待镶嵌宝石、六行按钮变「替换」、点行带上 `slotIndex`、关闭即取消），不再有「槽位已满」死路。
+- 服务端为权威实现：`gems.socket(db, account_id, gem_id, slot_index=None)` 先做同词条判定再决定目标槽位，替换前先把旧宝石的 `slot_index` 写空并 `flush`，避免 `uq_gem_socket` 唯一约束冲突；`/api/me/gems/socket` 新增可选 `slotIndex`，`/api/me/gems/grant` 新增可选 `affixId`（调试注入指定词条），两者都做了取值校验（`invalid_gem_slot` / `unknown_gem_affix`）。
+- **装备页签提供替换**：点击 3 × 2 方格中的任一部位打开**装备替换浮层**（`S.characterEquipPart`、`config.characterUI.equipPanel`），用 `Game.equipment.getBagPart` 列出六种元素（当前装备 / 持有 N / 无可用）与「替换」按钮；点整格调用 `Game.replaceCharacterEquipment` → `equipEquipment`，成功后留在浮层并提示「已换装」，`Lv.N` 保持不变（换装只交换 `element_id`）。
+- 新增 `config.characterUI.gemDetail` / `equipPanel` 与 `Game.getCharacterGemDetailPanel` / `getCharacterGemDetailSocketRect` / `getCharacterGemDetailCloseRect` / `getCharacterEquipPanel` / `getCharacterEquipRowRect` / `getCharacterEquipActionRect` / `getCharacterEquipCloseRect`；`openCharacter` / `backToCharacter` / `openAttributes` / `closeCharacterGems` / `setCharacterTab` 一并清空三个新浮层状态，`drawCharacter` 按「宝石浮层 → 装备替换 → 宝石详情 → 合成确认」叠加。
+- 验证：`tmp/check-character.js` 193 → **246 项**（宝石详情只开浮层不发请求、点「镶嵌」才发请求、装备替换换元素不改等级、新浮层几何不重叠等）；`tmp/check-gems.js` 239 → **310 项**（同词条同品质拒绝、高品质直替、`planSocket` 四种模式、满槽选择替换的完整 UI、指定槽位与非法槽位）；`tmp/check_db.py` 142 → **153 项**、`tmp/check_api.py` 164 → **177 项**（`slotIndex` / `affixId`、同词条唯一、满槽替换、非法槽位与未知词条）；全量 35 个 `check-*.js` 与 8 个 `audit-*.js` 0 失败，`node --check`、`compileall` 与 `git diff --check` 通过；出图 `tmp/character-gem-detail.png`、`tmp/character-gem-replace.png`、`tmp/character-equip-replace.png`，并更新 `character-equip.png`。
+
+---
+
+## 2026-10-22 · 装备背包改为方格与装备详情
+
+- 装备页签改为与宝石页签一致的 **6 列 × 2 行、每页 12 格**方格（`config.characterUI.equipCells` 改为 `{34,404,size 44,gap 4,columns 6,rows 2}`，与宝石方格同起点），按 `Game.equipment.getBagRows()` 逐件列出背包装备：格内是部位短名、装备图标与元素名，当前已装备的那件用绿框 + 右上绿点标出；新增 `config.characterUI.equipPager` 与 `Game.getCharacterEquipRows` / `getCharacterEquipPageCount` / `getCharacterEquipPage` / `setCharacterEquipPage` / `getCharacterEquipPagerRect`，超过 12 件时与宝石页签同一位置分页。
+- 装备替换浮层改为**装备详情**（`S.characterEquipItem`、`config.characterUI.equipDetail`，与宝石详情同一版式）：只显示装备图标、`部位 · 元素系`、`Lv.N`、当前装备 / 可替换与「替换」「关闭」，不再显示六种元素、持有数量与副标题；已装备的条目按钮显示「已装备」且不发请求。换装仍走 `equipEquipment`（只交换 `element_id`，等级保留在部位），替换后同一条目会变成换下来的旧元素。
+- 数据层把 `Game.equipment.getBagOverview()` 换成 `getBagRows()`（逐件输出部位名 / 短名 / 颜色、元素名 / 颜色、部位等级与是否当前装备，按「部位顺序 → id」排序），`getBagPart` 继续供装备背包界面按部位取六种元素。
+- 验证：`tmp/check-character.js` **245 项**（装备方格 6 × 2 与宝石同起点、逐件详情、替换不改等级、已装备条目不再请求、超过 12 件分页）、`tmp/check-gems.js` **285 项**；全量 35 个 `check-*.js` 与 8 个 `audit-*.js` 0 失败，`node --check`、`smoke-character.js` 与 `git diff --check` 通过；出图更新 `tmp/character-equip.png` 与 `tmp/character-equip-replace.png`。后端未改动。

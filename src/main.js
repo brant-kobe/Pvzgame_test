@@ -10,6 +10,7 @@
     Game.reset();
     window.requestAnimationFrame(loop);
   }
+  if (Game.accounts && Game.accounts.load) Game.accounts.load();
   Game.loadSprites(start);
   window.setTimeout(start, 1200);
 })(window.Game = window.Game || {});

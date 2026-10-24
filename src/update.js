@@ -57,6 +57,8 @@
     Game.updateSkillProjectiles(dt);
     Game.updateBombardment(dt);
     Game.updateElectromagneticZones(dt);
+    Game.updateWhirlwinds(dt);
+    Game.updateDrones(dt);
     for (var k = S.enemies.length - 1; k >= 0; k--) {
       var current = S.enemies[k], info = C.enemies[current.type];
       current.hitFlash = Math.max(0, current.hitFlash - dt);
@@ -66,21 +68,47 @@
         current.hp -= (current.burnDps || 10 + p.burn * 3) * dt * (current.damageTakenTimer > 0 ? current.damageTakenMultiplier || 1 : 1);
         if (current.hp <= 0) { Game.killEnemy(k); continue; }
       }
-      if (current.regenPerSecond > 0) current.hp = Math.min(current.maxHp, current.hp + current.regenPerSecond * dt);
+      var frostDps = Game.getFrostbiteDps(current);
+      if (frostDps > 0) {
+        current.hp -= frostDps * dt * (current.damageTakenTimer > 0 ? current.damageTakenMultiplier || 1 : 1);
+        if (current.hp <= 0) { Game.killEnemy(k); continue; }
+      }
+      Game.tickFrostbite(current, dt);
+      if (info.summonHpRatios && current.hp > 0) {
+        var summons = current.summons || 0, summonInfo = C.enemies[info.summonType];
+        while (summons < info.summonHpRatios.length && current.hp > 0 && current.hp <= current.maxHp * info.summonHpRatios[summons]) {
+          var side = summons % 2 === 0 ? 1 : -1;
+          S.pendingSpawns.push({ type: info.summonType, x: U.clamp(current.x + side * (info.radius + summonInfo.radius + 6), summonInfo.radius, C.width - summonInfo.radius), y: current.y });
+          summons++;
+          Game.addText(current.x, current.y - info.radius - 10, "傀儡脱离", C.colors.purple);
+          Game.burst(current.x, current.y, 8, C.colors.purple);
+        }
+        current.summons = summons;
+      }
+      if (current.regenPerSecond > 0) {
+        var regenLimit = info.regenBelowHpRatio ? current.maxHp * info.regenBelowHpRatio : current.maxHp;
+        if (current.hp < regenLimit) current.hp = Math.min(regenLimit, current.hp + current.regenPerSecond * dt * Game.getHealScale(current));
+      }
       current.slow = Math.max(0, current.slow - dt);
       if (current.slow === 0) current.slowFactor = .58;
       current.damageTakenTimer = Math.max(0, (current.damageTakenTimer || 0) - dt);
       if (current.damageTakenTimer === 0) current.damageTakenMultiplier = 1;
-      current.stun = Math.max(0, (current.stun || 0) - dt);
-      if (current.stun > 0) continue;
+      current.wound = Math.max(0, (current.wound || 0) - dt);
+      current.woundExtra = Math.max(0, (current.woundExtra || 0) - dt);
+      current.control = Math.max(0, (current.control || 0) - dt);
+      if (current.control === 0) current.controlType = "";
+      if (current.control > 0) continue;
       var speed = info.speed * (current.slow > 0 ? current.slowFactor || .58 : 1) * (current.type === "boss" && current.hp < current.maxHp * .5 ? 1.5 : 1);
-      var attackY = wall.y - wall.height / 2 - info.radius - 3;
-      if (current.y >= attackY) {
-        current.y = attackY;
+      var ranged = info.ranged, holdY = Game.getEnemyHoldY(info);
+      if (current.y >= holdY) {
+        current.y = holdY;
         if (current.attackTimer <= 0) {
-          wall.hp -= info.damage; current.attackTimer = current.type === "boss" ? .65 : 1.0;
-          Game.burst(current.x, wall.y, 4, C.colors.red); Game.addText(current.x, wall.y - 19, "-" + info.damage, C.colors.red);
-          if (wall.hp <= 0) { wall.hp = 0; session.message = "城墙失守"; S.screen = "defeat"; }
+          if (ranged) { Game.throwEnemyShot(current); current.attackTimer = ranged.interval * U.rand(.9, 1.1); }
+          else {
+            wall.hp -= info.damage; current.attackTimer = current.type === "boss" ? .65 : (info.attackInterval || 1);
+            Game.burst(current.x, wall.y, 4, C.colors.red); Game.addText(current.x, wall.y - 19, "-" + info.damage, C.colors.red);
+            if (wall.hp <= 0) { wall.hp = 0; Game.loseLevel("城墙失守"); }
+          }
         }
       } else {
         current.y += speed * dt;
@@ -88,6 +116,9 @@
       }
     }
     Game.updateArmoredCars(dt);
+    Game.updateEnemyShots(dt);
+    Game.updateHailStorms(dt);
+    Game.updateFuelBombs(dt);
     Game.flushPendingSpawns();
     Game.updateEffects(dt);
     var waveSpawned = !!plan && session.spawnCount >= plan.total && (!plan.boss || session.bossSpawned);
@@ -114,6 +145,7 @@
       car.contacts.forEach(function (contact) { contact.hitTimer = Math.max(0, contact.hitTimer - dt); });
       for (var j = S.enemies.length - 1; j >= 0; j--) {
         var enemy = S.enemies[j], radius = C.enemies[enemy.type].radius;
+        if (!Game.canHitEnemy(car, enemy)) continue;
         var nearestX = U.clamp(enemy.x, car.x - car.width / 2, car.x + car.width / 2);
         var nearestY = U.clamp(enemy.y, car.y - car.length / 2, car.y + car.length / 2);
         var dx = enemy.x - nearestX, dy = enemy.y - nearestY;
@@ -122,12 +154,11 @@
         for (var k = 0; k < car.contacts.length; k++) if (car.contacts[k].enemy === enemy) { contact = car.contacts[k]; break; }
         if (!contact) { contact = { enemy: enemy, hitTimer: 0, stunChecked: false }; car.contacts.push(contact); }
         if (contact.hitTimer > 0) continue;
-        Game.damageEnemy(enemy, car.damage, { critical: false, noWeaponEffects: true, silentText: true });
-        enemy.slow = Math.max(enemy.slow || 0, car.slowDuration);
-        enemy.slowFactor = Math.min(enemy.slowFactor || .58, car.slowFactor);
+        Game.damageEnemy(enemy, car.damage, { critical: false, noWeaponEffects: true, silentText: true, element: car.element });
+        Game.applySlow(enemy, car.slowDuration, car.slowFactor);
         if (!contact.stunChecked) {
           contact.stunChecked = true;
-          if (Math.random() < car.stunChance) enemy.stun = Math.max(enemy.stun || 0, car.stunDuration);
+          if (Math.random() < car.stunChance) Game.applyStun(enemy, car.stunDuration);
         }
         contact.hitTimer = car.hitInterval;
         car.impactFlash = .1;

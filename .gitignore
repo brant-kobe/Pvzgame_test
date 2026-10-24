@@ -2,6 +2,7 @@
 node_modules/
 .pnpm-store/
 .npm/
+.venv/
 
 # Build and coverage output
 dist/
@@ -12,6 +13,13 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Backend runtime data (SQLite database for the account layer)
+data/
+
+# Python bytecode caches
+__pycache__/
+*.pyc
 
 # Logs and temporary files
 *.log
