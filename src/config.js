@@ -166,8 +166,111 @@
     { total: 148, interval: .3, mix: ["bird", "wasp", "armored", "bird", "wasp"], hpScale: 2.45 },
     { total: 172, interval: .28, mix: ["armored", "bird", "wasp", "armored", "bird"], hpScale: 2.65 }
   ];
+  var levelFourteenWaves = [
+    { total: 10, interval: 1.6, mix: ["normal"] },
+    { total: 14, interval: 1.45, mix: ["normal", "splitter"] },
+    { total: 18, interval: 1.3, mix: ["normal", "splitter", "frostBeast"] },
+    { total: 22, interval: .6, mix: ["normal", "splitter", "frostBeast"], elite: "frostBeastElite" },
+    { total: 28, interval: .55, mix: ["frostBeast", "splitter", "normal", "frostBeast"] },
+    { total: 36, interval: .5, mix: ["normal", "frostBeast", "splitter", "frostBeast"], hpScale: 1.25 },
+    { total: 44, interval: .46, mix: ["splitter", "frostBeast", "normal", "frostBeast"], boss: true, hpScale: 1.45 },
+    { total: 54, interval: .43, mix: ["frostBeast", "normal", "splitter", "frostBeast", "splitter"], hpScale: 1.65 },
+    { total: 66, interval: .4, mix: ["splitter", "frostBeast", "normal", "frostBeast", "normal"], hpScale: 1.85 },
+    { total: 78, interval: .37, mix: ["frostBeast", "splitter", "normal", "frostBeast", "splitter"], hpScale: 2.05 },
+    { total: 92, interval: .34, mix: ["normal", "frostBeast", "splitter", "frostBeast", "normal"], hpScale: 2.25 },
+    { total: 108, interval: .31, mix: ["splitter", "frostBeast", "normal", "frostBeast", "splitter"], hpScale: 2.45 },
+    { total: 126, interval: .29, mix: ["frostBeast", "normal", "splitter", "frostBeast", "normal"], hpScale: 2.65 },
+    { total: 146, interval: .27, mix: ["splitter", "frostBeast", "normal", "frostBeast", "splitter"], hpScale: 2.75 }
+  ];
+  var levelFifteenWaves = [
+    { total: 12, interval: 1.55, mix: ["wasp"] },
+    { total: 16, interval: 1.4, mix: ["wasp", "flame"] },
+    { total: 20, interval: 1.25, mix: ["wasp", "flame", "lizard"] },
+    { total: 26, interval: .55, mix: ["lizard", "wasp", "flame", "lizard"], elite: "lizardElite" },
+    { total: 34, interval: .5, mix: ["wasp", "lizard", "flame", "wasp"] },
+    { total: 46, interval: .45, mix: ["flame", "wasp", "lizard", "wasp"], hpScale: 1.25 },
+    { total: 58, interval: .42, mix: ["lizard", "flame", "wasp", "lizard"], boss: true, hpScale: 1.45 },
+    { total: 72, interval: .4, mix: ["wasp", "lizard", "flame", "wasp", "lizard"], hpScale: 1.65 },
+    { total: 88, interval: .38, mix: ["flame", "wasp", "lizard", "flame", "wasp"], hpScale: 1.85 },
+    { total: 106, interval: .36, mix: ["lizard", "wasp", "flame", "lizard", "wasp"], hpScale: 2.05 },
+    { total: 126, interval: .33, mix: ["wasp", "flame", "lizard", "wasp", "flame"], hpScale: 2.25 },
+    { total: 148, interval: .3, mix: ["lizard", "wasp", "flame", "lizard", "wasp"], hpScale: 2.45 },
+    { total: 172, interval: .28, mix: ["wasp", "lizard", "flame", "wasp", "lizard"], hpScale: 2.65 },
+    { total: 198, interval: .26, mix: ["flame", "lizard", "wasp", "lizard", "wasp"], hpScale: 2.85 },
+    { total: 226, interval: .24, mix: ["wasp", "lizard", "flame", "wasp", "lizard"], hpScale: 3.05 }
+  ];
+  var levelSixteenWaves = [
+    { total: 12, interval: 1.55, mix: ["lizard"] },
+    { total: 16, interval: 1.4, mix: ["lizard", "bird"] },
+    { total: 20, interval: 1.25, mix: ["lizard", "bird", "puppet"] },
+    { total: 26, interval: .55, mix: ["puppet", "bird", "lizard", "puppet"], elite: "puppetElite" },
+    { total: 34, interval: .5, mix: ["bird", "puppet", "lizard", "bird"] },
+    { total: 46, interval: .45, mix: ["lizard", "bird", "puppet", "lizard"], hpScale: 1.25 },
+    { total: 58, interval: .42, mix: ["puppet", "lizard", "bird", "puppet"], boss: true, hpScale: 1.45 },
+    { total: 72, interval: .4, mix: ["bird", "lizard", "puppet", "bird", "lizard"], hpScale: 1.65 },
+    { total: 88, interval: .38, mix: ["puppet", "bird", "lizard", "puppet", "bird"], hpScale: 1.85 },
+    { total: 106, interval: .36, mix: ["lizard", "puppet", "bird", "lizard", "puppet"], hpScale: 2.05 },
+    { total: 126, interval: .33, mix: ["bird", "lizard", "puppet", "bird", "lizard"], hpScale: 2.25 },
+    { total: 148, interval: .3, mix: ["puppet", "bird", "lizard", "puppet", "bird"], hpScale: 2.45 },
+    { total: 172, interval: .28, mix: ["lizard", "puppet", "bird", "lizard", "puppet"], hpScale: 2.65 },
+    { total: 198, interval: .26, mix: ["bird", "puppet", "lizard", "bird", "puppet"], hpScale: 2.85 },
+    { total: 226, interval: .24, mix: ["puppet", "lizard", "bird", "puppet", "lizard"], hpScale: 3.05 }
+  ];
+  var levelSeventeenWaves = [
+    { total: 12, interval: 1.55, mix: ["lizard"] },
+    { total: 16, interval: 1.4, mix: ["lizard", "wasp"] },
+    { total: 20, interval: 1.25, mix: ["lizard", "wasp", "frostBeast"] },
+    { total: 26, interval: .55, mix: ["wasp", "frostBeast", "lizard", "wasp"], elite: "waspElite" },
+    { total: 34, interval: .5, mix: ["frostBeast", "wasp", "lizard", "frostBeast"] },
+    { total: 46, interval: .45, mix: ["lizard", "frostBeast", "wasp", "lizard"], hpScale: 1.25 },
+    { total: 58, interval: .42, mix: ["wasp", "lizard", "frostBeast", "wasp"], boss: true, hpScale: 1.45 },
+    { total: 72, interval: .4, mix: ["frostBeast", "lizard", "wasp", "frostBeast", "lizard"], hpScale: 1.65 },
+    { total: 88, interval: .38, mix: ["wasp", "frostBeast", "lizard", "wasp", "frostBeast"], hpScale: 1.85 },
+    { total: 106, interval: .36, mix: ["lizard", "wasp", "frostBeast", "lizard", "wasp"], hpScale: 2.05 },
+    { total: 126, interval: .33, mix: ["frostBeast", "lizard", "wasp", "frostBeast", "lizard"], hpScale: 2.25 },
+    { total: 148, interval: .3, mix: ["wasp", "frostBeast", "lizard", "wasp", "frostBeast"], hpScale: 2.45 },
+    { total: 172, interval: .28, mix: ["lizard", "wasp", "frostBeast", "lizard", "wasp"], hpScale: 2.65 },
+    { total: 198, interval: .26, mix: ["frostBeast", "wasp", "lizard", "frostBeast", "wasp"], hpScale: 2.85 },
+    { total: 226, interval: .24, mix: ["wasp", "lizard", "frostBeast", "wasp", "lizard"], hpScale: 3.05 }
+  ];
+  var levelEighteenWaves = levelSeventeenWaves.slice();
+  levelEighteenWaves[3] = { total: 26, interval: .55, mix: ["wasp", "frostBeast", "lizard", "wasp"], elite: "frostBeastElite" };
+  var levelNineteenWaves = [
+    { total: 12, interval: 1.55, mix: ["snowman"] },
+    { total: 16, interval: 1.4, mix: ["snowman", "lizard"] },
+    { total: 20, interval: 1.25, mix: ["snowman", "lizard", "puppet"] },
+    { total: 26, interval: .55, mix: ["puppet", "lizard", "snowman", "puppet"], elite: "puppetElite" },
+    { total: 34, interval: .5, mix: ["lizard", "puppet", "snowman", "lizard"] },
+    { total: 46, interval: .45, mix: ["snowman", "lizard", "puppet", "snowman"], hpScale: 1.25 },
+    { total: 58, interval: .42, mix: ["puppet", "snowman", "lizard", "puppet"], boss: true, hpScale: 1.45 },
+    { total: 72, interval: .4, mix: ["lizard", "snowman", "puppet", "lizard", "snowman"], hpScale: 1.65 },
+    { total: 88, interval: .38, mix: ["puppet", "lizard", "snowman", "puppet", "lizard"], hpScale: 1.85 },
+    { total: 106, interval: .36, mix: ["snowman", "puppet", "lizard", "snowman", "puppet"], hpScale: 2.05 },
+    { total: 126, interval: .33, mix: ["lizard", "snowman", "puppet", "lizard", "snowman"], hpScale: 2.25 },
+    { total: 148, interval: .3, mix: ["puppet", "lizard", "snowman", "puppet", "lizard"], hpScale: 2.45 },
+    { total: 172, interval: .28, mix: ["snowman", "puppet", "lizard", "snowman", "puppet"], hpScale: 2.65 },
+    { total: 198, interval: .26, mix: ["lizard", "puppet", "snowman", "lizard", "puppet"], hpScale: 2.85 },
+    { total: 226, interval: .24, mix: ["puppet", "snowman", "lizard", "puppet", "snowman"], hpScale: 3.05 }
+  ];
+  var levelTwentyWaves = [
+    { total: 12, interval: 1.55, mix: ["basketball"] },
+    { total: 16, interval: 1.4, mix: ["basketball", "puppet"] },
+    { total: 20, interval: 1.25, mix: ["basketball", "puppet", "wasp"] },
+    { total: 26, interval: .55, mix: ["wasp", "puppet", "basketball", "wasp"], elite: "waspElite" },
+    { total: 34, interval: .5, mix: ["puppet", "wasp", "basketball", "puppet"] },
+    { total: 46, interval: .45, mix: ["basketball", "puppet", "wasp", "basketball"], hpScale: 1.25 },
+    { total: 58, interval: .42, mix: ["wasp", "basketball", "puppet", "wasp"], boss: true, hpScale: 1.45 },
+    { total: 72, interval: .4, mix: ["puppet", "basketball", "wasp", "puppet", "basketball"], hpScale: 1.65 },
+    { total: 88, interval: .38, mix: ["wasp", "puppet", "basketball", "wasp", "puppet"], hpScale: 1.85 },
+    { total: 106, interval: .36, mix: ["basketball", "wasp", "puppet", "basketball", "wasp"], hpScale: 2.05 },
+    { total: 126, interval: .33, mix: ["puppet", "basketball", "wasp", "puppet", "basketball"], hpScale: 2.25 },
+    { total: 148, interval: .3, mix: ["wasp", "puppet", "basketball", "wasp", "puppet"], hpScale: 2.45 },
+    { total: 172, interval: .28, mix: ["basketball", "wasp", "puppet", "basketball", "wasp"], hpScale: 2.65 },
+    { total: 198, interval: .26, mix: ["puppet", "wasp", "basketball", "puppet", "wasp"], hpScale: 2.85 },
+    { total: 226, interval: .24, mix: ["wasp", "basketball", "puppet", "wasp", "basketball"], hpScale: 3.05 }
+  ];
   Game.config = {
-    width: 360, height: 640, maxLevel: 15, maxSkillSlots: 4, wallMaxHp: 1000, armorBlockWindow: .12, xpBase: 15, xpMultiplier: 1.13, xpBonus: 6, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12, flyingHover: 16,
+    width: 360, height: 640, maxLevel: 20, maxSkillSlots: 4, wallMaxHp: 1000, armorBlockWindow: .12, xpBase: 15, xpMultiplier: 1.13, xpBonus: 6, rifleSideOffset: -6, muzzleDistance: 34, magazineCapacity: 35, reloadDuration: 2, spreadAngle: .12, flyingHover: 16,
     sprites: {
       playerBody: { src: ["assets/player-man.png", "assets/player-body.png", "assets/man.png"], width: 74, height: 131, anchorX: 37, anchorY: 78 },
       playerRifle: { src: "assets/player-rifle.png", width: 18, height: 46, anchorX: 9, anchorY: 38, mountX: -6, mountY: -40 }
@@ -551,7 +654,14 @@
       { id: 10, name: "冰火交界", subtitle: "元素互克，控制手段大打折扣", brief: "火焰与雪人的抗性互补，只堆单一元素或只堆冰冻控制都会被卡住一半。", unlocked: true, hpScale: 2.2, xpScale: .22, waves: levelTenWaves },
       { id: 11, name: "高压电厂", subtitle: "电系受制，冰火再度交锋", brief: "雷电僵尸让电系技能减半、精英完全免疫，冰火互克仍需两手准备。", unlocked: true, hpScale: 2.35, xpScale: .2, waves: levelElevenWaves },
       { id: 12, name: "旧城疗养院", subtitle: "护甲挡伤，轮椅半血回血", brief: "护甲挡伤、轮椅半血后持续回血、火焰免疫燃烧与冻结，三种机制同时压上。", unlocked: true, hpScale: 2.5, xpScale: .19, waves: levelTwelveWaves },
-      { id: 13, name: "蜂巢天台", subtitle: "飞鸟毒蜂压境，贴地技能失效", brief: "飞鸟与毒蜂全程悬空，装甲车与燃油弹失效，龙卷风仍能卷住它们；先剥甲再输出。", unlocked: true, hpScale: 2.75, xpScale: .16, waves: levelThirteenWaves }
+      { id: 13, name: "蜂巢天台", subtitle: "飞鸟毒蜂压境，贴地技能失效", brief: "飞鸟与毒蜂全程悬空，装甲车与燃油弹失效，龙卷风仍能卷住它们；先剥甲再输出。", unlocked: true, hpScale: 2.75, xpScale: .16, waves: levelThirteenWaves },
+      { id: 14, name: "冻土前线", subtitle: "寒霜兽重甲推进，火系破局", brief: "寒霜兽免疫六种状态、推拉不动，但会承受三倍火系伤害；第 4 波寒霜兽精英压阵。", unlocked: true, hpScale: 2.9, xpScale: .14, waves: levelFourteenWaves },
+      { id: 15, name: "熔毒荒原", subtitle: "毒蜂、火焰与蜥蜴混编", brief: "毒蜂远程飞行、火焰僵尸免疫燃烧与冻结、蜥蜴弱冰抗电；第 4 波蜥蜴精英登场。", unlocked: true, hpScale: 3, xpScale: .12, waves: levelFifteenWaves },
+      { id: 16, name: "断线鸟巢", subtitle: "飞鸟掩护下的傀儡推进", brief: "蜥蜴僵尸弱冰抗电，飞鸟僵尸会从空中突袭，傀儡僵尸远程投掷并在半血与四分之一血时召唤傀儡；第 4 波傀儡精英登场。", unlocked: true, hpScale: 3.1, xpScale: .1, waves: levelSixteenWaves },
+      { id: 17, name: "寒蜂裂谷", subtitle: "毒蜂穿梭霜兽与蜥蜴之间", brief: "蜥蜴弱冰抗电，毒蜂远程飞行且弱风抗能量，寒霜兽免疫六种状态但承受三倍火伤；第 4 波毒蜂精英登场。", unlocked: true, hpScale: 3.2, xpScale: .1, waves: levelSeventeenWaves },
+      { id: 18, name: "霜影裂谷", subtitle: "寒霜兽精英领队推进", brief: "阵容沿用第 17 关的蜥蜴、毒蜂与寒霜兽；第 4 波由寒霜兽精英领队，第 7 波尸潮领主与小怪同场。", unlocked: true, hpScale: 3.2, xpScale: .1, waves: levelEighteenWaves },
+      { id: 19, name: "傀儡雪原", subtitle: "冰雪掩护下的傀儡攻势", brief: "雪人、蜥蜴与傀儡依次登场，第 4 波傀儡精英领队。", unlocked: true, hpScale: 3.3, xpScale: .09, waves: levelNineteenWaves },
+      { id: 20, name: "蜂球傀儡馆", subtitle: "篮球、傀儡与毒蜂混编", brief: "篮球僵尸远程投掷，傀儡会分批召唤木偶，毒蜂从空中针刺；第 4 波毒蜂精英登场。", unlocked: true, hpScale: 3.4, xpScale: .08, waves: levelTwentyWaves }
     ],
     waves: levelOneWaves
   };
