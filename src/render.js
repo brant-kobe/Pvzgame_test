@@ -560,6 +560,42 @@
     U.roundedRect(ctx, r * .72, -r, r * .34, r * .5, r * .1, drip, "rgba(236, 255, 240, .85)");
     ctx.restore();
   }
+  function drawBomberBomb(enemy, r, info, elite, phase) {
+    var lowHp = enemy.hp < enemy.maxHp * .5, arm = elite ? "#3a2722" : "#493129", bombX = 0, bombY = -r * 1.78, bombR = r * .46;
+    ctx.save();
+    if (enemy.wallExplosionTriggered) {
+      ctx.globalAlpha = .3 + .18 * Math.sin(phase * 2.2);
+      ctx.fillStyle = "#9b9f9d";
+      ctx.beginPath(); ctx.arc(-r * .34, -r * 1.08, r * .22, 0, Math.PI * 2); ctx.arc(r * .2, -r * 1.32, r * .17, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = .16 + .1 * Math.sin(phase * 1.7 + 1); ctx.fillStyle = "#d3d6d2";
+      ctx.beginPath(); ctx.arc(-r * .05, -r * 1.58, r * .26, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      return;
+    }
+    ctx.strokeStyle = arm; ctx.lineWidth = Math.max(2, r * .2); ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-r * .5, -r * .08); ctx.lineTo(-r * .78, -r * 1.02); ctx.lineTo(-bombR * .72, bombY + bombR * .34);
+    ctx.moveTo(r * .5, -r * .08); ctx.lineTo(r * .78, -r * 1.02); ctx.lineTo(bombR * .72, bombY + bombR * .34);
+    ctx.stroke();
+    ctx.fillStyle = elite ? "#c9a15e" : "#9f7650";
+    ctx.beginPath(); ctx.arc(-bombR * .7, bombY + bombR * .3, Math.max(1.2, r * .1), 0, Math.PI * 2); ctx.arc(bombR * .7, bombY + bombR * .3, Math.max(1.2, r * .1), 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = elite ? "#d9b45a" : "#ad7c4f"; ctx.lineWidth = Math.max(1, r * .07);
+    ctx.beginPath(); ctx.moveTo(-bombR * .22, bombY - bombR * .78); ctx.quadraticCurveTo(bombR * .2, bombY - bombR * 1.28, bombR * .46, bombY - bombR * 1.12); ctx.stroke();
+    ctx.shadowColor = lowHp ? "rgba(255, 80, 48, .9)" : "rgba(255, 174, 72, .72)";
+    ctx.shadowBlur = Math.max(4, r * (lowHp ? .8 : .54));
+    var body = ctx.createRadialGradient(bombX - bombR * .3, bombY - bombR * .34, bombR * .08, bombX, bombY, bombR);
+    body.addColorStop(0, "#5b6165"); body.addColorStop(.42, "#272c30"); body.addColorStop(1, "#111416");
+    ctx.fillStyle = body;
+    ctx.beginPath(); ctx.arc(bombX, bombY, bombR, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = elite ? "#d9b45a" : "#6f5140"; ctx.lineWidth = Math.max(1, r * .065);
+    ctx.beginPath(); ctx.arc(bombX, bombY, bombR, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = elite ? "#ffd166" : "#ff9d4d";
+    U.roundedRect(ctx, -bombR * .74, bombY - bombR * .18, bombR * 1.48, bombR * .28, bombR * .12, ctx.fillStyle, "rgba(255, 226, 166, .75)");
+    ctx.fillStyle = info.accent;
+    ctx.beginPath(); ctx.arc(bombX + bombR * .44, bombY - bombR * 1.12, Math.max(1.4, r * .1 + Math.abs(Math.sin(phase * (lowHp ? 3.4 : 2.4))) * r * .06), 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
   function drawFrostBeast(r, info, elite, phase) {
     var shell = elite ? "#5f8ba1" : "#87b6c9", rim = elite ? "#dff4ff" : "#eafaff", plate = elite ? "rgba(26, 56, 74, .55)" : "rgba(38, 74, 96, .48)";
     var limb = elite ? "#4a7186" : "#6b9cb1", shard = elite ? "#bdeaff" : "#dcf6ff", tips = elite ? [-1.1, -.74, -.38, .38, .74, 1.1] : [-1.02, -.68, .68, 1.02];
@@ -940,7 +976,7 @@
     marks.forEach(function (mark) { drawStatusBadge(x, y, mark.label, mark.color); x += mark.width + 3; });
   }
   function drawEnemyVitals(enemy, r) {
-    var info = C.enemies[enemy.type], reach = info && info.flying ? r * 1.6 : r;
+    var info = C.enemies[enemy.type], reach = info && info.flying ? r * 1.6 : info && info.vitalReach ? r * info.vitalReach : r;
     if (Game.isRaging(enemy)) text("冲锋", enemy.x, enemy.y - reach - 30, "bold 10px Segoe UI, Microsoft YaHei", info.accent, "center");
     else if (enemy.rageRecoveryTimer > 0) text("停顿", enemy.x, enemy.y - reach - 30, "bold 10px Segoe UI, Microsoft YaHei", C.colors.muted, "center");
     if (Game.isHardControlled(enemy)) {
@@ -976,6 +1012,7 @@
       var isLizard = enemy.type === "lizard" || enemy.type === "lizardElite";
       var isShield = enemy.type === "shield" || enemy.type === "shieldElite";
       var isChainsaw = enemy.type === "chainsaw" || enemy.type === "chainsawElite";
+      var isBomber = enemy.type === "bomber" || enemy.type === "bomberElite";
       var isBoss = Game.isBossEnemy(enemy), isDevourer = enemy.type === "devourer", isWarden = enemy.type === "warden", isDeepSeaBeast = enemy.type === "deepSeaBeast";
       var auraReach = info.flying ? r * 1.7 : r;
       var shirtColor = isSplitter ? (isElite ? "#584a84" : "#463c6b")
@@ -1141,6 +1178,7 @@
         drawZombieHead(r, info, -r * .4, -r * .74, .74);
         drawZombieHead(r, info, r * .4, -r * .74, .74);
       } else drawZombieHead(r, info, 0, -r * .72, 1, isSnowman);
+      if (isBomber) drawBomberBomb(enemy, r, info, isElite, S.session.elapsed * 3.6 + enemy.x * .05 + enemy.y * .03);
 
       // 特殊僵尸的识别部件。
        if (isRunner) { ctx.strokeStyle = isElite ? "#fff0a5" : "#ffe0a7"; ctx.lineWidth = Math.max(1, r * .12); ctx.beginPath(); ctx.moveTo(-r * .7, r * .55); ctx.lineTo(-r * 1.18, r * .9); ctx.moveTo(r * .7, r * .48); ctx.lineTo(r * 1.16, r * .72); ctx.stroke(); }
@@ -1493,7 +1531,7 @@
   };
 
   function drawCodexEnemyModel(id, enemy, x, y, width, height, detail) {
-    var isBoss = enemy.codexCategory === "boss" || id === "boss", flying = !!enemy.flying, wheelchair = id === "wheelchair" || id === "wheelchairElite", devourer = id === "devourer", warden = id === "warden", deepSeaBeast = id === "deepSeaBeast", topExtent = devourer ? 1.72 : warden ? 1.48 : deepSeaBeast ? 1.62 : isBoss ? 1.78 : flying ? 1.56 : 1.43, bottomExtent = devourer ? 1.82 : warden ? 1.55 : deepSeaBeast ? 1.55 : flying ? 1.46 : wheelchair ? 1.22 : 1.05;
+    var isBoss = enemy.codexCategory === "boss" || id === "boss", flying = !!enemy.flying, wheelchair = id === "wheelchair" || id === "wheelchairElite", devourer = id === "devourer", warden = id === "warden", deepSeaBeast = id === "deepSeaBeast", topExtent = devourer ? 1.72 : warden ? 1.48 : deepSeaBeast ? 1.62 : isBoss ? 1.78 : enemy.vitalReach ? enemy.vitalReach : flying ? 1.56 : 1.43, bottomExtent = devourer ? 1.82 : warden ? 1.55 : deepSeaBeast ? 1.55 : flying ? 1.46 : wheelchair ? 1.22 : 1.05;
     var totalExtent = topExtent + bottomExtent, scale = Math.min(detail ? 3.2 : 2.7, (height - 8) / (enemy.radius * totalExtent));
     var centerX = x + width / 2, centerY = y + height / 2;
     var modelY = centerY + (topExtent - bottomExtent) * enemy.radius * scale / 2;
@@ -1674,8 +1712,8 @@
       }
       var progress = 1 - U.clamp(explosion.life / explosion.duration, 0, 1), radius = explosion.radius * (.45 + progress * .55);
       ctx.save(); ctx.globalAlpha = (1 - progress) * .62;
-      ctx.fillStyle = explosion.type === "bombardment" ? "rgba(255, 174, 54, .48)" : explosion.type === "electromagnetic" ? "rgba(77, 213, 255, .48)" : explosion.type === "hailFrost" ? "rgba(143, 233, 255, .46)" : explosion.type === "fuelBlast" ? "rgba(255, 132, 44, .5)" : "rgba(255, 75, 42, .42)"; ctx.beginPath(); ctx.arc(explosion.x, explosion.y, radius, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1 - progress; ctx.strokeStyle = explosion.type === "bombardment" ? "#fff0a0" : explosion.type === "electromagnetic" ? "#d2ffff" : explosion.type === "hailFrost" ? "#eafcff" : explosion.type === "fuelBlast" ? "#ffe6b0" : "#ffbf6b"; ctx.lineWidth = Math.max(2, 8 * (1 - progress));
+      ctx.fillStyle = explosion.type === "bombardment" ? "rgba(255, 174, 54, .48)" : explosion.type === "electromagnetic" ? "rgba(77, 213, 255, .48)" : explosion.type === "hailFrost" ? "rgba(143, 233, 255, .46)" : explosion.type === "fuelBlast" || explosion.type === "bomberBlast" ? "rgba(255, 132, 44, .5)" : "rgba(255, 75, 42, .42)"; ctx.beginPath(); ctx.arc(explosion.x, explosion.y, radius, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1 - progress; ctx.strokeStyle = explosion.type === "bombardment" ? "#fff0a0" : explosion.type === "electromagnetic" ? "#d2ffff" : explosion.type === "hailFrost" ? "#eafcff" : explosion.type === "fuelBlast" || explosion.type === "bomberBlast" ? "#ffe6b0" : "#ffbf6b"; ctx.lineWidth = Math.max(2, 8 * (1 - progress));
       ctx.beginPath(); ctx.arc(explosion.x, explosion.y, radius * .84, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
     });
@@ -2674,6 +2712,7 @@
       if (rangedInfo) text((selectedEnemy.flying ? "远程飞行单位" : "远程单位") + "   ·   每 " + rangedInfo.interval + " 秒" + rangedAction + "一次，距防线 " + rangedInfo.standoff + " 像素" + (selectedEnemy.flying ? "处悬停" : "处停下"), 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
       else if (selectedEnemy.flying) text("飞行单位   ·   免疫装甲车、燃油弹等贴地技能，龙卷风例外", 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
       else if (selectedEnemy.armorCharges) text("装甲 " + selectedEnemy.armorCharges + " 层   ·   可抵挡等量的伤害与负面状态", 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
+      else if (selectedEnemy.wallExplosionDamage) text("撞线爆炸 " + selectedEnemy.wallExplosionDamage + " 点   ·   低血移速 ×" + selectedEnemy.speedBoostMultiplier, 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
       else if (selectedEnemy.blocksProjectiles) text("阻挡弹道   ·   步枪、干冰弹、温压弹与压缩气刃无法穿过", 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
       else if (selectedEnemy.rageHpRatio) text("狂暴冲锋   ·   生命低于 " + Math.round(selectedEnemy.rageHpRatio * 100) + "% 时持续 " + selectedEnemy.rageDuration + " 秒，移速 ×" + (selectedEnemy.rageSpeedMultiplier || 1) + "，结束后停顿 " + selectedEnemy.rageRecoveryDuration + " 秒", 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);
       else if (selectedEnemy.freezeHealPerSecond) text("冻结时生命回复 " + selectedEnemy.freezeHealPerSecond + " 点 / 秒   ·   受重伤压制", 44, 392, "bold 10px Segoe UI, Microsoft YaHei", C.colors.purple);

@@ -119,6 +119,20 @@
       var ranged = info.ranged, holdY = Game.getEnemyHoldY(info);
       if (current.y >= holdY) {
         current.y = holdY;
+        if (!charging && info.wallExplosionDamage > 0 && !current.wallExplosionTriggered) {
+          var blastY = wall.y - wall.height / 2 - 8;
+          current.wallExplosionTriggered = true;
+          wall.hp -= info.wallExplosionDamage;
+          S.explosions.push({ type: "bomberBlast", x: current.x, y: blastY, radius: info.wallExplosionRadius || 42, life: .55, duration: .55 });
+          Game.burst(current.x, blastY, 20, "#ff8a3d");
+          Game.addText(current.x, blastY - 18, "-" + info.wallExplosionDamage, C.colors.red);
+          current.attackTimer = info.attackInterval || 1;
+          if (wall.hp <= 0) {
+            wall.hp = 0;
+            Game.loseLevel("城墙失守");
+            continue;
+          }
+        }
         if (!charging && current.attackTimer <= 0) {
           if (ranged) { Game.throwEnemyShot(current); current.attackTimer = ranged.interval * U.rand(.9, 1.1); }
           else {

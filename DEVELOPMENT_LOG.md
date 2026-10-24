@@ -516,3 +516,14 @@ git diff --check
 - 装备替换浮层改为**装备详情**（`S.characterEquipItem`、`config.characterUI.equipDetail`，与宝石详情同一版式）：只显示装备图标、`部位 · 元素系`、`Lv.N`、当前装备 / 可替换与「替换」「关闭」，不再显示六种元素、持有数量与副标题；已装备的条目按钮显示「已装备」且不发请求。换装仍走 `equipEquipment`（只交换 `element_id`，等级保留在部位），替换后同一条目会变成换下来的旧元素。
 - 数据层把 `Game.equipment.getBagOverview()` 换成 `getBagRows()`（逐件输出部位名 / 短名 / 颜色、元素名 / 颜色、部位等级与是否当前装备，按「部位顺序 → id」排序），`getBagPart` 继续供装备背包界面按部位取六种元素。
 - 验证：`tmp/check-character.js` **245 项**（装备方格 6 × 2 与宝石同起点、逐件详情、替换不改等级、已装备条目不再请求、超过 12 件分页）、`tmp/check-gems.js` **285 项**；全量 35 个 `check-*.js` 与 8 个 `audit-*.js` 0 失败，`node --check`、`smoke-character.js` 与 `git diff --check` 通过；出图更新 `tmp/character-equip.png` 与 `tmp/character-equip-replace.png`。后端未改动。
+
+---
+
+## 2026-10-23 · 炸弹僵尸与撞线爆炸
+
+- 新增**炸弹僵尸**（110 血 / 移速 24 / 半径 17 / 撞击 11 / 20 经验）与**炸弹僵尸精英**（600 / 28 / 22 / 20 / 42）：两形态都**免疫眩晕**、额外承受 50% 火系伤害，并在生命低于 50% 时移速 ×1.5。
+- 首次抵达城墙攻击线时引爆一次：小怪造成 **55 点**、精英造成 **110 点**防线伤害，并生成 `bomberBlast` 爆炸、粒子与伤害飘字；引爆标记 `wallExplosionTriggered` 保证整局只触发一次，随后按普通 1 秒节奏继续啃墙。爆炸可直接击穿城墙并进入失败结算。
+- 低血加速数据化为 `speedBoostBelowHpRatio` / `speedBoostMultiplier`，实战移动、步枪与技能预判、空投覆盖和落点预判统一走新增的 `Game.getEnemySpeedMultiplier` / `Game.getEnemyMoveSpeed`；首领原有半血加速也改走同一接口，行为不变。
+- 绘制新增 `drawBomberBomb`：炸弹举过头顶、引线火花随相位闪烁，低血时辉光变为更急促的红色，引爆后停止绘制炸弹并改画余烟；`vitalReach: 2.38` 同步抬高血条、硬控标记与图鉴顶部外扩，避免被炸弹遮挡。
+- 图鉴自动收录两种形态并展示「火系伤害 +50%」「硬控·免疫眩晕」「撞线爆炸 N 点 · 低血移速 ×1.5」；测试场自动出现两种单位，尚未编入任何正式关卡波次。
+- 验证：新增 `tmp/check-bomber.js`，覆盖数据、火系易伤、眩晕免疫、冻结 / 麻痹边界、半血阈值、低血加速、单次撞线爆炸、爆炸后近战、爆炸击杀城墙、图鉴、绘制与测试场；同步把既有图鉴计数断言更新为各 15 种、抗性表更新为 12 组 24 种。全量 **45 个 `check-*.js` 与 9 个 `audit-*.js` 全部通过**，`node --check` 与 `git diff --check` 通过；画面用 `tmp/trace-draw.js bomber` 回放生成 `tmp/bomber.png`。

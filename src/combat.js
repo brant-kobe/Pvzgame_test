@@ -43,10 +43,10 @@
     return !!(info && info.codexCategory === "boss");
   };
   Game.isRaging = function (enemy) { return !!enemy && (enemy.rageTimer || 0) > 0; };
-  Game.getEnemyMoveSpeed = function (enemy) {
-    var info = enemy && C.enemies[enemy.type];
-    if (!info || Game.isHardControlled(enemy)) return 0;
-    return info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1) * (Game.isRaging(enemy) ? info.rageSpeedMultiplier || 1 : 1);
+  Game.getEnemyMoveSpeed = function (enemy, info) {
+    info = info || (enemy && C.enemies[enemy.type]);
+    if (!enemy || !info || Game.isHardControlled(enemy)) return 0;
+    return info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1) * (Game.isRaging(enemy) ? info.rageSpeedMultiplier || 1 : 1) * Game.getEnemySpeedMultiplier(enemy, info);
   };
   Game.tryStartRage = function (enemy) {
     var info = enemy && C.enemies[enemy.type];
@@ -79,13 +79,18 @@
     var scale = table ? table[status] : undefined;
     return scale === undefined || scale === null ? 1 : scale;
   };
+  Game.getEnemySpeedMultiplier = function (enemy, info) {
+    info = info || (enemy && C.enemies[enemy.type]);
+    if (!enemy || !info || !info.speedBoostBelowHpRatio || !info.speedBoostMultiplier) return 1;
+    return enemy.hp < enemy.maxHp * info.speedBoostBelowHpRatio ? info.speedBoostMultiplier : 1;
+  };
   Game.spawnEnemy = function (type, options) {
     var info = C.enemies[type], opts = options || {}, radius = info.radius;
     var edge = Math.max(22, radius + 4);
     var x = opts.x === undefined ? U.rand(edge, C.width - edge) : U.clamp(opts.x, radius, C.width - radius);
     var y = opts.y === undefined ? -radius - 8 : U.clamp(opts.y, -radius, S.wall ? S.wall.y - S.wall.height / 2 - radius - 3 : C.height);
     var maxHp = Math.round(info.hp * ((S.session && S.session.hpScale) || 1) * Game.getWaveHpScale());
-    var enemy = { type: type, x: x, y: y, hp: maxHp, maxHp: maxHp, slow: 0, slowFactor: .58, damageTakenTimer: 0, damageTakenMultiplier: 1, burn: 0, burnDps: 0, frostbiteStacks: {}, frostbiteDps: {}, control: 0, controlType: "", wound: 0, woundFactor: 0, woundExtra: 0, woundExtraFactor: 0, hitFlash: 0, attackTimer: 0, summons: 0, regenPerSecond: info.regenPerSecond || 0, armorCharges: info.armorCharges || 0, armorStamp: -1e9, armorFlash: 0, rageTriggered: false, rageTimer: 0, rageRecoveryTimer: 0 };
+    var enemy = { type: type, x: x, y: y, hp: maxHp, maxHp: maxHp, slow: 0, slowFactor: .58, damageTakenTimer: 0, damageTakenMultiplier: 1, burn: 0, burnDps: 0, frostbiteStacks: {}, frostbiteDps: {}, control: 0, controlType: "", wound: 0, woundFactor: 0, woundExtra: 0, woundExtraFactor: 0, hitFlash: 0, attackTimer: 0, summons: 0, regenPerSecond: info.regenPerSecond || 0, armorCharges: info.armorCharges || 0, armorStamp: -1e9, armorFlash: 0, wallExplosionTriggered: false, rageTriggered: false, rageTimer: 0, rageRecoveryTimer: 0 };
     if (Game.isBossEnemy({ type: type })) enemy.x = C.width / 2;
     S.enemies.push(enemy);
     if (info.codexCategory === "elite" && !opts.silent) {
