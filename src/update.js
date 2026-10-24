@@ -48,9 +48,12 @@
         if (bullet.hitEnemies.indexOf(enemy) >= 0 || Math.pow(bullet.x - enemy.x, 2) + Math.pow(bullet.y - enemy.y, 2) >= radius * radius) continue;
         bullet.hitEnemies.push(enemy);
         Game.damageEnemy(enemy, bullet.damage, bullet);
-        bullet.pierce--;
         if (enemy.hp <= 0) Game.killEnemy(j);
-        if (bullet.pierce < 0) removed = true;
+        if (Game.blocksProjectile(enemy)) removed = true;
+        else {
+          bullet.pierce--;
+          if (bullet.pierce < 0) removed = true;
+        }
       }
       if (removed) S.bullets.splice(i, 1);
     }
@@ -61,19 +64,27 @@
     Game.updateDrones(dt);
     for (var k = S.enemies.length - 1; k >= 0; k--) {
       var current = S.enemies[k], info = C.enemies[current.type];
+      var wasRaging = Game.isRaging(current);
       current.hitFlash = Math.max(0, current.hitFlash - dt);
       current.attackTimer -= dt;
-      if (current.burn > 0) {
+      if (wasRaging) {
+        current.rageTimer = Math.max(0, current.rageTimer - dt);
+        if (current.rageTimer === 0) current.rageRecoveryTimer = info.rageRecoveryDuration || 0;
+      }
+      if (!Game.isRaging(current) && current.burn > 0) {
         current.burn = Math.max(0, current.burn - dt);
         current.hp -= (current.burnDps || 10 + p.burn * 3) * dt * (current.damageTakenTimer > 0 ? current.damageTakenMultiplier || 1 : 1);
         if (current.hp <= 0) { Game.killEnemy(k); continue; }
+        Game.tryStartRage(current);
       }
-      var frostDps = Game.getFrostbiteDps(current);
+      var frostDps = Game.isRaging(current) ? 0 : Game.getFrostbiteDps(current);
       if (frostDps > 0) {
         current.hp -= frostDps * dt * (current.damageTakenTimer > 0 ? current.damageTakenMultiplier || 1 : 1);
         if (current.hp <= 0) { Game.killEnemy(k); continue; }
+        Game.tryStartRage(current);
       }
       Game.tickFrostbite(current, dt);
+      if (!Game.isRaging(current)) Game.tryStartRage(current);
       if (info.summonHpRatios && current.hp > 0) {
         var summons = current.summons || 0, summonInfo = C.enemies[info.summonType];
         while (summons < info.summonHpRatios.length && current.hp > 0 && current.hp <= current.maxHp * info.summonHpRatios[summons]) {
@@ -89,6 +100,7 @@
         var regenLimit = info.regenBelowHpRatio ? current.maxHp * info.regenBelowHpRatio : current.maxHp;
         if (current.hp < regenLimit) current.hp = Math.min(regenLimit, current.hp + current.regenPerSecond * dt * Game.getHealScale(current));
       }
+      if (info.freezeHealPerSecond > 0 && current.control > 0 && current.controlType === "freeze" && current.hp > 0) current.hp = Math.min(current.maxHp, current.hp + info.freezeHealPerSecond * dt * Game.getHealScale(current));
       current.slow = Math.max(0, current.slow - dt);
       if (current.slow === 0) current.slowFactor = .58;
       current.damageTakenTimer = Math.max(0, (current.damageTakenTimer || 0) - dt);
@@ -98,14 +110,19 @@
       current.control = Math.max(0, (current.control || 0) - dt);
       if (current.control === 0) current.controlType = "";
       if (current.control > 0) continue;
-      var speed = info.speed * (current.slow > 0 ? current.slowFactor || .58 : 1) * (current.type === "boss" && current.hp < current.maxHp * .5 ? 1.5 : 1);
+      if (wasRaging && current.rageTimer === 0) continue;
+      if (current.rageRecoveryTimer > 0) {
+        current.rageRecoveryTimer = Math.max(0, current.rageRecoveryTimer - dt);
+        if (current.rageRecoveryTimer > 0) continue;
+      }
+      var charging = Game.isRaging(current), speed = Game.getEnemyMoveSpeed(current);
       var ranged = info.ranged, holdY = Game.getEnemyHoldY(info);
       if (current.y >= holdY) {
         current.y = holdY;
-        if (current.attackTimer <= 0) {
+        if (!charging && current.attackTimer <= 0) {
           if (ranged) { Game.throwEnemyShot(current); current.attackTimer = ranged.interval * U.rand(.9, 1.1); }
           else {
-            wall.hp -= info.damage; current.attackTimer = current.type === "boss" ? .65 : (info.attackInterval || 1);
+            wall.hp -= info.damage; current.attackTimer = Game.isBossEnemy(current) ? .65 : (info.attackInterval || 1);
             Game.burst(current.x, wall.y, 4, C.colors.red); Game.addText(current.x, wall.y - 19, "-" + info.damage, C.colors.red);
             if (wall.hp <= 0) { wall.hp = 0; Game.loseLevel("城墙失守"); }
           }

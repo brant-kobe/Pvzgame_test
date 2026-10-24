@@ -15,6 +15,10 @@
   Game.canHitEnemy = function (source, enemy) {
     return !(source && source.groundOnly && Game.isFlyingEnemy(enemy));
   };
+  Game.blocksProjectile = function (enemy) {
+    var info = enemy && C.enemies[enemy.type];
+    return !!(info && info.blocksProjectiles);
+  };
   Game.getSkillElement = function (id) {
     var list = C.coreSkills || [];
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i].element || "physical";
@@ -30,8 +34,47 @@
     var info = enemy && C.enemies[enemy.type], table = info && info.damageTakenByElement, scale = table ? table[element] : undefined;
     return scale === undefined || scale === null ? 1 : scale;
   };
+  Game.getDamageSourceScale = function (enemy, source) {
+    var info = enemy && C.enemies[enemy.type], table = info && info.damageTakenBySource, id = source && source.damageSource, scale = table && id ? table[id] : undefined;
+    return scale === undefined || scale === null ? 1 : scale;
+  };
+  Game.isBossEnemy = function (enemy) {
+    var info = enemy && C.enemies[enemy.type];
+    return !!(info && info.codexCategory === "boss");
+  };
+  Game.isRaging = function (enemy) { return !!enemy && (enemy.rageTimer || 0) > 0; };
+  Game.getEnemyMoveSpeed = function (enemy) {
+    var info = enemy && C.enemies[enemy.type];
+    if (!info || Game.isHardControlled(enemy)) return 0;
+    return info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1) * (Game.isRaging(enemy) ? info.rageSpeedMultiplier || 1 : 1);
+  };
+  Game.tryStartRage = function (enemy) {
+    var info = enemy && C.enemies[enemy.type];
+    if (!info || !info.rageHpRatio || !info.rageDuration || enemy.rageTriggered || enemy.hp <= 0 || enemy.hp >= enemy.maxHp * info.rageHpRatio) return false;
+    enemy.rageTriggered = true;
+    enemy.rageTimer = info.rageDuration;
+    enemy.rageRecoveryTimer = 0;
+    enemy.slow = 0;
+    enemy.slowFactor = .58;
+    enemy.control = 0;
+    enemy.controlType = "";
+    enemy.burn = 0;
+    enemy.burnDps = 0;
+    enemy.frostbiteStacks = {};
+    enemy.frostbiteDps = {};
+    enemy.damageTakenTimer = 0;
+    enemy.damageTakenMultiplier = 1;
+    enemy.wound = 0;
+    enemy.woundFactor = 0;
+    enemy.woundExtra = 0;
+    enemy.woundExtraFactor = 0;
+    Game.addText(enemy.x, enemy.y - info.radius - 12, "狂暴冲锋", info.accent);
+    Game.burst(enemy.x, enemy.y, 12, info.accent);
+    return true;
+  };
   Game.getStatusScale = function (enemy, status) {
     var info = enemy && C.enemies[enemy.type], immune = info && info.statusImmune, table = info && info.statusDurationScale;
+    if (Game.isRaging(enemy)) return 0;
     if (immune && immune[status]) return 0;
     var scale = table ? table[status] : undefined;
     return scale === undefined || scale === null ? 1 : scale;
@@ -42,8 +85,8 @@
     var x = opts.x === undefined ? U.rand(edge, C.width - edge) : U.clamp(opts.x, radius, C.width - radius);
     var y = opts.y === undefined ? -radius - 8 : U.clamp(opts.y, -radius, S.wall ? S.wall.y - S.wall.height / 2 - radius - 3 : C.height);
     var maxHp = Math.round(info.hp * ((S.session && S.session.hpScale) || 1) * Game.getWaveHpScale());
-    var enemy = { type: type, x: x, y: y, hp: maxHp, maxHp: maxHp, slow: 0, slowFactor: .58, damageTakenTimer: 0, damageTakenMultiplier: 1, burn: 0, burnDps: 0, frostbiteStacks: {}, frostbiteDps: {}, control: 0, controlType: "", wound: 0, woundFactor: 0, woundExtra: 0, woundExtraFactor: 0, hitFlash: 0, attackTimer: 0, summons: 0, regenPerSecond: info.regenPerSecond || 0, armorCharges: info.armorCharges || 0, armorStamp: -1e9, armorFlash: 0 };
-    if (type === "boss") enemy.x = C.width / 2;
+    var enemy = { type: type, x: x, y: y, hp: maxHp, maxHp: maxHp, slow: 0, slowFactor: .58, damageTakenTimer: 0, damageTakenMultiplier: 1, burn: 0, burnDps: 0, frostbiteStacks: {}, frostbiteDps: {}, control: 0, controlType: "", wound: 0, woundFactor: 0, woundExtra: 0, woundExtraFactor: 0, hitFlash: 0, attackTimer: 0, summons: 0, regenPerSecond: info.regenPerSecond || 0, armorCharges: info.armorCharges || 0, armorStamp: -1e9, armorFlash: 0, rageTriggered: false, rageTimer: 0, rageRecoveryTimer: 0 };
+    if (Game.isBossEnemy({ type: type })) enemy.x = C.width / 2;
     S.enemies.push(enemy);
     if (info.codexCategory === "elite" && !opts.silent) {
       S.session.message = "精英来袭：" + info.name + "！";
@@ -57,7 +100,7 @@
     type = ids[arena.enemyIndex] || ids[0];
     info = C.enemies[type];
     for (var i = 0; i < amount; i++) {
-      Game.spawnEnemy(type, { x: type === "boss" ? C.width / 2 : U.rand(info.radius + 12, C.width - info.radius - 12), y: U.rand(150, 285), silent: true });
+      Game.spawnEnemy(type, { x: Game.isBossEnemy({ type: type }) ? C.width / 2 : U.rand(info.radius + 12, C.width - info.radius - 12), y: U.rand(150, 285), silent: true });
     }
     S.session.message = "生成 " + amount + " 只 · " + info.name;
     S.session.messageTimer = 1.2;
@@ -206,8 +249,7 @@
     S.enemies.forEach(function (enemy) {
       if (enemy.y < rifleLine) return;
       var info = C.enemies[enemy.type];
-      var speed = Game.isHardControlled(enemy) ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
-      if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
+      var speed = Game.getEnemyMoveSpeed(enemy);
       var attackY = Game.getEnemyHoldY(info);
       var predictedX = enemy.x, predictedY = enemy.y, flightTime = 0;
 
@@ -263,7 +305,7 @@
     for (var lane = 0; lane < lanes; lane++) {
       var spreadOffset = lane - (lanes - 1) / 2, bulletAngle = shotAngle + spreadOffset * C.spreadAngle;
       var laneMuzzle = Game.getWeaponMuzzle(p, C.muzzleDistance, bulletAngle), critical = Math.random() < U.clamp(p.crit || 0, 0, 1);
-      S.bullets.push({ x: laneMuzzle.x, y: laneMuzzle.y, vx: Math.cos(bulletAngle) * 300, vy: Math.sin(bulletAngle) * 300, damage: p.damage * (critical ? p.critDamage : 1), critical: critical, radius: p.bulletRadius, pierce: p.pierce, color: bulletColor, element: Game.getRifleElement(p), hitEnemies: [] });
+      S.bullets.push({ x: laneMuzzle.x, y: laneMuzzle.y, vx: Math.cos(bulletAngle) * 300, vy: Math.sin(bulletAngle) * 300, damage: p.damage * (critical ? p.critDamage : 1), critical: critical, radius: p.bulletRadius, pierce: p.pierce, color: bulletColor, element: Game.getRifleElement(p), damageSource: "rifle", hitEnemies: [] });
     }
     for (var i = 0; i < 3; i++) S.particles.push({ x: muzzle.x + U.rand(-3, 3), y: muzzle.y + U.rand(-3, 3), vx: U.rand(-20, 20), vy: U.rand(-65, -25), life: .18, maxLife: .18, color: bulletColor, size: U.rand(2, 4) });
     return lanes;
@@ -298,8 +340,7 @@
     var rangeLine = Game.getSkillRangeLine(type);
     S.enemies.forEach(function (enemy) {
       if (enemy.y < rangeLine) return;
-      var info = C.enemies[enemy.type], speed = Game.isHardControlled(enemy) ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
-      if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
+      var info = C.enemies[enemy.type], speed = Game.getEnemyMoveSpeed(enemy);
       var attackY = Game.getEnemyHoldY(info);
       var predictedX = enemy.x, predictedY = enemy.y, flightTime = 0, targetX, targetY;
       for (var i = 0; i < 3; i++) {
@@ -334,8 +375,8 @@
     return S.enemies.filter(function (enemy) { return enemy.y >= rangeLine; }).sort(function (a, b) {
       var aInfo = C.enemies[a.type], bInfo = C.enemies[b.type];
       var aScore = a.y + aInfo.radius * .35, bScore = b.y + bInfo.radius * .35;
-      if (a.type === "boss") aScore += 10;
-      if (b.type === "boss") bScore += 10;
+      if (Game.isBossEnemy(a)) aScore += 10;
+      if (Game.isBossEnemy(b)) bScore += 10;
       return bScore - aScore;
     }).slice(0, 1 + skill.extraTargets);
   };
@@ -369,7 +410,7 @@
       var end = Game.getHighEnergyBeamEnd(origin, angle), dx = end.x - origin.x, dy = end.y - origin.y, length = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / length, uy = dy / length, score = 0;
       S.enemies.forEach(function (enemy) {
         var ex = enemy.x - origin.x, ey = enemy.y - origin.y, along = ex * ux + ey * uy, across = Math.abs(ex * uy - ey * ux), radius = skill.beamWidth / 2 + C.enemies[enemy.type].radius;
-        if (along >= 0 && along <= length && across <= radius) score += enemy.type === "boss" ? 2 : C.enemies[enemy.type].codexCategory === "elite" ? 1.5 : 1;
+        if (along >= 0 && along <= length && across <= radius) score += Game.isBossEnemy(enemy) ? 2 : C.enemies[enemy.type].codexCategory === "elite" ? 1.5 : 1;
       });
       if (score > bestScore) { bestScore = score; bestAngle = angle; }
     });
@@ -387,7 +428,7 @@
     for (var i = S.enemies.length - 1; i >= 0; i--) {
       var enemy = S.enemies[i], ex = enemy.x - skill.activeX, ey = enemy.y - skill.activeY, along = ex * ux + ey * uy, across = Math.abs(ex * uy - ey * ux), reach = skill.beamWidth / 2 + C.enemies[enemy.type].radius;
       if (along < 0 || along > length || across > reach) continue;
-      if (skill.crippleEnabled && skill.damageTakenDuration > 0) { enemy.damageTakenTimer = Math.max(enemy.damageTakenTimer || 0, skill.damageTakenDuration); enemy.damageTakenMultiplier = skill.damageTakenMultiplier; }
+      if (!Game.isRaging(enemy) && skill.crippleEnabled && skill.damageTakenDuration > 0) { enemy.damageTakenTimer = Math.max(enemy.damageTakenTimer || 0, skill.damageTakenDuration); enemy.damageTakenMultiplier = skill.damageTakenMultiplier; }
       if (skill.slowEnabled && skill.slowDuration > 0) Game.applySlow(enemy, skill.slowDuration, skill.slowFactor);
       Game.damageEnemy(enemy, skill.damage, { critical: false, noWeaponEffects: true, silentText: true, element: Game.getSkillElement("highEnergyBeam") });
       if (enemy.hp <= 0) Game.killEnemy(i);
@@ -396,21 +437,21 @@
   Game.launchSkillVolley = function (type, angle) {
     var skill = S.player.skills[type], origin = Game.getSkillMuzzle();
     if (type === "thermobaric") {
-      S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(angle) * skill.projectileSpeed, vy: Math.sin(angle) * skill.projectileSpeed, radius: skill.projectileRadius, impactDamage: skill.impactDamage, impactKnockback: skill.impactKnockback, explosionDamage: skill.explosionDamage, explosionRadius: skill.explosionRadius, explosionKnockback: skill.explosionKnockback, burnDps: skill.burnDps, burnDuration: skill.burnDuration, pierce: skill.pierce, hasImpacted: false, fuseTimer: 0, critical: false, element: Game.getSkillElement(type), hitEnemies: [] });
+      S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(angle) * skill.projectileSpeed, vy: Math.sin(angle) * skill.projectileSpeed, radius: skill.projectileRadius, impactDamage: skill.impactDamage, impactKnockback: skill.impactKnockback, explosionDamage: skill.explosionDamage, explosionRadius: skill.explosionRadius, explosionKnockback: skill.explosionKnockback, burnDps: skill.burnDps, burnDuration: skill.burnDuration, pierce: skill.pierce, hasImpacted: false, fuseTimer: 0, critical: false, element: Game.getSkillElement(type), damageSource: type, hitEnemies: [] });
       return;
     }
     if (type === "airBlade") {
       var bladeLanes = 1 + skill.spread;
       for (var blade = 0; blade < bladeLanes; blade++) {
         var bladeAngle = angle + (blade - (bladeLanes - 1) / 2) * C.spreadAngle;
-        S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(bladeAngle) * skill.projectileSpeed, vy: Math.sin(bladeAngle) * skill.projectileSpeed, radius: skill.projectileRadius, damage: skill.damage, knockback: skill.knockback, pierce: skill.pierce, woundDuration: skill.woundDuration, woundFactor: skill.woundFactor, woundExtraDuration: skill.woundExtraDuration, woundExtraFactor: skill.woundExtraFactor, critical: false, element: Game.getSkillElement(type), hitEnemies: [] });
+        S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(bladeAngle) * skill.projectileSpeed, vy: Math.sin(bladeAngle) * skill.projectileSpeed, radius: skill.projectileRadius, damage: skill.damage, knockback: skill.knockback, pierce: skill.pierce, woundDuration: skill.woundDuration, woundFactor: skill.woundFactor, woundExtraDuration: skill.woundExtraDuration, woundExtraFactor: skill.woundExtraFactor, critical: false, element: Game.getSkillElement(type), damageSource: type, hitEnemies: [] });
       }
       return;
     }
     var lanes = 1 + skill.spread;
     for (var lane = 0; lane < lanes; lane++) {
       var bulletAngle = angle + (lane - (lanes - 1) / 2) * C.spreadAngle;
-      S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(bulletAngle) * skill.projectileSpeed, vy: Math.sin(bulletAngle) * skill.projectileSpeed, radius: skill.projectileRadius, damage: skill.damage, knockback: skill.knockback, pierce: skill.pierce, splitCount: skill.splitCount, slowDuration: skill.slowDuration, freezeDuration: skill.freezeDuration, slowFactor: skill.slowFactor, frostbiteEnabled: !!skill.frostbiteEnabled, frostbiteSource: type, frostbiteDps: skill.frostbiteDps, frostbiteDuration: skill.frostbiteDuration, frostbiteMaxStacks: skill.frostbiteMaxStacks, critical: false, element: Game.getSkillElement(type), hitEnemies: [] });
+      S.skillProjectiles.push({ type: type, x: origin.x, y: origin.y, vx: Math.cos(bulletAngle) * skill.projectileSpeed, vy: Math.sin(bulletAngle) * skill.projectileSpeed, radius: skill.projectileRadius, damage: skill.damage, knockback: skill.knockback, pierce: skill.pierce, splitCount: skill.splitCount, slowDuration: skill.slowDuration, freezeDuration: skill.freezeDuration, slowFactor: skill.slowFactor, frostbiteEnabled: !!skill.frostbiteEnabled, frostbiteSource: type, frostbiteDps: skill.frostbiteDps, frostbiteDuration: skill.frostbiteDuration, frostbiteMaxStacks: skill.frostbiteMaxStacks, critical: false, element: Game.getSkillElement(type), damageSource: type, hitEnemies: [] });
     }
   };
   Game.launchArmoredCars = function (skill) {
@@ -675,7 +716,7 @@
     var angle = Math.atan2(projectile.vy, projectile.vx), count = projectile.splitCount;
     for (var i = 0; i < count; i++) {
       var shardAngle = angle + (i - (count - 1) / 2) * .2;
-      S.skillProjectiles.push({ type: "iceShard", x: enemy.x, y: enemy.y, vx: Math.cos(shardAngle) * 245, vy: Math.sin(shardAngle) * 245, radius: Math.max(3, projectile.radius * .58), damage: projectile.damage * .45, knockback: projectile.knockback * .5, pierce: 0, splitCount: 0, slowDuration: projectile.slowDuration, freezeDuration: projectile.freezeDuration, slowFactor: projectile.slowFactor, frostbiteEnabled: projectile.frostbiteEnabled, frostbiteSource: projectile.frostbiteSource, frostbiteDps: projectile.frostbiteDps, frostbiteDuration: projectile.frostbiteDuration, frostbiteMaxStacks: projectile.frostbiteMaxStacks, critical: false, element: projectile.element, hitEnemies: [enemy], isShard: true });
+      S.skillProjectiles.push({ type: "iceShard", x: enemy.x, y: enemy.y, vx: Math.cos(shardAngle) * 245, vy: Math.sin(shardAngle) * 245, radius: Math.max(3, projectile.radius * .58), damage: projectile.damage * .45, knockback: projectile.knockback * .5, pierce: 0, splitCount: 0, slowDuration: projectile.slowDuration, freezeDuration: projectile.freezeDuration, slowFactor: projectile.slowFactor, frostbiteEnabled: projectile.frostbiteEnabled, frostbiteSource: projectile.frostbiteSource, frostbiteDps: projectile.frostbiteDps, frostbiteDuration: projectile.frostbiteDuration, frostbiteMaxStacks: projectile.frostbiteMaxStacks, critical: false, element: projectile.element, damageSource: "dryIce", hitEnemies: [enemy], isShard: true });
     }
   };
   Game.updateSkillProjectiles = function (dt) {
@@ -705,7 +746,8 @@
           Game.damageEnemy(enemy, projectile.impactDamage, projectile);
           Game.applyKnockback(enemy, projectile.x - projectile.vx, projectile.y - projectile.vy, projectile.impactKnockback);
           if (enemy.hp <= 0) Game.killEnemy(j);
-          if (projectile.pierce > 0) { projectile.pierce--; projectile.hasImpacted = true; projectile.fuseTimer = .18; }
+          if (Game.blocksProjectile(enemy)) { Game.explodeThermobaric(projectile); removed = true; }
+          else if (projectile.pierce > 0) { projectile.pierce--; projectile.hasImpacted = true; projectile.fuseTimer = .18; }
           else { Game.explodeThermobaric(projectile); removed = true; }
         } else {
           Game.damageEnemy(enemy, projectile.damage, projectile);
@@ -716,8 +758,11 @@
           if (projectile.woundDuration > 0 || projectile.woundExtraDuration > 0) Game.applyWound(enemy, projectile.woundDuration, projectile.woundFactor, projectile.woundExtraDuration, projectile.woundExtraFactor);
           Game.splitDryIceProjectile(projectile, enemy);
           if (enemy.hp <= 0) Game.killEnemy(j);
-          projectile.pierce--;
-          if (projectile.pierce < 0) removed = true;
+          if (Game.blocksProjectile(enemy)) removed = true;
+          else {
+            projectile.pierce--;
+            if (projectile.pierce < 0) removed = true;
+          }
         }
       }
       if (removed) S.skillProjectiles.splice(i, 1);
@@ -761,12 +806,11 @@
   function bombardmentCoverage(skill, point, impactTime) {
     var score = 0;
     S.enemies.forEach(function (enemy) {
-      var info = C.enemies[enemy.type], speed = Game.isHardControlled(enemy) ? 0 : info.speed * (enemy.slow > 0 ? enemy.slowFactor || .58 : 1);
-      if (enemy.type === "boss" && enemy.hp < enemy.maxHp * .5) speed *= 1.5;
+      var info = C.enemies[enemy.type], speed = Game.getEnemyMoveSpeed(enemy);
       var attackY = Game.getEnemyHoldY(info), predictedY = Math.min(attackY, enemy.y + speed * impactTime);
       var dx = enemy.x - point.x, dy = predictedY - point.y, distance = Math.sqrt(dx * dx + dy * dy), reach = skill.blastRadius + info.radius;
       if (distance > reach) return;
-      var weight = enemy.type === "boss" ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
+      var weight = Game.isBossEnemy(enemy) ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
       score += weight * (1.1 - distance / reach);
     });
     return score;
@@ -805,8 +849,7 @@
     var rangeLine = Game.getSkillRangeLine("bombardment");
     S.enemies.forEach(function (candidate) {
       if (candidate.y < rangeLine) return;
-      var candidateInfo = C.enemies[candidate.type], candidateSpeed = Game.isHardControlled(candidate) ? 0 : candidateInfo.speed * (candidate.slow > 0 ? candidate.slowFactor || .58 : 1);
-      if (candidate.type === "boss" && candidate.hp < candidate.maxHp * .5) candidateSpeed *= 1.5;
+      var candidateInfo = C.enemies[candidate.type], candidateSpeed = Game.getEnemyMoveSpeed(candidate);
       var candidateAttackY = Game.getEnemyHoldY(candidateInfo), targetY = candidate.y;
       for (var step = 0; step < 3; step++) {
         var estimateY = U.clamp(targetY, minY, maxY), dropTime = (estimateY + 24) / skill.bombSpeed;
@@ -894,7 +937,7 @@
   };
   Game.getWhirlwindEnemyWeight = function (enemy) {
     var info = C.enemies[enemy.type];
-    return enemy.type === "boss" ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
+    return Game.isBossEnemy(enemy) ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
   };
   Game.getWhirlwindChaseTarget = function (tornado, field) {
     var skill = S.player.skills.whirlwindCannon, clusterRadius = skill.clusterRadius, threatRange = Math.max(1, field.maxY - field.minY);
@@ -1112,7 +1155,7 @@
     var rangeLine = Game.getSkillRangeLine("chainLightning"), best = null, bestScore = -Infinity, fallback = null, fallbackScore = -Infinity;
     S.enemies.forEach(function (enemy) {
       if (enemy.y < rangeLine) return;
-      var score = enemy.y + C.enemies[enemy.type].radius * .35 + (enemy.type === "boss" ? 10 : 0);
+      var score = enemy.y + C.enemies[enemy.type].radius * .35 + (Game.isBossEnemy(enemy) ? 10 : 0);
       if (taken && taken.indexOf(enemy) >= 0) {
         if (score > fallbackScore) { fallbackScore = score; fallback = enemy; }
         return;
@@ -1200,7 +1243,7 @@
     S.enemies.forEach(function (enemy) {
       var info = C.enemies[enemy.type], dx = enemy.x - point.x, dy = enemy.y - point.y, reach = skill.radius + info.radius;
       if (dx * dx + dy * dy > reach * reach) return;
-      score += enemy.type === "boss" ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
+      score += Game.isBossEnemy(enemy) ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
     });
     return score;
   };
@@ -1295,7 +1338,7 @@
       if (Game.isFlyingEnemy(enemy)) return;
       var info = C.enemies[enemy.type], dx = enemy.x - point.x, dy = enemy.y - point.y, reach = skill.radius + info.radius;
       if (dx * dx + dy * dy > reach * reach) return;
-      score += enemy.type === "boss" ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
+      score += Game.isBossEnemy(enemy) ? 1.6 : info.codexCategory === "elite" ? 1.3 : 1;
     });
     return score;
   };
@@ -1509,18 +1552,20 @@
     S.session.kills++;
     Game.gainXp(info.xp);
     Game.addText(enemy.x, enemy.y, "+" + info.xp + " XP", C.colors.yellow);
-    Game.burst(enemy.x, enemy.y, enemy.type === "boss" ? 24 : info.splitInto ? 14 : 8, info.splitInto ? C.colors.purple : info.accent);
+    Game.burst(enemy.x, enemy.y, Game.isBossEnemy(enemy) ? 24 : info.splitInto ? 14 : 8, info.splitInto ? C.colors.purple : info.accent);
     if (info.splitInto) Game.addText(enemy.x, enemy.y - 20, "分裂 ×" + info.splitCount, C.colors.purple);
     Game.queueSplitSpawns(enemy, info);
     S.enemies.splice(index, 1);
   };
   Game.damageEnemy = function (enemy, amount, bullet) {
+    if (Game.isRaging(enemy)) return false;
     if (Game.blockWithArmor(enemy)) { enemy.hitFlash = .08; Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, "格挡", C.colors.cyan); return; }
     var element = Game.getDamageElement(bullet);
     enemy.lastHitElement = element;
     var p = S.player || {}, attack = p.attackMultiplier === undefined ? 1 : p.attackMultiplier;
     var elementAttack = p.elementMultipliers && p.elementMultipliers[element] !== undefined ? p.elementMultipliers[element] : 1;
-    var actualDamage = amount * attack * elementAttack * Game.getElementDamageScale(enemy, element) * (enemy.damageTakenTimer > 0 ? enemy.damageTakenMultiplier || 1 : 1); enemy.hp -= actualDamage; enemy.hitFlash = .08; if (!bullet.noWeaponEffects && S.player.burn) Game.applyBurn(enemy, 10 + S.player.burn * 3, 1.5 + S.player.burn * .4); if (!bullet.noWeaponEffects && S.player.freeze && element === "ice") { Game.applySlow(enemy, 1.2 + S.player.freeze * .25, .58); Game.applyFreeze(enemy, C.rifleFreezeDuration); } if (!bullet.silentText) Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, bullet.critical ? Math.ceil(actualDamage) + " 暴击" : String(Math.ceil(actualDamage)), bullet.critical ? C.colors.yellow : C.colors.text);
+    var actualDamage = amount * attack * elementAttack * Game.getElementDamageScale(enemy, element) * Game.getDamageSourceScale(enemy, bullet) * (enemy.damageTakenTimer > 0 ? enemy.damageTakenMultiplier || 1 : 1); enemy.hp -= actualDamage; enemy.hitFlash = .08; Game.tryStartRage(enemy); if (!bullet.noWeaponEffects && S.player.burn) Game.applyBurn(enemy, 10 + S.player.burn * 3, 1.5 + S.player.burn * .4); if (!bullet.noWeaponEffects && S.player.freeze && element === "ice") { Game.applySlow(enemy, 1.2 + S.player.freeze * .25, .58); Game.applyFreeze(enemy, C.rifleFreezeDuration); } if (!bullet.silentText) Game.addText(enemy.x + U.rand(-5, 5), enemy.y - C.enemies[enemy.type].radius, bullet.critical ? Math.ceil(actualDamage) + " 暴击" : String(Math.ceil(actualDamage)), bullet.critical ? C.colors.yellow : C.colors.text);
+    return true;
   };
   Game.throwEnemyShot = function (enemy) {
     var info = C.enemies[enemy.type], ranged = info.ranged;
