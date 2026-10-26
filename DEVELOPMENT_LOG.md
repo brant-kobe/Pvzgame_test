@@ -527,3 +527,15 @@ git diff --check
 - 绘制新增 `drawBomberBomb`：炸弹举过头顶、引线火花随相位闪烁，低血时辉光变为更急促的红色，引爆后停止绘制炸弹并改画余烟；`vitalReach: 2.38` 同步抬高血条、硬控标记与图鉴顶部外扩，避免被炸弹遮挡。
 - 图鉴自动收录两种形态并展示「火系伤害 +50%」「硬控·免疫眩晕」「撞线爆炸 N 点 · 低血移速 ×1.5」；测试场自动出现两种单位，尚未编入任何正式关卡波次。
 - 验证：新增 `tmp/check-bomber.js`，覆盖数据、火系易伤、眩晕免疫、冻结 / 麻痹边界、半血阈值、低血加速、单次撞线爆炸、爆炸后近战、爆炸击杀城墙、图鉴、绘制与测试场；同步把既有图鉴计数断言更新为各 15 种、抗性表更新为 12 组 24 种。全量 **45 个 `check-*.js` 与 9 个 `audit-*.js` 全部通过**，`node --check` 与 `git diff --check` 通过；画面用 `tmp/trace-draw.js bomber` 回放生成 `tmp/bomber.png`。
+
+## 2026-10-26 · React 前端迁移
+
+- 新增 `frontend/` React + Vite 应用：`App.jsx` 负责页面路由，`features/` 覆盖首页、关卡选择、僵尸 / 技能图鉴、登录注册、账户中心、属性、角色、装备背包、装备强化、宝石、城墙、战斗 HUD、暂停、升级、结算与测试场工具。
+- 新增 `GameCanvas`、`engine.js`、`actions.js` 与 `ui-store.js`。React 只领取 10 Hz 轻量快照；敌人、弹体、粒子和技能实体继续保存在 Canvas 引擎中。React 命令统一经 `actions.js` 进入 `Game`。
+- 新增 `src/lifecycle.js`：`Game.mount({ canvas })` 初始化视图、输入、账户、精灵和 RAF；`Game.destroy()` 清理 RAF、定时器和监听，支持重复挂载 / 卸载。
+- `src/render.js` 改为通过 `initializeView` / `destroyView` 管理 Canvas，并在 `Game.uiMode === "react"` 时跳过旧 Canvas 菜单、HUD、暂停、升级和结算绘制。
+- `src/input.js` 改为通过 `initializeInput` / `destroyInput` 绑定与释放监听；React 模式下 Canvas 指针只保留手动瞄准。`state.js` 对旧 `start-hint` 节点增加空值保护。
+- Vite 生产构建输出 `frontend/dist/index.html` 与 `/app-assets/`；FastAPI 检测到构建产物时托管 React 首页，继续提供 `/assets`、`/pictures` 与 `/api`，构建缺失时回退旧版根 `index.html`。
+- 保留 `window.Game` 与旧 Canvas 菜单作为验收期兼容 / 离线回退路径；后续阶段再转为 ES Module 并移除旧菜单。
+- 修复 React 页面在宽屏浏览器中整体贴左的问题：`#root` 改为全屏 Flex 居中容器，游戏主体与测试场侧栏作为整体水平 / 垂直居中；重新执行生产构建通过。
+- 验证：`npm --prefix frontend run build` 通过；`src/*.js` 语法检查、`compileall server` 通过；`check_db.py` 153 项、`check_api.py` 176 项、`check-accounts.js` 164 项、`check-character.js` 245 项、`check-equipment.js` 108 项、`check-wall.js` 61 项、`check-gems.js` 285 项、`check-rewards.js` 65 项与 `check-bomber.js` 全部通过。`check_api.py` 已按构建存在 / 不存在分别验证 React 静态托管与旧版回退；新增 `tmp/check-react-ssr.mjs`，15 个 React 页面 / 浮层 SSR 与挂载、销毁、重复挂载共 18 项通过。

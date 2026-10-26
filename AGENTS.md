@@ -1,163 +1,200 @@
 # AGENTS.md
 
-面向后续开发者的协作说明。修改代码前请先阅读本文件，并保持与 `README.md`、`DEVELOPMENT_PLAN.md` 同步。
+面向后续开发者的协作说明。修改代码前先阅读本文件；功能或规则变更后同步更新 `README.md`、`DEVELOPMENT_PLAN.md` 和 `DEVELOPMENT_LOG.md`。
 
 ## 项目概览
 
 - 项目：`街区警戒线`，9:16 竖屏单手 Roguelite 僵尸生存射击游戏。
-- 技术：**前端**为原生 JavaScript + Canvas 2D，**无构建工具、零运行时依赖**；**后端**（账户与数据层）为 Python 3.13 + FastAPI + SQLAlchemy + SQLite，依赖集中在 `server/requirements.txt`。
-- 运行：账户模式用 `.venv\Scripts\python server\run.py` 启动后访问 `http://127.0.0.1:8787`。所有脚本通过 `index.html` 按固定顺序加载，共享单一 `window.Game` 命名空间。
+- 前端：React + Vite + Canvas 2D；旧引擎模块继续使用 `window.Game`，React 负责低频界面，Canvas 负责高频战斗表现。
+- 后端：Python 3.13 + FastAPI + SQLAlchemy + SQLite，依赖见 `server/requirements.txt`。
+- 生产启动：`npm --prefix frontend run build` 后执行 `.venv\Scripts\python server\run.py`，访问 `http://127.0.0.1:8787`。
+- React 开发：后端保持 `8787`，另启 `npm --prefix frontend run dev`，访问 `http://127.0.0.1:5173`。
+- 旧脚本由 `index.html` 按固定顺序加载；React 入口在 `frontend/src/game/engine.js` 中保持同一顺序。
 
 ## 运行与验证
 
-后端依赖已装在 `.venv`（见 `server/requirements.txt`）。改完代码后至少执行：
+改完代码后至少执行：
 
 ```powershell
+npm --prefix frontend run build
+node tmp\check-react-ssr.mjs
 Get-ChildItem src -Filter *.js | ForEach-Object { node --check $_.FullName }
 git diff --check
 ```
 
-- 改动 `server/` 时另需 `.venv\Scripts\python -m compileall server`（Python 语法校验）。
-- 账户相关改动必须跑以下冒烟脚本：`.venv\Scripts\python tmp\check_db.py`（数据层）、`.venv\Scripts\python tmp\check_api.py http://127.0.0.1:8787`（接口，需先起服务）、`node tmp\check-accounts.js`（前端账户层与界面几何）；角色 / 装备 / 背包界面改动另跑 `node tmp\check-character.js`，装备相关改动另跑 `node tmp\check-equipment.js`，城墙相关改动另跑 `node tmp\check-wall.js`，宝石相关改动另跑 `node tmp\check-gems.js`，奖励 / 结算相关改动另跑 `node tmp\check-rewards.js`；炸弹僵尸相关改动另跑 `node tmp\check-bomber.js`。
-- `node --check`：语法校验，必须全部通过。
-- `git diff --check`：空白字符校验。Windows 下出现的 `LF will be replaced by CRLF` 只是换行符提示，不是错误。
-- 逻辑回归优先用一次性 `node -e` 冒烟测试；需要模拟 Canvas 时，用 `Proxy` 桩实现 `document.getElementById("game").getContext("2d")`。
-- **画面前端不要依赖无头浏览器**：本机沙箱禁止程序打开命名管道，`msedge` / `chrome --headless` 一律在 `mojo platform_channel` 上失败（换 `--no-sandbox`、`--single-process` 都没用，不是页面问题）。要检查 Canvas 画面，用 `tmp/trace-draw.js` 把真实绘制指令录成 `tmp/draw-ops.json`，再用捆绑 Python 跑 `tmp/replay-draw.py` 回放成 PNG；`trace-draw.js` 的场景参数是 `enemies`（六种单位造型）、`status`（冻结 / 眩晕 / 麻痹 / 减速 / 燃烧 + 护甲 + 「燃」角标 / 燃烧 + 冻伤 10 层的两个角标 / 雷电僵尸的麻痹与电弧，共 8 个样本按 4×2 网格排布）、`wasp`（毒蜂的三种形态：悬停 / 飞行途中 / 精英，外加两枚毒刺与一枚篮球弹体并排对照造型）、`wheelchair`（满血 / 半血回血中 / 精英三种状态，外加一只普通僵尸作尺寸对照）、`frostBeast`（普通僵尸作尺寸对照，外加减速中 / 眩晕中 / 精英三只寒霜兽）、`lizard`（普通僵尸作尺寸对照，两只蜥蜴 + 减速中 / 冰冻中的蜥蜴 + 蜥蜴僵尸精英）、`bomber`（满血 / 低血 / 精英三种炸弹僵尸，外加已引爆并冒烟的形态与撞线爆炸）或 `codex <分类> <id> [页码]`、`account <menu|login|register|account|attributes|equipment|equipmentBag|wall|character|characterEquip|characterResource|characterGems|characterGemDetail|characterGemReplace|characterEquipReplace|characterGuest|gemsSynth|result>`。
-- 不要引入测试框架、构建器或运行时依赖，除非用户明确要求。
-- **调试中间产物统一放进 `tmp/`**：冒烟测试脚本、临时截图、日志、导出数据等一律写入工作区根目录的 `tmp/`，不要散落在项目根目录或 `src/`；该目录已在 `.gitignore` 中忽略，不会被提交。仅当临时产物需要长期保留或复用时，才正式收录进 `src/` 或文档。
+按改动范围追加验证：
 
-## 代码结构与职责
+```powershell
+# 后端改动
+.venv\Scripts\python -m compileall server
 
-脚本加载顺序（见 `index.html`）：`config → attributes → equipment → wall → gems → accounts → utils → state → combat → update → sprites → render → input → main`。
+# 账户 / 数据层
+.venv\Scripts\python tmp\check_db.py
+.venv\Scripts\python tmp\check_api.py http://127.0.0.1:8787
+node tmp\check-accounts.js
 
-| 文件 | 职责 | 备注 |
-| --- | --- | --- |
-| `src/config.js` | 全部静态数据：尺寸、精灵、颜色、敌人、词条、技能、波次、关卡、属性、账户与界面几何 | 调平衡/加内容优先改这里 |
-| `src/attributes.js` | 角色属性：基础值 + 外部修正，计算攻击/元素/冷却/防线/暴击/负面时间 | `Game.attributes`；`Game.reset` 时应用 |
-| `src/equipment.js` | 装备层：六部位缓存、背包、元素汇总、属性修正 | `Game.equipment`；只读账户装备数据 |
-| `src/wall.js` | 城墙层：钢材等级、稀土突破、防线血量修正 | `Game.wall`；只读账户城墙数据 |
-| `src/gems.js` | 宝石层：六部位 × 六槽位、背包词条、锁定、一键合成与属性修正 | `Game.gems`；只读账户宝石数据，`getBag()` 给角色界面用 |
-| `src/accounts.js` | 账户数据层：内存缓存 + 异步落库 | `Game.accounts`；render 只读缓存 |
-| `src/utils.js` | 数学、随机、绘制、文本工具 | `Game.utils` |
-| `src/state.js` | `Game.state` 单局状态、`Game.reset`、界面切换 | 只存数据，不写绘制逻辑 |
-| `src/combat.js` | 生成、瞄准、射击、碰撞、伤害、经验、词条、技能效果 | 战斗规则集中于此 |
-| `src/update.js` | 主循环推进、实体移动、波次、技能更新 | 只调用 combat 接口 |
-| `src/sprites.js` | PNG 加载，多路径回退 | `Game.sprites.images.*` |
-| `src/render.js` | 所有 Canvas 绘制、HUD、菜单、图鉴、结算 | 只读 `Game.state` |
-| `src/input.js` | 鼠标/触控/键盘，界面点击区域 | 调用 `state`/`combat` 的公开函数 |
-| `src/main.js` | 初始化与 `requestAnimationFrame` 主循环 | 精灵就绪后启动，含超时保护 |
+# 角色、装备、城墙、宝石、奖励
+node tmp\check-character.js
+node tmp\check-equipment.js
+node tmp\check-wall.js
+node tmp\check-gems.js
+node tmp\check-rewards.js
 
-**分层原则**：数据进 `config`，状态进 `state`，战斗规则进 `combat`/`update`，绘制只进 `render`，输入只进 `input`。不要把战斗逻辑写进 `render`。
+# 敌人机制
+node tmp\check-bomber.js
+node tmp\trace-boss.js
+```
 
-**后端分层**（`server/`）：`app/routers/` 只做请求解析与响应组装，数据访问一律经 SQLAlchemy 会话（不散落裸 SQL）；`app/security.py` 是密码哈希、会话签发与 `current_account` 依赖的唯一入口；`app/web.py` 负责静态托管，**只暴露 `index.html` 与 `src/`、`styles/`、`assets/`、`pictures/`**。
+- 逻辑回归优先写成一次性 `node -e`；Canvas 可用 `Proxy` 桩模拟 `getContext("2d")`。
+- 本机不能用无头浏览器做画面验证。用 `tmp/trace-draw.js` 记录绘制指令到 `tmp/draw-ops.json`，再用 `tmp/replay-draw.py` 回放 PNG。
+- `trace-draw.js` 支持 `enemies`、`status`、`wasp`、`wheelchair`、`frostBeast`、`lizard`、`bomber`、`codex ...`、`account ...` 等场景。
+- 调试脚本、日志、截图和导出数据一律放在 `tmp/`；需要长期复用的内容才移入 `src/` 或文档。
+- 不引入测试框架、Redux、TypeScript 或新的运行时依赖，除非用户明确要求；React/Vite 依赖只由 `frontend/package.json` 管理。
 
-## 命名与代码风格
+## 代码结构与边界
 
-- IIFE 模块包裹，严格模式：`(function (Game) { "use strict"; ... })(window.Game = window.Game || {});`
-- 使用 `var`、函数表达式、ES5 语法，保持与现有代码一致；不要混入 ES Module 或可选链等新语法。
-- 变量缩写约定：`C = Game.config`，`S = Game.state`，`U = Game.utils`。
-- 函数挂在 `Game.*` 上，供其它模块调用。
-- **不添加注释，除非用户明确要求。** 现有注释仅出现在配置和模块头部。
-- 文本、界面文案与文档使用简体中文。
+旧引擎加载顺序：`config → attributes → equipment → wall → gems → accounts → utils → state → combat → update → sprites → render → input → lifecycle`。React 入口在 `frontend/src/game/engine.js` 中同步这一顺序。
 
-## 关键机制约定
+| 文件 | 职责 |
+| --- | --- |
+| `src/config.js` | 静态数据、数值、界面几何、关卡与图鉴配置 |
+| `src/attributes.js` | 角色属性与外部修正的唯一计算层 |
+| `src/equipment.js` / `wall.js` / `gems.js` | 装备、城墙、宝石的只读数据层 |
+| `src/accounts.js` | 账户缓存、异步请求与持久化入口 |
+| `src/utils.js` / `state.js` | 工具函数、单局状态与界面切换 |
+| `src/combat.js` | 生成、瞄准、射击、碰撞、伤害、词条、技能效果 |
+| `src/update.js` | 主循环、实体推进、波次和技能更新 |
+| `src/sprites.js` / `render.js` | 资源加载与 Canvas 战斗绘制；React 模式下不绘制旧菜单 |
+| `src/input.js` / `lifecycle.js` | 输入绑定 / 清理、引擎挂载 / 卸载与动画循环 |
+| `frontend/src/game/ui-store.js` | 10 Hz 不可变 UI 快照与订阅 |
+| `frontend/src/game/actions.js` | React 进入游戏命令层的唯一入口 |
+| `frontend/src/game/GameCanvas.jsx` | Canvas 主机与引擎生命周期 |
+| `frontend/src/features/` | 首页、账户、关卡、图鉴、角色养成与战斗浮层 |
 
-- **瞄准**：自动索敌用预判 + 武器实际挂点（`Game.getWeaponMount`）；齐射时锁定一条真实弹道，用 `Game.getAimAngleForShot`，不要用两条弹道的角平分线。
-- **弹药**：每个基础攻击周期只扣 1 发；齐射/连发额外弹丸不额外扣弹；最后一发连发完成后才换弹。
-- **齐射**：相邻弹道角间隔为 `config.spreadAngle`（当前 0.12 弧度），步枪齐射、干冰弹齐射与压缩气刃齐射共用该值。压缩气刃的「气刃齐射」每级 +2 道，因此扇形比另外两个更宽。
-- **连发**：步枪沿同一锁定方向按短间隔依次发射，子弹前后排列而非横向并排；干冰弹、温压弹和压缩气刃每次连发重新索敌，并优先选择与本轮已发弹方向差异较大的目标。
-- **技能解锁**：温压弹、干冰弹、装甲车、空投轰炸、电磁穿刺、高能射线、旋风加农、冰雹发生器、燃油弹、压缩气刃、无人机、跃迁电子默认 `unlocked: false`，必须通过局内解锁词条获得；解锁时 `level = 1`，之后每个同技能专属词条 `level++`。未解锁时 `Game.updateSkills` 不得触发。
-- **伤害属性**：六种属性在 `config.elements`（physical / energy / electric / ice / fire / wind）。归属的**唯一来源**是 `config.coreSkills[].element`（**不要写进 `skillDefaults`**），步枪是唯一动态属性（`Game.getRifleElement`：normal → physical、ice → ice、fire → fire）。读取只用 `Game.getSkillElement(id)` / `Game.getRifleElement(p)` / `Game.getDamageElement(source)`；**属性必须在生成瞬间快照到实体上**（步枪子弹、温压弹 / 干冰弹 / 气刃 / 电磁落雷、分裂小冰弹、燃油弹与火场、热核区、电磁矩阵、装甲车、龙卷风、无人机、炸弹、电链都带 `element`），无人机气刃按释放技能记物理。所有伤害只走 `Game.damageEnemy`，它在**护甲格挡之后**写 `enemy.lastHitElement`（格挡不记录），**不要在别处改**，也不要给 `config.enemies` 加 `element` 字段。抗性写 `config.enemies[].damageTakenByElement`（`1.5` 弱点 / `.5` 减免），唯一读取入口 `Game.getElementDamageScale(enemy, element)`，只在 `damageEnemy` 里用，排在护甲之后、与致残的 `damageTakenMultiplier` 相乘；**燃烧每秒伤害不走属性倍率**。**来源减伤**写成 `config.enemies[].damageTakenBySource`（伤害来源 id → 受伤倍率），唯一读取入口 `Game.getDamageSourceScale(enemy, source)`（读 `source.damageSource`，缺省 1）：弹道来源 id 为 `rifle / dryIce / thermobaric / airBlade`（盾牌僵尸 `.1`、看守者 `.01`），非弹道来源（电链、炸弹、龙卷风、无人机、装甲车、电磁落雷、火场、射线等）不写表即全额；弹体在生成瞬间快照 `damageSource`（与 `element` 同一处），**新伤害来源要同步补 id**。与属性倍率、致残倍率相乘，排在护甲格挡之后。当前属性克制 **15 组 28 种形态**（新增：暴食者、看守者、深海巨兽三个首领各有独立抗性表），逐条见 `config.enemies` 与 README「属性克制」一节。展示只进技能图鉴（核心技能只有 `element`；`elementNote` 目前**只写在 `Game.getSkillGroups` 合成的步枪分组**上，`config.coreSkills[]` 里没有这个字段，核心技能在 `render.js` 的属性徽标处回退显示 `detail`）与僵尸图鉴的「属性克制」一行（倍率 0 写「免疫」），**HUD、伤害数字与特效都不显示属性**；核对 `tmp/check-elements.js` / `check-resist.js` / `check-new-bosses.js` 等。
-- **负面状态**：状态表 `config.statusEffects`（burn / frostbite / slow / knockback / pull / stun / freeze / paralysis / wound），每条带 `category`（`damage` / `soft` / `hard` / `debuff`）、`color`、头顶 `label`（晕 / 冻 / 麻 / 燃 / 霜）与按量缩放的 `scaleLabel`。**硬控（眩晕 / 冻结 / 麻痹）期间完全无法移动与攻击**：三者共用 `enemy.control` + `enemy.controlType`，统一走 `Game.applyHardControl`（只有不短于剩余时间的新控制才覆盖类型），`applyStun / applyFreeze / applyParalysis` 只是语义包装；`update.js` 每帧递减并在 `control > 0` 时 `continue`，任何「是否动不了」的判断都必须调 `Game.isHardControlled`，**不要读 `enemy.stun`**。软控：`Game.applySlow(enemy, duration, factor)` 只压速度；`Game.applyKnockback(enemy, sourceX, sourceY, distance)` 是瞬时推开、不写持续字段；`Game.applyPull(enemy, sourceX, sourceY, distance)` 是旋风加农每帧叠加的牵引，同样不写字段。伤害性：`Game.applyBurn`（`enemy.burn` / `burnDps`）与 `Game.applyFrostbite(enemy, source, dps, duration, maxStacks)`（按来源分层：`frostbiteStacks[source]` 各层剩余秒数、`frostbiteDps[source]` 单层伤害；`update.js` 先按 `Game.getFrostbiteDps(enemy)` 扣血再 `Game.tickFrostbite`，**不走属性倍率**）；削弱只有 `Game.applyWound`（两层 `wound` / `woundExtra`，`Game.getHealScale` 压制回血）。**所有负面状态都必须走这几个入口**：先查 `Game.getStatusScale`（免疫不生效、其余按倍率缩放；击退缩放推开距离、牵引缩放牵引速度）再调 `Game.blockWithArmor`，直接写 `enemy.slow` / `enemy.control` 会绕过护甲。
-- **状态抗性**：`statusImmune`（状态 id → `true`）与 `statusDurationScale`（倍率，`.5` 减半；对击退表示推开距离、对牵引表示牵引速度），**唯一读取入口 `Game.getStatusScale(enemy, status)`**；免疫判定排在 `Game.blockWithArmor` 之前，被免疫的状态不写字段也不扣装甲。当前组：火焰 / 火焰精英免疫燃烧与冻结（照样吃减速、眩晕与麻痹）；雪人 / 雪人精英冻结 ×0.5；雷电麻痹 ×0.5、雷电精英**免疫麻痹**；**寒霜兽与寒霜兽精英六条一起免疫**（燃烧、冻伤、冻结、麻痹、击退、牵引 —— 推不动也拉不动，但眩晕、减速、重伤照常）；盾牌 / 盾牌精英免疫眩晕与燃烧、麻痹 ×1.5、冻结 ×0.5；暴食者**所有负面状态 ×0.5** 且免疫击退；看守者免疫击退 / 眩晕 / 麻痹；电锯 / 电锯精英免疫眩晕与麻痹。**狂暴期间所有状态一律失效**：`Game.getStatusScale` 首行对 `Game.isRaging(enemy)` 返回 0，`damageEnemy` 也直接拒绝（见「狂暴冲锋」）。**冻结是硬控不是减速**：冰系来源显式调 `Game.applyFreeze`（干冰弹、冰雹砸击、冰霜爆炸、步枪冰冻子弹），共用 `enemy.control` / `controlType` 与 `Game.isHardControlled`，不要读 `enemy.stun`。冻伤按来源分层、每秒伤害不走属性倍率。**冻结回血**：`config.enemies[].freezeHealPerSecond`（当前只有深海巨兽 45）让被冻结的目标每秒回血，同样受 `Game.getHealScale` 重伤压制，实现只在 `update.js` 一处、不要在别处写。展示由 `enemyStatusTraits` 画「状态抗性」一行（分类前缀 + `scaleLabel`，倍率 0 写「免疫」），寒霜兽六条会排成 3 + 3 两行（516 / 528 / 540，仍在面板 548 内）；战场画硬控虚线环 + 晕 / 冻 / 麻标记（冻结加冰壳），燃烧与冻伤在血条右侧画「燃」「霜N」。核对：`tmp/check-new-bosses.js`（五个新单位与三个新首领）等
-- **释放距离**：每个技能与步枪都有交战距离，僵尸进入对应距离后该技能才会释放，避免技能越过尸潮打空气。距离定义在 `config.ranges`（相对**城墙攻击线** `wall.y - wall.height/2` 的像素数，当前 `far 480 / mid 320 / near 125`），归属写在 `config.coreSkills[].range`，步枪单独用 `config.rifleRange`。判定入口是 `Game.isSkillRangeEngaged(id)`（`id` 为技能 id 或 `"rifle"`），`Game.getRangeLine(rangeName)` 给出该距离在画面上的 y 阈值；未配置 `range` 的技能回退为 `far`。所有释放点（`Game.fire`、`updateSkills` 的每个分支、`launchArmoredCars` 等）都必须经过它，且**冷却就绪后要停在 0 原地等待**，不能空转进冷却。索敌函数（`updateAim`、`getSkillTargetAngle`、`getElectromagneticTargets`、`getHighEnergyBeamAngle`、`getBombardmentTarget`、`getHailTargetPoint`、`getFuelBombTarget`、`getChainLightningStart`）同样只考虑进入距离内的敌人，保证「谁触发就打谁」；已经释放的技能弹丸与实体（含龙卷风、无人机与电链的后续弹射）不受距离限制。
-- **距离范围预览**：战斗/测试场中长按技能槽（`config.skillRangeHoldMs`，默认 350 毫秒）会在战场上画出该技能的距离范围 —— 顶边为 `Game.getSkillRangeLine` 的阈值线，向下填充到城墙攻击线，使用 `coreSkills[].color` 淡色叠加，并附「技能名 · 档位 距离 / 范围内 N 只」标签；松手立即消失。状态只存在 `S.skillRangePreview`（技能 id 或 `null`），由 `Game.reset` 与 `Game.pause` 清空，`Game.drawRangePreview` 也只允许 `playing` / `testArena` 两种界面绘制，且会校验该技能确实在 `player.skillOrder` 中。长按判定在 `input.js`（`holdSkillSlot` / `releaseSkillSlot`，`pointerup`、`pointercancel`、`pointerleave`、`blur` 都会释放），技能槽矩形必须与 `config.skillSlots` 和 `drawSkillSlots` 保持一致。
-- **技能槽上限**：`config.maxSkillSlots`（当前 4）限制每局能装备的核心技能数量，已获得技能按先后顺序记录在 `player.skillOrder`。**只进不出**：满槽后不提供卸下或替换机制，`Game.unlockSkill` 在满槽且未传 `force` 时直接返回 `false` 且不修改任何已有技能，任何新技能都不得顶替旧技能。`Game.unlockSkill(id, force)` 是唯一解锁入口：`Game.chooseTrait` 与其它常规流程**不得传 `force`**，只有测试场的 `Game.testUnlockSkill` 传 `true` 以便单独调试任意技能。`Game.rollTraits` 必须在 `Game.canUnlockSkill()` 为假时过滤掉全部 `unlocksSkill` 词条，否则会绕过上限；已装备技能的强化词条与步枪词条不受影响。新增技能时同时更新 `config.coreSkills` 的 `icon` 与 `color`，HUD 技能槽只从这两处取图标和颜色。
-- **词条池**：`Game.rollTraits` 会过滤已满级词条、未满足解锁条件的技能词条、已解锁技能的解锁词条、以及满槽时全部新技能解锁词条（见「技能槽上限」）；三张卡不出现重复。
-- **护甲**：护甲僵尸的 `armorCharges` 同时抵挡伤害与负面状态，唯一扣层入口是 `Game.blockWithArmor`。**所有伤害必须走 `Game.damageEnemy`，所有负面状态必须走 `Game.applySlow`（减速）/ `Game.applyKnockback`（击退）/ `Game.applyPull`（牵引）/ `Game.applyStun` · `Game.applyFreeze` · `Game.applyParalysis`（三种硬控）/ `Game.applyBurn` · `Game.applyFrostbite`（伤害性）/ `Game.applyWound`（重伤）** —— 这几个函数会先查 `Game.getStatusScale`（免疫直接不生效、其余按倍率缩放，见「负面状态」）再调用 `blockWithArmor`，直接在别处写 `enemy.slow = …` 或 `enemy.control = …` 会绕过护甲。**护甲同样会挡下击退与牵引**：同一瞬间的命中先被护甲格挡并写下 `armorStamp`，紧随其后的 `Game.applyKnockback` 会在这段 `armorBlockWindow` 窗口内被一并挡下，所以破甲前的护甲僵尸推不动（空投轰炸、温压弹与压缩气刃的击退都无效）。**牵引走同一条判定**：龙卷风每帧调用 `Game.applyPull`，所以护甲僵尸在风圈里既拉不动、装甲还会被按 `armorBlockWindow` 每 0.12 秒吃掉 1 层（12 层约 1.4 秒剥光），破甲后立刻恢复牵引。`config.armorBlockWindow`（0.12 秒）限制同一瞬间的连续命中只扣 1 层，防止热核区、电磁矩阵这类每帧结算的持续伤害在一帧内剥光护甲；被格挡时在敌人头顶显示「格挡」并保留 `armorFlash` 闪光。护甲耗尽时显示「护甲破碎」，之后与普通僵尸无异。
-- **远程僵尸**：`config.enemies[].ranged`（篮球、毒蜂及其精英与傀儡）声明远程行为：`standoff` 是僵尸中心距**城墙攻击线**的停步距离，`interval`/`projectileSpeed`/`projectileRadius`/`damage` 描述投掷物，另有两个可选展示字段 `shot`（投掷物造型，缺省 `basketball`，毒蜂写 `stinger`，由 `Game.drawEnemyShots` 按 `shot.type` 分流）与 `action`（图鉴里的动词，缺省「投掷」，毒蜂写「针刺」）。**`ranged` 的优先级高于 `flying`**：`Game.getEnemyHoldY` 只要看到 `ranged` 就直接返回 `城墙攻击线 − standoff`，不再叠加 `radius` 与 `flyingHover`，所以「飞行 + 远程」的毒蜂与篮球僵尸停在同一档距离上。近战、远程与飞行的停步位置**统一由 `Game.getEnemyHoldY(info)` 给出**（有 `ranged` 就停步投掷、没有就贴脸啃墙），`update.js` 与 `updateAim` / `getSkillTargetAngle` / `bombardmentCoverage` / `getBombardmentTarget` 的落点预判都必须调它，不要再在各处重算 `城墙攻击线 − radius − 3`。投掷物是独立实体 `S.enemyShots`，由 `Game.throwEnemyShot` 生成、`Game.updateEnemyShots` 推进，落到攻击线时扣城墙耐久并可在打空时直接判 `defeat`（命中特效配色取 `shot.accent`，不要写死篮球色）；`Game.reset` 会清空。远程僵尸不会贴到城墙，靠城墙前的减速/近战无法拦住它。
-- **飞行单位**：`config.enemies[].flying`（飞鸟 / 飞鸟精英 / 毒蜂 / 毒蜂精英）声明飞行；机制收敛为 `Game.canHitEnemy(source, enemy)` —— 来源带 `groundOnly` 而目标 `flying` 时返回 `false`。**贴地技能写在 `config.skillDefaults[id].groundOnly`**（当前只剩装甲车与燃油弹），并复制到实体（车辆、燃油弹与火场）；贴地伤害来源必须先过它：`updateArmoredCars`（碾压伤害、减速、眩晕整段跳过）、`updateFuelBombs` / `explodeFuelPool`（灼烧、点燃、减速、结束爆炸一起跳过）；贴地索敌也要跳过飞行单位：`getFuelBombTarget` / `getFuelBombCoverage` 的落点与覆盖分都不能算飞鸟。**旋风加农已改为非贴地**（`skillDefaults.whirlwindCannon` 没有 `groundOnly`）：`updateWhirlwinds` 不再过滤飞行单位，飞鸟与毒蜂会被卷入、掉血并被牵引，`getWhirlwindChaseTarget` 也把它们算进候选与聚集分。空中与瞬时伤害照常命中（步枪、干冰弹、温压弹、冰雹、气刃、无人机、电链、空投爆炸、电磁穿刺、高能射线），地面区域照旧结算。**无人机是「会飞的技能实体」**：不带 `groundOnly`，既撞得到飞鸟，`getDroneChaseTarget` 也把飞鸟算进候选与聚集分 —— 它与龙卷风一样不做贴地过滤。飞行单位停步位置抬高 `config.flyingHover`（16 像素），攻击节奏由 `config.enemies[].attackInterval` 决定（缺省 1 秒，飞鸟 0.7 / 精英 0.6，首领走 0.65 分支）。渲染 `Game.drawEnemies(singleEnemy, layer)` 分 `"ground"` / `"air"` 两层，`Game.draw` 先地面、再装甲车与龙卷风、最后飞行单位；近战飞鸟用 `drawBirdBody`（纯色深黑 + 浅色描边，不要渐变），远程毒蜂用 `drawWaspBody`（半透明双翼 + 黄黑条纹 + 强调色尾针），两者画完即 `return`；寒霜兽是第一个完整自定义地面身体（`drawFrostBeast`），蜥蜴僵尸用 `drawLizardBody`（宽头 + 四足外张 + 长尾，同样画完即 `return`），血条与硬控标记按 `radius × 1.6` 抬高，图鉴外扩在 `drawCodexEnemyModel` 按 `flying` 切换（轮椅僵尸下外扩 1.22）。
-- **精英/首领规则**：每种小怪都要有对应精英（体型大、数值不弱于基础）；精英固定第 4 波每局 1 只（可配置 `elitePool` 随机选一种）。首领是独立类别、每局 1 只，在本波常规小怪投放到 `floor(plan.total / 2)` 时登场，`total` 只计常规名额、首领额外 +1。首领血条画在首领头顶，显示当前分段与剩余条数；`config.bossHealth.bars` 只影响显示，顶部 HUD 画 `BOSS · 首领名`。第 1 关首领在第 5 波，第 2～20 关在第 7 波（正式波次**只能用 `boss`（尸潮领主）**；暴食者 / 看守者 / 深海巨兽是**仅图鉴与测试场**的首领，判断一律用 `Game.isBossEnemy(enemy)`（读 `codexCategory === "boss"`），**不要写 `enemy.type === "boss"`** —— 波次生成、测试场居中、电链起点加权、空投/射线/龙卷风/冰雹/燃油的索敌权重、头顶血条、精英光环、头顶血条、攻击节奏 0.65 秒分支都已按它收口）。**各关阵容与精英接入见 `DEVELOPMENT_PLAN.md` 第 6 节与 `config.levels`**；新特殊僵尸要把类型判断同步加到 `render.js`，并在精英通用配色前先判断其特殊造型。
-- **弹道阻挡与狂暴冲锋**：`config.enemies[].blocksProjectiles: true`（当前寒霜兽与其精英）让步枪与四类弹道技能（温压弹、干冰弹及其分裂小冰弹、压缩气刃）命中即止：判定入口是 `Game.blocksProjectile(enemy)`，在 `update.js` 的步枪弹循环与 `updateSkillProjectiles` 的两个分支里命中后立即移除弹体（温压弹改为当场爆炸、不再穿透），只影响穿透次数、不影响伤害本身；新增弹道来源时必须把这条判定接进去。`config.enemies[].rageHpRatio / rageDuration / rageSpeedMultiplier / rageRecoveryDuration`（当前电锯僵尸与其精英）声明**阈值狂暴冲锋**：伤害结算、燃烧与冻伤掉血在 `update.js` 里调 `Game.tryStartRage(enemy)`，跌破阈值即触发（只触发一次），狂暴期间 `Game.isRaging` 为真 —— `damageEnemy` 直接拒绝、`getStatusScale` 全部返回 0、移速乘 `rageSpeedMultiplier`、不攻击；狂暴结束进入 `rageRecoveryTimer` 停顿（期间也不动不攻击），之后恢复行动。**不要在别处读 `enemy.rageTimer` 判断狂暴**，统一走 `Game.isRaging` / `Game.tryStartRage` / `Game.getEnemyMoveSpeed`（它是移动速度的唯一入口：硬控 0、减速乘 `slowFactor`、狂暴乘倍率，原先散落的 `info.speed × …` 计算都已收进它）。核对：`tmp/check-new-bosses.js`
-- **炸弹僵尸与撞线爆炸**：`bomber` / `bomberElite` 使用可选字段 `speedBoostBelowHpRatio`、`speedBoostMultiplier`、`wallExplosionDamage`、`wallExplosionRadius` 与渲染专用 `vitalReach`。低血加速唯一走 `Game.getEnemySpeedMultiplier` / `Game.getEnemyMoveSpeed`，移动、步枪与技能预判、空投覆盖和落点预判都必须使用它，不要在任一处重新硬编码 `hp < maxHp * .5`。`spawnEnemy` 写入 `wallExplosionTriggered: false`；到达 `Game.getEnemyHoldY(info)` 后先检查该标记，首次触发时直接扣城墙 `wallExplosionDamage`、压入 `bomberBlast` 爆炸、飘伤害字并设置普通攻击间隔，之后同一局不再爆炸，只按普通近战节奏啃墙。眩晕免疫由 `statusImmune.stun` 走既有 `Game.getStatusScale`，冻结与麻痹仍可控制；火系 ×1.5 只在 `damageTakenByElement` 配置。绘制在通用僵尸身体上追加 `drawBomberBomb`（举过头顶的炸弹、引线火花、低血更急促的红色辉光，引爆后改画余烟），血条与状态标记通过 `info.vitalReach` 抬高，图鉴顶部外扩也读取它。核对 `tmp/check-bomber.js`。
-- **分裂与回血**：`Game.killEnemy` 依据 `info.splitInto/splitCount` 把子体写入 `S.pendingSpawns`，由 `Game.flushPendingSpawns` 在 `update` 末尾统一生成，避免遍历中修改 `S.enemies`；带 `regenPerSecond` 的敌人在燃烧结算后按 `dt` 回血且不超过最大生命（**可选 `regenBelowHpRatio` 把回血变成「有触发条件 + 有上限」**：写 `.5` 表示「只在生命低于 50% 时开始回血、并且最多回到 50%」，缺省时行为与以前完全一致 —— 分裂僵尸精英与精英幼体照旧一路回满），**回血量还要乘 `Game.getHealScale(enemy)`** —— 压缩气刃留下的重伤会把回血压到 50%，「禁疗」叠加的 1 秒内压到 10%，两层计时（`enemy.wound` / `enemy.woundExtra`）在 `update.js` 里按 `dt` 递减。不要在别处直接改 `enemy.hp` 来回血，否则会绕过重伤。展示侧：血条外侧的脉动绿环只在**当前确实在回血**时画（同样按 `regenBelowHpRatio` 判断，所以轮椅僵尸只在半血以下才亮），轮椅僵尸还把绿环扩大到 `radius × 1.72` 以免被车轮与车身挡住；僵尸图鉴详情页的机制行写作「生命回复 N 点 / 秒 · 仅在生命低于 50% 时生效」（没有阈值的单位写「持续生效，受重伤压制」）。核对脚本是 `tmp/check-wheelchair.js`。
-- **傀儡与阈值召唤**：`summonHpRatios` + `summonType` 声明「掉到阈值放一只」：`update.js` 在燃烧 / 冻伤后、硬控 `continue` 前比对 `enemy.hp <= enemy.maxHp × summonHpRatios[enemy.summons]`，命中压进 `S.pendingSpawns`（与分裂同管线）、`enemy.summons++`、弹「傀儡脱离」，子体两侧交替落位；**每阈值只触发一次**、**冻结 / 眩晕照常触发**，阈值读 `enemy.maxHp`，自动跟随 `hpScale`。子体 `silent: true` / `codexHidden: true`。渲染 `drawPuppetRig` 叠在身上，`drawPuppetDollBody` 画完即 `return`；投掷物 `shot: "doll"`。图鉴新增「召唤」行（`enemySummonTraits`）。核对 `tmp/check-puppet.js`。
-- **HUD 技能槽**：右上枪械图标下方是**单列 4 格**技能槽，几何集中在 `config.skillSlots`（`offsetX/y/width/height/gap`，当前 4 格共 48×21 的纵向步进），`drawHud` 通过 `drawSkillSlots` 按 `player.skillOrder` 从上往下填充：已有技能显示 `coreSkills` 里的图标 + 颜色 + `Lv.N`，剩余槽位显示空槽。技能槽只展示状态，不需要玩家点击触发。技能处于 `active` 存续期时，槽位进度条改为显示剩余时间（白色）；其余情况显示冷却就绪进度。改动 `skillSlots` 或 `maxSkillSlots` 时必须同步 `input.js` 中由同一份配置推导的技能槽点击穿透范围。
-- **空投轰炸**：解锁后自动索敌，冷却 11 秒；技能就绪且场上有敌人时，优先选择预计爆炸时覆盖敌人更多的区域并从屏幕上方投弹；落地后造成范围伤害、击退并按词条施加中心增伤、眩晕或持续灼烧减速（击退走 `Game.applyKnockback`，与其它负面状态一样会被护甲格挡）；热核区域不继承步枪效果，状态在 `Game.reset` 时清理。爆炸几何全在 `config.skillDefaults.bombardment`：`blastRadius`（当前 45）同时决定伤害判定、爆炸特效半径、击退衰减与热核区半径，`centerRadius`（当前 17，按同一比例缩放）决定「精准打击」的中心增伤范围 —— 两者必须同步缩放，否则精准打击会变相覆盖整个爆炸区。**多枚炸弹必须分别选定落点**：`Game.launchBombardment` 逐枚调用 `Game.getBombardmentTarget(skill, delay, avoid)`，按 `bombDropDelay × 序号` 预判爆炸时刻位置并传入已选落点 `avoid`。索敌分两步：先取未过滤的最优候选 `main`，再在「与全部已选落点距离 ≥ `max(56, blastRadius × bombMinSeparationRatio)`」的候选里取最优 `alternative`；只有 `alternative.score ≥ main.score × bombAltScoreRatio` 时才改打另一个敌群，否则调用 `Game.spreadBombTarget` 把落点推离已选落点，并在推离后按 1/2 递减偏移量重试，直到落点仍能覆盖到敌人为止（最多 4 次）。这样既不会两枚炸弹完全重叠，也不会把后续炸弹丢到没有敌人的空地上。不要退回「一次索敌、多枚共用同一 `targetX/targetY`」的写法。
-- **装甲车**：解锁时立即派出首辆，之后按 6.3 秒独立冷却从城墙前随机车道派车；车辆是独立实体而非技能弹丸。基础值为 `config.skillDefaults.armoredCar` 的 `carWidth 42 / carLength 80 / speed 100 / hitInterval .12 / damage 4`，一只静止僵尸停在车下会被碾压 9 段。同一辆车对单个目标按 `hitInterval` 多段造成低伤害，首次接触只判定一次眩晕。**`hitInterval` 必须 ≥ `config.armorBlockWindow`**：`Game.blockWithArmor` 对不足该窗口的命中照样格挡、但不再扣层（防持续伤害一帧剥光的规则），间隔一旦低于窗口，多出来的段既打不伤也不剥甲，对护甲僵尸反而更弱 —— 0.12 秒在 60fps 下实际 0.1333 秒，刚好每段扣层；调值前先用 `tmp/check-armored-car.js` 量一遍。碾压减速不会覆盖更强的减速（`slowFactor` 取更强的一档）；车辆伤害不得继承步枪燃烧 / 冰冻词条，击杀仍走 `Game.killEnemy`。车身只由 `carWidth/carLength` 与 `sizeLevel`（「重型底盘」每级 +15%）决定，绘制全部按 `car.width/length` 相对计算，改尺寸不需要动 `render.js`。硬控期间敌人不移动、不攻击城墙，但仍可受伤、燃烧、冻伤和回血；车辆和状态在 `Game.reset` 时清空。
-- **旋风加农**：龙卷风是独立实体（`S.tornadoes`），边界由 `Game.getWhirlwindField` 依 `S.wall` 与风圈半径给出。移动风按 `Game.getWhirlwindChaseTarget` 打分选点（`clusterWeight × 聚集权重 − 距离 × 0.35 + threatWeight × 靠墙程度`，权重首领 1.6／精英 1.3／小怪 1），贴近其他风的位置扣分，目标点带 `clusterJitter` 偏移；`Game.pickWhirlwindTarget` 只在无可行目标时随机游走。重新选点只由 `retargetTimer` 驱动（追击 0.5–1.2 秒、游走 1.1–2.1 秒），到达后原地停留，不要每帧重算。命中按 `hitInterval` 分段；**牵引走 `Game.applyPull(enemy, tornado.x, tornado.y, pullSpeed * dt * 距离衰减)`**（`config.statusEffects.pull`，软控），不打断移动 / 攻击 / 眩晕，但先过 `Game.getStatusScale(enemy, "pull")` 与 `Game.blockWithArmor` —— **不要在 `updateWhirlwinds` 里直接改 `enemy.x/y`**。**它不是贴地技能**（`skillDefaults` 里没有 `groundOnly`）：飞鸟与毒蜂会被卷入、掉血并被牵引，`getWhirlwindChaseTarget` 也把它们算进候选与聚集分。冷却只在持续时间结束后才开始（**冰雹 / 燃油弹 / 压缩气刃 / 无人机 / 跃迁电子已改为释放瞬间计时，不要照抄本技能**）：存续期记在 `skill.active/activeElapsed/duration`，结束帧写 `skill.fireTimer`。`stormGather` 在移动风自然到期时按原位置生成静止大龙卷风（双重旋风各留一个）。伤害用 `noWeaponEffects` 与 `silentText`，击杀仍走 `Game.killEnemy`；`Game.reset` 清空。
-- **冰雹发生器**：中距离技能，落点由 `Game.getHailTargetPoint(skill, taken)` 从进入中距离线的敌人里选：每个敌人作候选圆心，`Game.getHailCoverage` 数覆盖权重（首领 1.6／精英 1.3／小怪 1），再按 `penalty = 距离 / 半径` 对已选落点扣分，因此连环冰雹优先换敌群；全场只有一团时落点沿横向推开 `半径 × 0.55` 再夹回画面 —— 不要退回「多团共用同一落点」。冰雹是独立实体（`S.hailStorms`），`Game.updateHailStorms` 每 `hitInterval` 0.25 秒对半径内敌人结算伤害、`Game.applySlow`（×0.35、1.1 秒）并 `Game.applyFreeze` **冻结 0.6 秒**（硬控）；护甲会先吃掉前几次砸击。「冰雹冻伤」让每次砸击 `Game.applyFrostbite(..., 1 层)`（每层 1.2 点/秒、5 秒、最多 10 层，数值在 `Game.spawnHailStorm` 快照）。**冰雹不是贴地技能**（不设 `groundOnly`），飞鸟照常被砸中并冻结。冷却**在释放瞬间计时**：成功即写 `skill.fireTimer = skill.fireInterval`（6 秒），`skill.active/activeElapsed/duration` 只用于 HUD 与防重叠，不要退回「结束帧才写」。`explodeOnEnd` 到期调用 `Game.explodeHailStorm`，对 `explosionRadius` 内敌人 `Game.applyFreeze` **1.5 秒**、**不造成伤害**，特效走 `hailFrost`。`Game.drawHailStorms` 画冰雾圆盘 + 虚线外圈 + 16 条冰锥，在装甲车与龙卷风之后、飞行单位之前；`Game.reset` / `testClearBuild` / `testClearEnemies` 都要清空 `S.hailStorms`。
-- **燃油弹**：近距离**贴地**技能，分飞行段 `S.fuelShells`（`Game.spawnFuelShell` 从 `Game.getSkillMuzzle()` 起飞，落地 `Game.spawnFuelPool`）与灼烧段 `S.fuelPools`（每 `hitInterval` 0.25 秒结算伤害 + `Game.applyBurn`，`slowFactor < 1` 时再 `Game.applySlow`）。落点由 `Game.getFuelBombTarget(skill, taken, ignoreRange)` 选：候选与覆盖分**都必须排除飞鸟**，未传 `ignoreRange` 时再按 `Game.getSkillRangeLine("fuelBomb")`（near）过滤；去重规则同冰雹（`penalty = 距离 / 半径` + 推开 `半径 × 0.55`）。**「燃油+1」的额外弹必须传 `ignoreRange = true`**，这是「无距离限制」的唯一实现；`extraDamageScale`（0.7）在生成弹体时乘到灼烧、点燃与爆炸上，爆炸伤害 = `damage × explosionDamageScale`，不要另设爆炸伤害字段。火场时长 `duration`，存续期 = 飞行 + 灼烧，写在 `skill.activeDuration`（技能槽白色进度条读它）；冷却**释放瞬间计时**（成功写 `skill.fireTimer`，5 秒）。结束时 `Game.explodeFuelPool` 按 `explosionRadius`（半径 × 1.35）爆炸并再次点燃，特效走 `fuelBlast`。`Game.drawFuelPools` / `drawFuelShells`；火场画在冰雹之后、飞行单位之前，弹体画在城墙与幻形之后。`Game.reset` / `testClearBuild` / `testClearEnemies` 清空 `S.fuelShells` 与 `S.fuelPools`。
-- **压缩气刃**：中距离技能，走**弹丸管线**（`launchSkillVolley` 的 `airBlade` 分支生成，`updateSkillProjectiles` 通用 `else` 结算伤害、击退与状态），齐射 / 连发语义与干冰弹一致：齐射沿 `config.spreadAngle` 共用一次冷却，连发每轮 `getSkillTargetAngle(type, origin, preferredAwayFrom)` 重新索敌并优先换方向，`(type === "dryIce" || type === "airBlade") && skill.spread > 0` 的中心补偿不能只留一个。基础 `projectileSpeed 400 / radius 9 / damage 34 / knockback 26 / pierce 3`：命中 `projectile.pierce--`，归零后下一击移除，所以一道气刃最多「本体 + 穿透 3」= 4 个目标；「气刃穿透」每级 +3。冷却 4.5 秒，走通用分支，`updateSkills` 结束时写 `skill.fireTimer = skill.fireInterval`（没有 `active` 存续期）。**重伤**：`Game.applyWound(enemy, duration, factor, extraDuration, extraFactor)` 与 `applySlow` 同构（先 `blockWithArmor`），分两层写 `enemy.wound` / `enemy.woundExtra`，`Game.getHealScale(enemy)` 把两层系数相加夹在 0～1；「禁疗」只加 `woundExtraDuration 1 / woundExtraFactor .4`，**不要**改基础 5 秒 50%。命中顺序必须是 `damageEnemy` → `applyKnockback` → `applyWound`。不是贴地技能，飞鸟照常被穿透与重伤。渲染：绿色月牙（`#2fdc81`）+ 重伤绿色虚线弧（`setLineDash` 后用 `ctx.restore()` 还原）。
-- **无人机**：中距离技能，实体在 `S.drones`（`Game.spawnDrone` / `moveDrone` / `updateDrones`），**不要复用 `S.tornadoes`**。选点沿用 `Game.getWhirlwindEnemyWeight` 与同一套打分（`clusterWeight × 聚集度 − 距离 × 0.35 + threatWeight × 靠墙程度`），重选 0.45–1.1 秒（无目标时 1.1–2.1 秒随机游走），范围复用 `Game.getWhirlwindField(radius)`。**它不贴地**：`skillDefaults.drone` 不写 `groundOnly`，`Game.getDroneChaseTarget` 用 `Game.canHitEnemy` 过滤，飞鸟既会被撞也计入聚集分 —— 不要照抄龙卷风的过滤。机身半径由 `Game.getDroneRadius(skill) = radius × (1 + sizeLevel × 0.3)` 唯一给出，**撞击判定与绘制都用它**。数值在 `spawnDrone` 时快照到实体，`updateDrones` 只读实体字段；撞击按 `hitInterval` 0.35 秒分段（`contacts` + `hitTimer`，击杀同步 splice），伤害走 `damageEnemy` 并带 `noWeaponEffects` / `silentText`，眩晕走 `Game.applyStun`。「无人机气刃」不新增弹道：`Game.spawnDroneBlade` 压入 `type: "airBlade"` 弹体，穿透 0、目标写进 `hitEnemies`，**只有伤害**（击退与重伤字段全 0），带 `noWeaponEffects`，伤害值读 `S.player.skills.airBlade`。冷却 9 秒、**释放瞬间计时**，`active/activeElapsed` 只用于技能槽剩余时间条与防重叠。`Game.drawDrones` 画在火场之后、`drawEnemies(null, "air")` 之前；`Game.reset` / `testClearBuild` / `testClearEnemies` 清空 `S.drones`。
-- **跃迁电子**：中距离技能，唯一一条**电链**，伤害只落在节点上。整条链在释放瞬间算完（`Game.launchChainLightning` → `Game.buildChainLightning`）：起点由 `Game.getChainLightningStart` 从进入中距离线的敌人里按最靠城墙（`y + radius × .35`，首领 +10）选出，之后每跳由 `Game.getChainLightningJumpTarget` 取**最近且未被本条链打过**的目标；链实体压进 `S.skillProjectiles`（`type: "chainLightning"`，`nodes` / `next` / `jumpDelay` / `life`，伤害与麻痹在释放瞬间快照），`Game.updateChainLightnings` 按 `jumpDelay` 0.08 秒调 `resolveChainLightningNode`：目标已阵亡则跳过，否则 `damageEnemy` → `applyBurn`（仅「跃迁燃烧」）→ `applyParalysis`（硬控），并压入 `chainSpark` 特效；节点全部结算后链再存活 0.32 秒用于淡出。**路径上的僵尸不掉血不是特判**：它们必然离上一节点更近，会被优先选为节点 —— 不要补沿线伤害。基础 `damage 26 / bounces 5（连起点 6 个目标）/ stunDuration 1.2 / fireInterval 7`，弹射**不受交战距离限制**。「复合电子」多跑一轮，用共享 `taken` 避开第一条链打过的目标；「多重越导」只加 `bounces`，节点数 = `1 + bounces`。冷却在释放瞬间写 `fireTimer`，没有 `active` 存续期。渲染在 `drawBullets` 提前分支：`drawChainBolt` 用纯直线（`moveTo` + `lineTo`，不要折点 / 曲线）描紫色辉光 + 亮紫主链 + 近白芯线，只画到 `next`；`chainSpark` 在 `drawEffects` 单独处理。飞鸟照常命中；护甲先格挡该跳的伤害与麻痹。
-- **测试场调试面板**：它是 `index.html` 里的 DOM 面板（`#test-controls`），不是 Canvas 绘制；`render.js` 的 `Game.updateTestControls`（由 `Game.draw` 每帧调用）负责显隐、文案与高亮，`input.js` 负责事件绑定。僵尸选择器由 `buildTestEnemyPicker` 读 `config.enemies[].codexCategory` 生成「小怪 / 精英 / 首领」三行按钮（含 `codexHidden` 的派生单位），每行是 `overflow-x: auto` + `flex-wrap: nowrap` 的**横向可拖动列表**（`input.js` 做 pointer 委托拖动并吞掉那次 `click`，触摸走原生滚动）；按钮只在首次刷新时建一次 DOM，之后只切换 `.active`，点击走事件委托并调用 `Game.setTestEnemy(id)`。新增敌人会自动出现在对应行，不需要改 HTML。
-- **战斗平衡**：初始步枪伤害为 28；普通、快跑、分裂僵尸及其幼体、精英和首领的基础移动速度均较原配置降低约 20%。
-- **角色属性**：`config.attributes.base` 是唯一基础值来源（攻击力 100、六系各 100、防线 1000、暴击 8%、暴伤 150%、冷却缩减 0%、负面时间 100%），`config.attributes.caps` 只限冷却 50%、暴击 95%、暴伤 500%、负面时间 200%；**攻击力与六系攻击力是无上限数值**，伤害按 `数值 / 100` 换算。`src/attributes.js` 的 `Game.attributes` 负责合并修正、生成最终属性，并在 `Game.reset` 时 `applyPlayer` / `applyWall`（`applyWall` 只在开局调用，测试场 9999 随后覆盖）。所有伤害在 `Game.damageEnemy` 里按「护甲格挡 → 攻击倍率 → 元素倍率 → 敌人属性抗性 → 致残易伤」结算；燃烧 / 冻伤在 `Game.applyBurn` / `applyFrostbite` 里按攻击力与火 / 冰倍率缩放 DPS，时长乘负面时间；硬控、减速与重伤写入时长时同样乘负面时间。**冷却缩减只作用于技能冷却**，由 `Game.tickSkillCooldown` 递减 `fireTimer`，不动 `activeElapsed`；**暴击只作用于步枪**。界面入口是角色界面右上角「属性」（只读页，底部只有「返回角色」）。**装备、城墙、宝石是三个独立修正来源**：`Game.equipment` 用 `setModifiers({ attack, elementAttack })`（`clear()` → `clearModifiers()`），`Game.wall` 用独立的 `setWallHpBonus()`（**不得写进 `setModifiers`**，否则登出装备会清掉城墙加成），`Game.gems` 只把 `slotIndex !== null` 的宝石汇总为 `setGemModifiers()`（`clear()` → `clearGemModifiers()`）。**不要绕过这三层直接改 `Game.attributes`**，也不要重复成长公式。核对：`tmp/check-attributes.js`。
-- **经验与通关判定**：升级门槛由 `config.xpBase / xpMultiplier / xpBonus` 决定（当前 15 XP 起、`floor(当前门槛 × 1.13 + 6)` 递推），唯一实现在 `Game.nextXpAfter`，`Game.gainXp` 与 `Game.grantMaxLevel` 都必须调用它，不要在两处各写一份公式；升到 `config.maxLevel`（当前 15）累计需要 1384 XP，HUD 经验条按当前 `nextXp` 显示进度。升到 `config.maxLevel` **不立即胜利**，只切到 `LV.MAX` 并提示清剿；胜利必须同时满足「满级 + 末波全部计划投放完成 + 首领波的首领已登场并被击杀 + `S.enemies` 与 `S.pendingSpawns` 均为空」，统一由 `update.js` 在 `flushPendingSpawns` 之后调用 `Game.winLevel`（`winLevel` 自带 `screen === "playing"` 守卫，失败优先）。末波清场但经验不足时先 `Game.grantMaxLevel` 补足满级再结算，避免无怪可打。`Game.gainXp` 每次只弹一次三选一（靠 `break` 退出升级循环），盈余经验留到下一次 `gainXp` 继续结算；若 `Game.rollTraits` 返回空数组则跳过升级界面直接继续升级，避免词条池被榨干后卡在无卡可选的三选一界面 —— 当前池子可选取次数远多于 14 次升级，但改动词条上限时要重新核算。
-- **关卡波次与解锁**：波次在 `config.levels[].waves`，`Game.reset` 存入 `S.session.waves`，逻辑与 HUD 只读它；**当前 20 关全部 `unlocked: true`**，`Game.isLevelUnlocked` 的前置判定保留，把某一关改回 `false` 就会重新要求通关前一关；首页「开始战斗」用 `Game.getContinueLevel`（最早一关未通关，全通回落到最后一关），**不要再用「最后一关」语义**。每关 `xpScale` / `hpScale` 只缩放经验与敌人生命（`Math.round(info.hp × hpScale × waveHpScale)`，不动伤害 / 速度 / 经验 / 回血）；`Game.getWaveHpScale` 读单波 `hpScale`（缺省 1，测试场 1）。各关 `hpScale`、逐波阶梯、投放量、预算倍数与阵容见 `config.levels`、`DEVELOPMENT_PLAN.md` 第 6 节与 `tmp/check-hp-budget.js`；新增关卡按「投放数量 × 单只等效血量 × 倍率」把相对上一关的预算控制在 1.1～1.4（第 8 关 0.96 是书面例外）。远程僵尸直接写进 `mix`，不需要额外代码。关卡列表几何集中在 `config.levelSelect`，行矩形唯一由 `Game.getLevelRowRect(index)` 给出（按 `backY` 夹行高），`drawLevelSelect` 与 `input.js` 必须共用；每行只画序号 + 名称 + `?` + 行尾状态，序号 `level.id < 10` 补零。`?` 的矩形由 `Game.getLevelInfoRect(index)` 给出，点击写入 `S.levelPreview` 并弹出简介；面板内容由 `Game.getLevelRoster(levelId)` 从 `mix` / `elite` / `elitePool` / `boss` 现场推导（小怪 / 精英 / 首领三组，按首次登场去重并附覆盖波次），面板几何与逐行 y 由 `Game.getLevelBriefPanel()` / `Game.getLevelBriefLayout()` 唯一给出；`×` 或面板外只收起，**被面板盖住的关卡行绝不能开战**，`brief` ≤ 40 字（约 23 字/行、两行内）。`S.levelPreview` 由 `Game.openLevelPreview` / `closeLevelPreview` 读写，`openLevelSelect` / `backToMenu` / `reset` 清空。
-- **关卡奖励**：每局结束（胜利 / 失败 / 撤离）按「本局最高等级 + 是否通关」**只发最高一档**，由 `server/app/rewards.py` 唯一实现：未升级 1 金币；Lv.2 发 10 金币 + 1 颗灰宝石；Lv.5 发 100 金币、1–3 钢材、30% 概率 1 稀土、2–5 颗宝石（灰 50% / 绿 30% / 蓝 15% / 紫 5%）、3–10 张随机部位图纸、1 件随机装备；通关再加 200 金币与 1 件装备（共 300 金币、2 件装备）。失败与撤离按已到达档次发奖，每局可重复、不按关卡缩放。服务端在 `rewards.grant` 里用**一次 `db.commit()`** 提交资源 / 宝石 / 装备背包项（其后的 `equipment.ensure_rows` 另有一条提交补齐六部位装备行），客户端只展示 `POST /api/me/rewards` 的返回值（`Game.accounts.claimRewards` → `Game.settleRewards` 写 `S.session.reward`），**不要在客户端重算掉落**。宝石进 `gems` 背包、装备进 `equipment_bag`；未登录 / 离线 / 测试场不结算。结算页 `Game.drawResult` 三态（`victory` / `defeat` / `retreat`），奖励行、档位名与 `config.resultUI` 几何；暂停菜单「退出关卡」走 `Game.quitLevel`（进入 `retreat`）。验证：`tmp/check-rewards.js`、`tmp/check_db.py`、`tmp/check_api.py`。
-- **装备背包**：掉落装备只有「部位 + 元素」，**强化等级属于部位**（`equipment.level` 只由升级接口改）；换装走 `equipment.equip` 交换两行 `element_id`，**不得改 `level`**；`equipment_bag` 无唯一约束，同部位同元素重复全部保留，不自动折算、没有出售 / 分解。前端 `Game.equipment.applyBag` / `getBag` / `getBagPart` / `getBagRows` 只做展示与聚合，背包不参与属性；入口「角色 → 装备强化 → 装备背包」（`Game.openEquipmentBag`，几何 `config.equipmentBagUI`），角色界面背包「装备」页签也能逐件换装，战斗内不能换装。验证：`tmp/check-equipment.js`、`tmp/check-rewards.js`。
-- **角色界面（角色大厅）**：首页底部左侧「角色」按钮（`config.menu.buttons.character`）进入 `character` 界面，**它是装备 / 宝石 / 背包的唯一入口**。上半部是 2 列 × 3 行、边长 `config.characterUI.slotGrid.size` 的装备格（`drawEquipmentGlyph` 画部位图标 + 部位名 + 元素圆点 + `Lv.N`，右侧信息列显示元素系与攻击 / 元素加成），点方块打开该部位的宝石浮层（`S.characterGems`）：六行槽位固定从上往下排（空槽也占一行），行内显示品质、词条、锁标与「卸下」，点「关闭」或浮层外收起。中部「装备强化 / 城墙强化」分别进入 `equipment` / `wall`，这两处的「返回」回到 `character`。下半部是背包，三个页签 `宝石 / 装备 / 资源`（`S.characterTab`）统一用方格：宝石与装备都是 **6 列 × 2 行、每页 12 格**（`gemCells` / `equipCells`，同起点），格子外是 `‹ n/m ›` 分页；宝石格画品质三角、词条与数值、部位短名与 14 × 14 锁按钮，点格子先开宝石详情（`S.characterGemDetail`，点「镶嵌」才落位：同词条只能一颗，更高品质直替原槽位），点锁按钮锁定；装备格画部位短名、图标与元素名，当前已装备那件用绿框 + 绿点标出，点格子开装备详情（`S.characterEquipItem`，部位 · 元素、`Lv.N`、状态与「替换」「关闭」，已装备的按钮置灰且不发请求）；资源页签用 `Game.getCharacterResources()`（过滤数量为 0）驱动 6 列 × 2 行 44×44 方格，格内画图标与数量，全为 0 时只显示提示。宝石图标统一是 `drawGemIcon` 的按品质着色三角形。**独立的宝石界面已移除**（旧 `config.gemUI` 与 `Game.drawGemsPanel` 等接口全删），宝石操作的守卫从 `screen === "gems"` 改为 `"character"`。**属性面板保留为只读页**（入口是角色界面右上角「属性」，底部只有「返回角色」）。全部矩形由 `Game.getCharacter*Rect()` 给出，`drawCharacter` / `drawCharacterGems` 与 `input.js` 共用；`drawHud` 在 `character` 界面跳过。验证：`tmp/check-character.js`、`tmp/check-gems.js`，画面用 `tmp/trace-draw.js account character|characterEquip|characterResource|characterGems|characterGuest|gemsSynth` 回放核对。
+- 数据进 `config`，状态进 `state`，战斗规则进 `combat` / `update`，Canvas 绘制只进 `render`，输入只进 `input`。
+- React 不直接修改 `Game.state`，不持有敌人、弹体、粒子或技能实体数组；所有操作经 `frontend/src/game/actions.js`。
+- `ui-store.js` 只发布低频界面快照；HUD 高频变化以 10 Hz 更新，战斗循环仍由 Canvas 引擎驱动。
+- React 浮层打开时必须阻止事件穿透到 Canvas；战场瞄准和坐标相关操作继续留在 Canvas。
+- `render.js` 只读状态和账户缓存，不发起请求、不修改战斗状态。
+- 后端路由只做请求解析与响应组装；数据访问统一经 SQLAlchemy 会话，不写散落裸 SQL。
 
-## 常见扩展路径
+## 命名与风格
 
-**新增敌人**
-1. 在 `config.enemies` 增加条目，设置 `hp/speed/radius/damage/xp/color/accent`。
-2. 必须带 `codexCategory`（`minion`/`elite`/`boss`）、`description`、`tactics`，图鉴会自动收录。
-3. 精英需同时规划对应小怪；如需新行为，在 `combat.spawnEnemy` 或 `update.js` 补充。
-4. 特殊机制尽量用可选配置字段表达而不是给 `spawnEnemy`/`update` 加类型判断：护甲用 `armorCharges`（配合 `Game.blockWithArmor`），属性抗性 / 弱点用 `damageTakenByElement`（配合 `Game.getElementDamageScale`，见「伤害属性」），来源减伤用 `damageTakenBySource`（弹道来源 `rifle / dryIce / thermobaric / airBlade`，配合 `Game.getDamageSourceScale`，见「伤害属性」），状态免疫 / 时长缩放用 `statusImmune` / `statusDurationScale`（配合 `Game.getStatusScale`，见「状态抗性」），远程用 `ranged`（`standoff`/`interval`/`projectileSpeed`/`projectileRadius`/`damage`，外加可选的 `shot` 造型与 `action` 图鉴动词，配合 `Game.throwEnemyShot`；远程与飞行可以同时写，此时停步距离只由 `standoff` 决定；`shot` 若是新造型，要在 `Game.drawEnemyShots` 里补对应分支），飞行用 `flying`（配合 `Game.canHitEnemy` 与 `skillDefaults[].groundOnly`），攻击节奏用 `attackInterval`（缺省 1 秒），条件回血用 `regenPerSecond` 配可选的 `regenBelowHpRatio`（见「分裂与回血」），低血加速用 `speedBoostBelowHpRatio` / `speedBoostMultiplier`（配合 `Game.getEnemyMoveSpeed`，见「炸弹僵尸与撞线爆炸」），撞线爆炸用 `wallExplosionDamage` / `wallExplosionRadius`（同一标记只触发一次），弹道阻挡用 `blocksProjectiles`、阈值狂暴用 `rageHpRatio / rageDuration / rageSpeedMultiplier / rageRecoveryDuration`、冻结回血用 `freezeHealPerSecond`（三者都见「弹道阻挡与狂暴冲锋」，核对 `tmp/check-new-bosses.js`）。`render.js` 的 `drawEnemies` 里再按 `enemy.type` 补外观分支：**只想换掉某个部件**（护甲、轮椅、火舌、积雪、电弧、盾牌、电锯、头顶炸弹）就在僵尸身体那条路径里加绘制，**要换成完全不同的生物**（飞鸟、毒蜂、寒霜兽、蜥蜴僵尸、傀儡、暴食者毛毛虫、看守者装甲武士、深海巨兽章鱼）则在 `drawEnemies` 里画完就 `return`，别走僵尸的躯干与双腿。飞行单位还要交给 `"air"` 层绘制；`drawCodexEnemyModel` 的上下外扩默认是 1.43 / 1.05，**新造型的几何**要么落在这个范围内（寒霜兽最宽 1.44 × 半径、最下 1.05 × 半径），要么像飞鸟（1.56 / 1.46）、轮椅僵尸（下外扩 1.22）与炸弹僵尸（`vitalReach` 顶部外扩 2.38）那样在 `drawCodexEnemyModel` 里加一条分支，否则图鉴里会被裁掉翅膀、车轮或脚踏。
+- 旧引擎保持 IIFE 严格模式：`(function (Game) { "use strict"; ... })(window.Game = window.Game || {});`，使用 `var`、函数表达式和 ES5 语法。
+- 新 React 代码使用 ES Module + JSX，可通过 Vite 构建；不要为旧引擎引入可选链等新语法。
+- 常用缩写：旧引擎用 `C = Game.config`、`S = Game.state`、`U = Game.utils`；React 通过 `ui-store` 快照和 `actions` 命令访问。
+- 公共游戏函数挂到 `Game.*`；React 组件不要复制战斗规则。
+- 不添加注释，除非用户明确要求；现有注释只保留模块头部和配置注释。
+- 文案使用简体中文。提交信息使用单段纯文本。
 
-**新增步枪词条**
-1. 在 `config.traits` 增加条目：`id/name/rarity/max/icon/desc/detail/apply(p)`。
-2. `apply` 直接修改玩家对象 `p`；升级池与技能图鉴自动收录。
-3. `id` 与 `player.traits[id]` 计数器绑定，改名时注意兼容。
+## 必须保持的核心规则
 
-**新增关卡**
-1. 在 `config.js` 顶部加一份 `levelNWaves`（每波 `total`/`interval`/`mix`，可选 `elite`/`elitePool`/`boss`/`hpScale`），再往 `config.levels` 追加 `{ id, name, subtitle, unlocked:false, hpScale, xpScale, waves }`。
-2. 新关卡是否默认锁定由数据决定：写 `unlocked: true` 直接开放（当前 20 关都是这样），写 `false` 则 `Game.isLevelUnlocked` 会要求第 `id-1` 关已完成，无需额外代码；经验缩放 `xpScale` 越小升级越慢，按该关数量与血量校准，另可参考 `tmp/check-hp-budget.js`（看「对比上一关」一列，控制在 1.1～1.4，全员廉价单位 + 机制免疫的阵容可以按文档里的例外降到 0.9 左右）与 `tmp/check-xp.js`（满级应落在倒数两波内）。
-3. 关卡选择列表会按 `config.levels` 自动多出一行，行高由 `Game.getLevelRowRect` 在 `backY` 之内自适应，通常不需要改几何；行数变多后每行会变矮，注意序号、名称与 `?` 圆钮是否还放得下。新关卡必须写 `brief`（40 字以内）：列表行只画序号与名称，副标题与阵容都在简介面板里，阵容由 `Game.getLevelRoster` 从波次现场推导，不需要手写。
+### 伤害与属性
 
-**新增核心技能**
-1. 在 `config.skillDefaults` 加技能数值（含 `unlocked:false, level:0`），`coreSkills` 加图鉴条目（同时给 `range` 档位与 `element` 伤害属性，见「伤害属性」）。
-2. 在 `config.skillTraits` 加一个 `unlocksSkill:true` 的解锁词条，以及若干 `skillId` 关联的强化词条。
-3. 在 `combat.js` 实现发射/碰撞/效果，`update.js` 接入 `updateSkills`/弹丸推进，`render.js` 绘制弹丸与效果。
-4. 在 `combat.updateSkills` 保持 `if (!skill.unlocked) return;` 守卫。
+- 六种属性为 `physical / energy / electric / ice / fire / wind`。
+- 技能属性唯一来源是 `config.coreSkills[].element`，不要写进 `skillDefaults`；步枪属性只通过 `Game.getRifleElement` 获取。
+- 所有伤害必须走 `Game.damageEnemy`。生成弹体或伤害实体时快照 `element` 与 `damageSource`。
+- 属性抗性读 `damageTakenByElement`，来源减伤读 `damageTakenBySource`，唯一入口分别是 `Game.getElementDamageScale` 和 `Game.getDamageSourceScale`，且只在 `damageEnemy` 中使用。
+- 结算顺序：护甲格挡 → 属性 / 来源 / 致伤倍率 → 扣血；护甲格挡时不记录 `lastHitElement`。
+- 燃烧与冻伤的持续伤害不走属性倍率。
+- 属性与抗性信息只显示在技能 / 僵尸图鉴，不显示在 HUD、伤害数字或特效中。
 
-**调整人物/步枪/幻形**
-- 精灵尺寸、锚点、挂载点都在 `config.sprites`；`muzzleDistance` 应等于枪口到握把锚点的距离；幻形位置改 `config.skillRing.offsetX/offsetY`。
-- 替换人物：更新 `assets/man.png` 后生成透明裁切图（`player-man.png`/`player-body.png`），再按比例调锚点。
+### 状态、护甲与移动
 
-**调整分辨率与战场高度**
-- 逻辑宽度固定为 `config.width`（360）；`config.height` 是基准值，`render.js` 的 `resizeCanvas` 会按画布显示比例把逻辑高度重算为 `width * 显示高 / 显示宽` 并夹在 640–960，再按设备像素比设置实际分辨率。
-- 画布铺满浏览器高度由 `styles/main.css` 的 `#game-shell` 控制；改变战场长度会影响城墙/人物位置，它们由 `Game.layoutWorld` 依据 `C.height` 重排（城墙 `C.height-125`、人物 `C.height-58`），窗口缩放时会自动调用。
-- 顶部战斗 HUD 使用紧凑布局，关卡标题显示为“关卡数字 关卡名称”（如“3 封锁工厂”），位于 `drawHud`；改动 HUD 尺寸时同步更新 `input.js` 中暂停按钮等点击区。
+- 状态统一使用 `config.statusEffects`：伤害性 `burn / frostbite`，软控 `slow / knockback / pull`，硬控 `stun / freeze / paralysis`，削弱 `wound`。
+- 所有负面状态必须走公开入口：`applySlow`、`applyKnockback`、`applyPull`、`applyStun`、`applyFreeze`、`applyParalysis`、`applyBurn`、`applyFrostbite`、`applyWound`；不要直接写 `enemy.slow`、`enemy.control` 或直接改坐标。
+- 硬控共用 `enemy.control` / `enemy.controlType`，判断统一用 `Game.isHardControlled`，不要读取 `enemy.stun`。
+- 免疫与时长缩放统一走 `Game.getStatusScale(enemy, status)`；免疫判定先于护甲消耗。击退倍率表示距离，牵引倍率表示速度。
+- 护甲层数只能由 `Game.blockWithArmor` 扣除，同时抵挡伤害、状态、击退和牵引。
+- 敌人移动速度只能通过 `Game.getEnemyMoveSpeed` 计算；它统一处理硬控、减速、狂暴和低血加速。
+- 回血必须乘 `Game.getHealScale`，以正确应用重伤和禁疗。
+- 狂暴期间 `Game.getStatusScale` 返回 0，`Game.damageEnemy` 拒绝伤害；统一用 `Game.isRaging` / `Game.tryStartRage` 判断与触发。
 
-## 账户与数据层约定
+### 瞄准、技能与词条
 
-- **账户数据的唯一来源是 SQLite**（`data/blockline.db`，由后端持有）。前端**不得再直接读写 `localStorage` 存进度**；旧键 `blockline.progress` 只在「导入本机旧进度」时作为一次性读取来源，导入后不再写入。
-- **未登录 / 离线时的进度只存在于本次会话**：通关会写进 `Game.accounts.state.sessionProgress`，关卡列表照常显示「已通关」，但刷新页面即失效，顶栏与结算界面都明确提示「成绩未保存」。它只是展示层的会话缓存，**不得写进 `localStorage`**；一旦登录成功（`applyMe`）立即丢弃，不与账户进度混用。
-- **前端访问账户数据的唯一入口是 `Game.accounts`**（`src/accounts.js`）：它维护内存缓存（账户信息、关卡进度、资源、装备、城墙、各自的 busy / 错误提示）与 `loading / ready / guest / offline` 四态，对外提供**同步**的 `getProgress()` / `getEquipment()` / `getEquipmentBag()` / `getWall()` 与**异步**的 `login` / `register` / `logout` / `markLevelComplete` / `addResource` / `applyResources` / `claimRewards` / `upgradeEquipment` / `equipEquipment` / `upgradeWall` / `deleteAccount`。`applyMe` 会把 `equipment` / `equipmentBag` 交给 `Game.equipment.applyAccount` / `applyBag`、把 `wall` 交给 `Game.wall.applyAccount`、把 `gems` 交给 `Game.gems.applyAccount`；`forgetAccount` 会同时清空全部；401 时必须回到 guest 并清空装备、背包、宝石与城墙加成。
-- **渲染层只读缓存**：`render.js` 继续通过 `Game.isLevelCompleted` / `Game.getProgress` 同步取数，不得直接发起请求，也不得写账户状态；`state.js` 保留这四个公开函数名作为薄封装，因此关卡列表、`Game.getContinueLevel` 与 `Game.winLevel` 的调用点不需要改动。
-- **后端结构固定为应用工厂 + 路由分层**：`create_app()` 统一装配，`server/app/routers/` 下按 `health` / `auth` / `me` 分文件；数据库访问只经 SQLAlchemy 会话，不散落裸 SQL 字符串。依赖固定写进 `server/requirements.txt`（`fastapi` / `uvicorn[standard]` / `sqlalchemy`），**不引入 passlib、bcrypt、JWT 等额外依赖** —— 密码用标准库 `hashlib.pbkdf2_hmac`，会话用数据库表 + HttpOnly Cookie。
-- **鉴权约定**：密码存 `pbkdf2_sha256$200000$<salt_hex>$<hash_hex>`，校验用 `hmac.compare_digest`；会话 token 由 `secrets.token_urlsafe(32)` 生成，**库里只存 `sha256(token)`**，以 `HttpOnly; SameSite=Strict; Path=/` Cookie 下发，默认 30 天、剩余不足 15 天时滑动续期，启动时清理过期会话。写接口只收 `POST` / `DELETE` 并校验同源，用户名唯一且 `COLLATE NOCASE`。
-- **只绑定 `127.0.0.1`**，不监听局域网；静态挂载只暴露 `index.html` 与 `src/`、`styles/`、`assets/`、`pictures/`，**`server/` 与 `data/` 绝不能通过 HTTP 访问**。
-- **校验规则有两份，且前端只覆盖长度**：前端 `config.accounts`（`usernameMin/usernameMax/passwordMin/passwordMax`）由 `input.js` 的 `submitAccountDialog` 读出，**只做长度即时提示**，**没有字符集校验** —— 用户名非法字符（如 `名字!`）不会在前端拦下，会提交到后端才被 `invalid_username` 拒绝。`server/app/config.py`（`USERNAME_PATTERN` 正则 + `PASSWORD_MIN/MAX`）才是权威校验。改动其中一份必须同步另一份，并写进本次变更说明；要给前端补字符集提示，先在 `config.accounts` 增加与 `USERNAME_PATTERN` 对应的字段再在 `submitAccountDialog` 里校验，不要只改一处。
-- **断连行为**：`file://` 打开或 `/api/health` 失败时进入 `offline` 态 —— 顶栏提示「未连接数据库 · 本局进度不会保存」、账户界面禁用、战斗与测试场照常可玩但**不保存成绩**；未登录（`guest`）同样不保存。**任何情况下都不允许静默丢档**。
-- **装备数据层**：`equipment` 表以 `(account_id, slot_id)` 为联合主键，存 `element_id` 与 `level`；首次 `/api/me` 或升级时由 `server/app/equipment.py` 的 `ensure_rows` 补齐六个部位，六系洗牌分配且之后固定。升级接口 `POST /api/me/equipment/upgrade` 由服务端校验部位、满级与材料，扣金币 + 部位专属图纸；**金币与图纸价格只在服务端配置**，返回的 `nextCost` 是前端唯一价格来源。装备上限 100，攻击/元素每级 +5，图纸 10 起每级 +10、金币 80 起每级 +40。`equipment_bag` 存掉落装备的 `slot_id` / `element_id`（无等级、无唯一约束），`POST /api/me/equipment/equip` 只交换元素；资源产出现在由关卡奖励接入。完整设计见 `DEVELOPMENT_PLAN.md` 第 12 节与第 14 节。
-- **城墙数据层**：`wall_state` 表以 `account_id` 为主键，存 `level`（1～200）与 `breakthroughs`（0～19）；首次 `/api/me` 时由 `server/app/wall.py` 的 `ensure_state` 创建 Lv.1。`POST /api/me/wall/upgrade` 的 `action` 为 `level` 时按 `20 × 当前等级` 扣钢材升级；为 `breakthrough` 时只允许在 10/20/…/190 节点、扣 `2 × 已突破次数 + 2` 稀土，**等级与血量都不变**。Lv.200 封顶。`hpBonus = (level - 1) × 200`，基础 1000；测试场 9999 不被覆盖。资源 `steel` / `rareEarth` 已进入 `RESOURCE_IDS`。**关于 `schema_version`（当前 6）**：它**只是 `schema_version` 表里的一行记录，不是版本化迁移机制** —— `_seed_schema_version` 只在「该版本号这一行不存在」时插入，**不会更新已有行、也不会按版本号执行任何迁移**；真正的兼容处理只有 `database.create_all()` 补建缺失的表，和 `_migrate_gem_lock` 这一条 `ALTER TABLE gems ADD COLUMN locked`（目前唯一的显式迁移）。新增字段时要**手写**对应的 `ALTER TABLE` 或在 `create_all()` 后补逻辑，改 `SCHEMA_VERSION` 本身不会迁移任何表；`/api/health` 会把它作为 `schemaVersion` 返回。
-- **宝石数据层**：`gems` 表存 `id` / `account_id` / `part_id` / `quality`（0～4）/ `affix_id` / `slot_index`（0～5 或 `NULL`）/ `locked`，唯一约束 `(account_id, part_id, slot_index)` 允许背包存在多个 `NULL`。旧库启动时 `database.create_all()` 用 `ALTER TABLE` 补 `locked` 列（默认 0），`SCHEMA_VERSION` 当前为 **6**。`server/app/gems.py` 负责词条数值、随机词条、首空槽镶嵌、卸下、锁定、五合一、一键批量合成与调试注入；`POST /api/me/gems/socket`、`/unsocket`、`/synthesize`、`/synthesize-all`、`/lock` 与 `/grant` 均返回完整宝石列表。**宝石不自动合成**：`/synthesize-all` 按「部位 × 品质」把未镶嵌、未锁定的宝石每 5 颗组成一组，一次合成全部组并各产出一颗高一档宝石，同一批新产出不会被再次消耗；`locked` 为 1 的宝石显示 🔒、不进入候选、不被消耗，仍可镶嵌。`/synthesize` 单组接口保留给旧测试 / 内部使用。普通等级与品质绑定部位，红色封顶；宝石由关卡奖励产出（灰～紫），红色仍需五合一；`/grant` 保留作调试注入。
+- 自动索敌必须考虑预判、真实武器挂点和敌人停步位置；齐射锁一条真实弹道，使用 `Game.getAimAngleForShot`。
+- 每个基础攻击周期只扣 1 发；齐射与连发额外弹丸不额外扣弹，最后一发连发完成后才换弹。
+- 技能释放前必须通过 `Game.isSkillRangeEngaged(id)`；冷却就绪但未进入射程时保持在 0，不得空转进入冷却。索敌函数也必须过滤未进入距离的敌人。
+- 技能槽上限由 `config.maxSkillSlots` 控制，当前为 4；已获得技能记录在 `player.skillOrder`，只进不出。
+- `Game.unlockSkill` 是唯一解锁入口；常规流程不得传 `force`，测试场才允许强制解锁。
+- `Game.rollTraits` 必须过滤满级、未满足条件、已解锁和满槽时的解锁词条；三张卡不能重复。
+- `skillSlots` 几何必须同时被 `drawSkillSlots` 和 `input.js` 使用。长按预览状态只存于 `S.skillRangePreview`，暂停与重置时清空。
 
+### 敌人与关卡
 
-## 文档同步要求
+- 新敌人优先用 `config.enemies` 的可选字段表达机制，避免在 `spawnEnemy` / `update` 中堆 `type` 判断。
+- 近战、远程、飞行的停步位置统一由 `Game.getEnemyHoldY(info)` 给出；远程字段是 `ranged`，飞行字段是 `flying`。
+- 贴地技能在 `skillDefaults[].groundOnly` 标记，命中判断统一走 `Game.canHitEnemy`；当前贴地技能只有装甲车和燃油弹。
+- 每种小怪都应有对应精英；精英固定在第 4 波，每局 1 只，可通过 `elitePool` 随机选择。
+- 首领判断统一使用 `Game.isBossEnemy(enemy)`，不要写死 `enemy.type === "boss"`。正式波次的首领目前是尸潮领主，其他首领只进图鉴与测试场。
+- 分裂与阈值召唤一律写入 `S.pendingSpawns`，由 `Game.flushPendingSpawns` 在更新末尾统一生成，不能在遍历中直接改 `S.enemies`。
+- 寒霜兽类单位的 `blocksProjectiles` 会让弹道命中即止；狂暴冲锋、冻结回血、撞线爆炸等机制分别使用既有配置字段和入口，不要复制实现。
+- 炸弹僵尸的低血加速、撞线爆炸和 `wallExplosionTriggered` 规则详见 `config.enemies` 与 README；任何移动或落点预判都必须使用统一速度接口。
+- 新增特殊外观时同步更新 `render.js` 的类型判断；完整自定义身体绘制完成后尽早 `return`，不要继续叠加通用僵尸部件。
+- 关卡与波次只配置在 `config.levels` / `waves` 中；`Game.reset` 后逻辑与 HUD 只读 `S.session.waves`。
 
-- 功能或规则变更后，必须同步更新 `README.md`（当前已实现、限制）和 `DEVELOPMENT_PLAN.md`（系统设计、验收记录）。
-- 提交信息使用单段纯文本。
+## 常见扩展流程
+
+### 新增敌人
+
+1. 在 `config.enemies` 添加基础字段：`hp/speed/radius/damage/xp/color/accent`。
+2. 添加 `codexCategory`（`minion` / `elite` / `boss`）、`description`、`tactics`。
+3. 精英同步配置对应小怪和数值；特殊机制优先使用可选字段。
+4. 在 `render.js` 补充外观分支，并按需更新测试场、图鉴与检查脚本。
+
+### 新增核心技能
+
+1. 在 `config.skillDefaults` 添加数值，在 `coreSkills` 添加图鉴条目、`range` 与 `element`。
+2. 在 `config.skillTraits` 添加 `unlocksSkill: true` 的解锁词条和强化词条。
+3. 在 `combat.js` 实现生成 / 命中 / 效果，在 `update.js` 接入推进，在 `render.js` 补充绘制。
+4. 保持未解锁时不触发，并为伤害实体快照 `element` 与 `damageSource`。
+
+### 新增关卡
+
+1. 在 `config.js` 定义波次数组，每波包含 `total`、`interval`、`mix`，按需添加 `elite`、`elitePool`、`boss`、`hpScale`。
+2. 向 `config.levels` 添加关卡数据，必填 `brief`，并校准 `hpScale` / `xpScale`。
+3. 用 `tmp/check-level*.js`、`tmp/check-hp-budget.js`、`tmp/check-xp.js` 和关卡简介回放验证。
+
+### 调整画面与输入
+
+- 尺寸、锚点和挂点集中在 `config.sprites` / `config.skillRing`；改人物 PNG 后同步更新裁切图和锚点。
+- 逻辑宽度固定为 `config.width`；`resizeCanvas` 会按显示比例重算高度并夹在合理范围。
+- 所有点击区域必须与绘制共用同一套几何函数；修改 HUD、弹窗、技能槽或列表布局时同步检查 `input.js`。
+- 画面改动必须通过 `trace-draw.js` + `replay-draw.py` 真实回放核对。
+
+## 账户与后端
+
+- SQLite 是账户、进度和资源数据的唯一来源；前端不得再用 `localStorage` 保存进度。
+- 未登录或离线时只允许使用会话内缓存，刷新即失效，且必须明确提示“成绩未保存”。
+- 前端访问账户数据的唯一入口是 `Game.accounts`；渲染层同步读取缓存，不直接发请求。
+- 密码只存 PBKDF2-SHA256 哈希；会话 token 只存 SHA-256 摘要，使用 HttpOnly + SameSite=Strict Cookie。
+- 服务只绑定 `127.0.0.1`；静态服务只暴露 `index.html`、`src/`、`styles/`、`assets/`、`pictures/`，绝不能暴露 `server/` 或 `data/`。
+- `schema_version` 不是自动迁移机制。新增表可依赖 `create_all()`，新增字段必须手写兼容迁移。
+- 前端可提示格式问题，但用户名、密码、装备、城墙、宝石和奖励的最终校验必须在服务端。
+- `/api/me/resources`、`/api/me/gems/grant` 和 `/api/me/rewards` 目前是调试 / 本地单机接口，缺少幂等或额度保护，不要视为可信的正式产出通道。
+
+## React 前端
+
+- 生产入口由 FastAPI 返回 `frontend/dist/index.html`；`/app-assets/` 只托管构建产物，`/assets/` 与 `/pictures/` 继续托管游戏素材。
+- `frontend/src/game/engine.js` 是旧引擎导入顺序的唯一来源；新增旧模块时同步维护该文件。
+- `Game.mount()` / `Game.destroy()` 必须保持幂等：挂载只允许一个 RAF 循环；卸载必须取消 RAF、定时器、窗口与 Canvas 监听。
+- `render.js` 在 `Game.uiMode === "react"` 时只绘制战场；React 已接管的菜单、HUD、暂停、升级和结算不得回退到 Canvas 绑定。
+- 新页面先通过 `actions.js` 定义命令，再由 `ui-store.js` 提供快照；不要在组件内直接写 `Game.state` 或请求 `/api`。
+- 账户、装备、城墙、宝石、奖励仍以 `Game.accounts` 与 FastAPI 为权威数据源；React 只展示缓存和执行命令。
+- Vite 构建资源目录固定为 `app-assets`，不要改回 `assets`，以免覆盖游戏素材。
+- React 页面至少人工检查竖屏手机、桌面、滚动、弹窗层级、输入法、长按取消、点击穿透和离线状态。
+- `#root` 必须保持全屏 Flex 居中；宽屏下游戏主体与测试场面板整体居中，不能贴左或依赖固定左边距。
 
 ## 已知限制
 
-- 针对玩家本人的投掷攻击、音效、长期养成、联网等均未实现。
-- **资源产出**：金币、六种部位图纸、钢材、稀土、宝石与装备由关卡奖励发放（规则见「关卡奖励」），钻石与零件仍无产出。
-- **`POST /api/me/resources` 是无限制的资源增删接口**：它对 `RESOURCE_IDS` 里全部 11 种资源开放，只做「资源 id 存在」校验，然后按 `amount = max(0, amount + delta)` 增减（夹在 0，不会变负），**除会话鉴权外没有任何权限、数量上限或审计限制** —— 任何登录用户都可以给自己加任意数量的金币 / 钢材 / 稀土 / 图纸。它目前只被当调试注入用（README 与 `Game.accounts.addResource`），**不要把它当成可信的产出通道**；如果要正式对外，要么收进仅本地可用的调试开关（例如环境变量 + 只允许 `127.0.0.1` 且关闭奖励接口），要么加上单次与累计上限。同类的还有 `POST /api/me/gems/grant`（可无成本注入宝石）。`POST /api/me/rewards` 也**没有幂等或「关卡是否已结算」的校验**，客户端可以任意重复调用领奖（唯一守卫是「通关必须满级」）。
-- **账户是本地单机形态**：服务只监听 `127.0.0.1`，没有找回密码、邮箱验证与多设备同步，换机器需自行拷贝 `data/blockline.db`。
-- 人物与步枪使用 `assets/` PNG，敌人、装甲车、城墙、幻形仍为 Canvas 程序化绘制。
+- 尚未实现针对玩家本人的投掷攻击、音效、联网和多设备同步。
+- 账户是本地单机形态；换机器需要手动迁移 `data/blockline.db`。
+- 钻石与零件目前没有正式产出。
+- 人物和步枪使用 `assets/` 下的 PNG；敌人、装甲车、城墙和幻形仍由 Canvas 绘制。
+
+## 文档同步
+
+- 可玩内容或规则有变化：更新 `README.md`。
+- 系统设计、数据层或验收方式有变化：更新 `DEVELOPMENT_PLAN.md`。
+- 完成一轮开发：在 `DEVELOPMENT_LOG.md` 记录日期、改动和验证结果。
+- `config`、README、开发计划与测试脚本之间存在重复数值时，必须一起核对。

@@ -1,0 +1,14 @@
+import "../../../src/config.js";
+import "../../../src/attributes.js";
+import "../../../src/equipment.js";
+import "../../../src/wall.js";
+import "../../../src/gems.js";
+import "../../../src/accounts.js";
+import "../../../src/utils.js";
+import "../../../src/state.js";
+import "../../../src/combat.js";
+import "../../../src/update.js";
+import "../../../src/sprites.js";
+import "../../../src/render.js";
+import "../../../src/input.js";
+import "../../../src/lifecycle.js";

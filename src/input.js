@@ -1,9 +1,16 @@
 /* 输入层：将鼠标/触控事件转换为游戏动作。 */
 (function (Game) {
   "use strict";
-  var C = Game.config, S = Game.state, canvas = Game.view.canvas;
+  var C = Game.config, S = Game.state, canvas = null, inputBound = false, inputCleanups = [];
+
+  function addInputListener(target, type, handler, options) {
+    if (!target || !target.addEventListener) return;
+    target.addEventListener(type, handler, options);
+    inputCleanups.push(function () { target.removeEventListener(type, handler, options); });
+  }
 
   Game.pointerPosition = function (event) {
+    if (!canvas) return { x: 0, y: 0 };
     var rect = canvas.getBoundingClientRect();
     return { x: (event.clientX - rect.left) * C.width / rect.width, y: (event.clientY - rect.top) * C.height / rect.height };
   };
@@ -79,7 +86,7 @@
 
   function bindTestButton(id, action) {
     var button = document.getElementById(id);
-    if (button) button.addEventListener("click", function (event) { event.preventDefault(); action(); });
+    if (button) addInputListener(button, "click", function (event) { event.preventDefault(); action(); });
   }
 
   var slotHoldTimer = null, slotHoldId = null;
@@ -121,6 +128,12 @@
     }, C.skillRangeHoldMs || 350);
   }
 
+  Game.initializeInput = function (nextCanvas) {
+    if (inputBound) Game.destroyInput();
+    canvas = nextCanvas || canvas;
+    inputBound = true;
+    if (!canvas || !canvas.addEventListener) return false;
+
   bindTestButton("test-controls-hide", function () { S.testArena.controlsVisible = false; });
   bindTestButton("test-controls-tab", function () { S.testArena.controlsVisible = true; });
   var testEnemyRows = document.getElementById("test-enemy-rows");
@@ -131,7 +144,7 @@
       dragList.classList.remove("dragging");
       dragList = null;
     }
-    testEnemyRows.addEventListener("pointerdown", function (event) {
+    addInputListener(testEnemyRows, "pointerdown", function (event) {
       var list = event.target && event.target.closest ? event.target.closest(".test-enemy-list") : null;
       if (!list || (event.pointerType && event.pointerType !== "mouse")) return;
       dragList = list;
@@ -140,7 +153,7 @@
       dragMoved = false;
       list.classList.add("dragging");
     });
-    testEnemyRows.addEventListener("pointermove", function (event) {
+    addInputListener(testEnemyRows, "pointermove", function (event) {
       if (!dragList) return;
       var offset = event.clientX - dragStartX;
       if (!dragMoved && Math.abs(offset) <= 3) return;
@@ -148,10 +161,10 @@
       dragList.scrollLeft = dragStartLeft - offset;
       event.preventDefault();
     });
-    testEnemyRows.addEventListener("pointerup", endEnemyDrag);
-    testEnemyRows.addEventListener("pointercancel", endEnemyDrag);
-    testEnemyRows.addEventListener("pointerleave", endEnemyDrag);
-    testEnemyRows.addEventListener("click", function (event) {
+    addInputListener(testEnemyRows, "pointerup", endEnemyDrag);
+    addInputListener(testEnemyRows, "pointercancel", endEnemyDrag);
+    addInputListener(testEnemyRows, "pointerleave", endEnemyDrag);
+    addInputListener(testEnemyRows, "click", function (event) {
       var chip = event.target, id = chip && chip.getAttribute ? chip.getAttribute("data-enemy-id") : null;
       if (dragMoved) { dragMoved = false; event.preventDefault(); event.stopPropagation(); return; }
       if (id) Game.setTestEnemy(id);
@@ -248,16 +261,20 @@
   }
 
   if (accountDialog) {
-    if (accountDialogSubmit) accountDialogSubmit.addEventListener("click", function (event) { event.preventDefault(); submitAccountDialog(); });
-    if (accountDialogCancel) accountDialogCancel.addEventListener("click", function (event) { event.preventDefault(); closeAccountDialog(); });
-    if (accountDialogUser) accountDialogUser.addEventListener("keydown", function (event) { if (event.key === "Enter") { event.preventDefault(); submitAccountDialog(); } });
-    if (accountDialogPass) accountDialogPass.addEventListener("keydown", function (event) { if (event.key === "Enter") { event.preventDefault(); submitAccountDialog(); } });
-    window.addEventListener("keydown", function (event) { if (event.key === "Escape" && !accountDialog.hidden) closeAccountDialog(); });
+    if (accountDialogSubmit) addInputListener(accountDialogSubmit, "click", function (event) { event.preventDefault(); submitAccountDialog(); });
+    if (accountDialogCancel) addInputListener(accountDialogCancel, "click", function (event) { event.preventDefault(); closeAccountDialog(); });
+    if (accountDialogUser) addInputListener(accountDialogUser, "keydown", function (event) { if (event.key === "Enter") { event.preventDefault(); submitAccountDialog(); } });
+    if (accountDialogPass) addInputListener(accountDialogPass, "keydown", function (event) { if (event.key === "Enter") { event.preventDefault(); submitAccountDialog(); } });
+    addInputListener(window, "keydown", function (event) { if (event.key === "Escape" && !accountDialog.hidden) closeAccountDialog(); });
   }
 
-  canvas.addEventListener("pointerdown", function (event) {
+  addInputListener(canvas, "pointerdown", function (event) {
     event.preventDefault();
     var point = Game.pointerPosition(event), center = C.width / 2;
+    if (Game.uiMode === "react") {
+      if (S.screen === "playing" || S.screen === "testArena") Game.setManualAim(point.x, point.y);
+      return;
+    }
 
     if (S.screen === "menu") {
       var menuButtons = C.menu.buttons;
@@ -490,13 +507,13 @@
       Game.setManualAim(point.x, point.y);
     }
   });
-  canvas.addEventListener("pointerup", releaseSkillSlot);
-  canvas.addEventListener("pointercancel", releaseSkillSlot);
-  canvas.addEventListener("pointerleave", releaseSkillSlot);
-  window.addEventListener("pointerup", releaseSkillSlot);
-  window.addEventListener("pointercancel", releaseSkillSlot);
-  window.addEventListener("blur", releaseSkillSlot);
-  window.addEventListener("keydown", function (event) {
+  addInputListener(canvas, "pointerup", releaseSkillSlot);
+  addInputListener(canvas, "pointercancel", releaseSkillSlot);
+  addInputListener(canvas, "pointerleave", releaseSkillSlot);
+  addInputListener(window, "pointerup", releaseSkillSlot);
+  addInputListener(window, "pointercancel", releaseSkillSlot);
+  addInputListener(window, "blur", releaseSkillSlot);
+  addInputListener(window, "keydown", function (event) {
     if (S.screen !== "testArena") return;
     var key = event.key.toLowerCase();
     if (key === "arrowleft") { Game.selectTestEnemy(-1); event.preventDefault(); }
@@ -515,4 +532,19 @@
     else if (key === "h") { S.testArena.controlsVisible = !S.testArena.controlsVisible; event.preventDefault(); }
     else if (key === "escape") { Game.exitTestArena(); event.preventDefault(); }
   });
+  return true;
+  };
+
+  Game.destroyInput = function () {
+    inputCleanups.forEach(function (cleanup) { cleanup(); });
+    inputCleanups = [];
+    inputBound = false;
+    canvas = null;
+    if (slotHoldTimer) clearTimeout(slotHoldTimer);
+    slotHoldTimer = null;
+    slotHoldId = null;
+    if (S.skillRangePreview) S.skillRangePreview = null;
+  };
+
+  if (Game.view && Game.view.canvas) Game.initializeInput(Game.view.canvas);
 })(window.Game = window.Game || {});

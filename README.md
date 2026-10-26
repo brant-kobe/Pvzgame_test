@@ -1,12 +1,24 @@
 # 街区警戒线
 
-这是依据 `DEVELOPMENT_PLAN.md` 实现的第一版浏览器游戏原型。
+这是依据 `DEVELOPMENT_PLAN.md` 实现的浏览器游戏。生产入口由 React + Vite 构建，战斗画面继续由 Canvas 2D 驱动。
 
 ## 项目结构
 
 ```text
 .
-├── index.html              # 页面入口：Canvas、开始提示、测试场调试面板与脚本装载
+├── index.html              # 旧版免构建入口（离线 / 回退调试）
+├── frontend/               # React + Vite 应用
+│   ├── index.html          # React 页面入口
+│   ├── package.json        # React / Vite 依赖与构建脚本
+│   ├── vite.config.js      # 开发代理、生产构建与资源目录
+│   ├── dist/               # 生产构建产物（生成后由 FastAPI 托管）
+│   └── src/
+│       ├── main.jsx        # React 启动入口
+│       ├── app/            # 应用外壳与页面路由
+│       ├── components/     # 通用按钮、面板与状态组件
+│       ├── features/       # 账户、关卡、图鉴、角色与战斗浮层
+│       ├── game/           # Canvas 宿主、UI Store、命令与旧引擎装载
+│       └── styles.css      # React 页面样式
 ├── assets/
 │   ├── man.png             # 人物原图（白底）
 │   ├── player-man.png      # 人物精灵（透明底、已裁切，优先加载）
@@ -39,31 +51,48 @@
 │   ├── sprites.js          # PNG 精灵加载（支持多路径回退）
 │   ├── render.js           # Canvas 绘制和 HUD/界面
 │   ├── input.js            # 鼠标、触控与键盘输入
-│   └── main.js             # 应用初始化与 requestAnimationFrame 入口
+│   ├── lifecycle.js        # React 挂载 / 卸载、动画循环与事件清理
+│   └── main.js             # 旧版免构建入口
 ├── AGENTS.md               # 面向后续开发者的协作约定与关键机制说明
 ├── DEVELOPMENT_LOG.md      # 历史上每一次功能变更的逐条记录
 ├── DEVELOPMENT_PLAN.md     # 开发计划、系统设计与验收记录
 └── README.md
 ```
 
-模块通过单一的 `window.Game` 命名空间协作，并按照 `index.html` 中的顺序加载。这样不需要构建工具，直接双击入口文件仍然可以运行；后续如果引入打包工具，也可以按职责迁移为 ES Module。
+React 生产入口通过 Vite 按依赖顺序装载旧引擎模块；旧模块仍使用 `window.Game` 作为兼容层，便于现有专项脚本和 Canvas 渲染继续运行。React 只负责低频页面与浮层，战斗实体、弹体、粒子和主循环仍留在游戏引擎内。
 
-**账户与数据层（已实施）** 让项目成为全栈应用：`server/`（FastAPI + SQLAlchemy 后端，含 `run.py` 与 `requirements.txt`）持有 SQLite 数据库 `data/blockline.db`，账户、登录会话、关卡进度与资源全部落库；前端新增数据层 `src/accounts.js`，游戏本体仍是零依赖原生 JS。设计与规则见 [`DEVELOPMENT_PLAN.md`](./DEVELOPMENT_PLAN.md) 第 12 节。
+**账户与数据层（已实施）** 让项目成为全栈应用：`server/`（FastAPI + SQLAlchemy 后端，含 `run.py` 与 `requirements.txt`）持有 SQLite 数据库 `data/blockline.db`，账户、登录会话、关卡进度与资源全部落库；前端通过 `src/accounts.js` 与 React UI Store 访问同源 `/api`。设计与规则见 [`DEVELOPMENT_PLAN.md`](./DEVELOPMENT_PLAN.md) 第 12 节与第 19 节。
 
 ## 运行
 
-### 全栈模式（推荐，账户与进度可用）
+### 全栈生产模式（推荐，React + 账户 + 进度）
 
 ```powershell
 .venv\Scripts\pip install -r server\requirements.txt   # 首次执行
+cd frontend
+npm install                                           # 首次执行
+npm run build
+cd ..
 .venv\Scripts\python server\run.py                     # 打开 http://127.0.0.1:8787
 ```
 
-服务只绑定 `127.0.0.1`，由它同时托管静态页面与 `/api` 接口。首次访问时首页账户按钮显示「未登录」，点它可注册或登录；数据库文件在 `data/blockline.db`（已在 `.gitignore` 中忽略）。换端口或换库：`python server\run.py --port 8790 --db tmp/other.db`。
+服务只绑定 `127.0.0.1`。存在 `frontend/dist/index.html` 时，FastAPI 返回 React 首页并托管 `/app-assets/`，同时继续提供 `/assets/`、`/pictures/` 与 `/api`；不存在构建产物时回退到旧版 `index.html`。首次访问可在首页账户入口注册或登录，数据库文件在 `data/blockline.db`（已在 `.gitignore` 中忽略）。换端口或换库：`python server\run.py --port 8790 --db tmp/other.db`。
 
-### 纯前端模式（离线试玩）
+### React 开发模式
 
-直接双击打开 [`index.html`](./index.html)，或在当前目录启动任意静态文件服务器后访问该页面。此时账户功能不可用：顶栏提示「未连接数据库 · 本局进度不会保存」，**战斗、图鉴与测试场照常可玩，但成绩只保留在本次会话，刷新即失效**。
+分别启动后端与 Vite：
+
+```powershell
+.venv\Scripts\python server\run.py
+cd frontend
+npm run dev
+```
+
+浏览器访问 `http://127.0.0.1:5173/`。Vite 将 `/api`、`/assets` 和 `/pictures` 代理到 FastAPI，避免跨域并保持 Cookie 同源。修改 React 页面时使用此模式，不直接双击 `frontend/index.html`。
+
+### 旧版离线模式（回退兼容）
+
+直接双击根目录 [`index.html`](./index.html)，或通过静态文件服务器打开。该入口仍使用旧 Canvas 菜单与输入，账户功能不可用，成绩只保留在本次会话。React 迁移完成验收后，可再决定是否删除这条回退路径。
 
 ## 开发约定
 
@@ -72,8 +101,9 @@
 - 新增步枪强化时添加到 `traits`，核心技能升级项添加到 `skillTraits`，并为核心技能维护 `coreSkills` / `skillDefaults`。技能图鉴和升级池会自动收录配置中的词条。
 - 新增战斗规则：放在 `src/combat.js` 或 `src/update.js`，不要写入渲染模块。
 - 新增 Canvas 画面：放在 `src/render.js`，通过 `Game.state` 读取状态。
-- 新增鼠标、触控或键盘操作：放在 `src/input.js`。
-- 需要新增系统时，创建独立文件并在 `index.html` 中明确加载顺序。
+- 新增鼠标、触控或键盘操作：战场瞄准放在 `src/input.js`，React 页面按钮放在对应 `frontend/src/features/` 组件。
+- 新增 React 页面：在 `frontend/src/features/` 创建组件，通过 `frontend/src/game/actions.js` 进入游戏命令层，通过 `frontend/src/game/ui-store.js` 获取低频快照；不要直接逐帧读取战斗实体。
+- 新增旧引擎模块时，同步更新 `frontend/src/game/engine.js` 的导入顺序；长期目标仍是逐步改为 ES Module。
 - 账户与进度：**只能经 `Game.accounts` 读写**（`src/accounts.js`）。`render.js` 只读缓存、不发起请求；`state.js` 的 `getProgress` / `markLevelComplete` / `isLevelCompleted` / `isLevelUnlocked` 是薄封装，不要绕过它们直接写 `localStorage`。
 - 后端：依赖固定写进 `server/requirements.txt`；账户数据的唯一来源是 `data/blockline.db`；新增接口请在 `server/app/routers/` 下按模块添加，并在 `create_app()` 里挂载。
 - 新增资源类型：在 `src/config.js` 的 `resources` 加条目，并同步 `server/app/config.py` 的 `RESOURCE_IDS`（服务端会拒绝未知资源）。
@@ -84,14 +114,15 @@
 
 ## 视觉实现
 
-- `styles/main.css` 负责页面容器、响应式比例和外层光晕。
-- `src/render.js` 负责游戏内视觉表现，包括背景纵深、HUD 面板、3D 金属城墙、分层人物精灵、悬浮幻形、僵尸模型、子弹拖尾、Boss 光效以及升级和结算界面。
+- `styles/main.css` 负责旧版页面容器、响应式比例和外层光晕；`frontend/src/styles.css` 负责 React 页面与浮层。React 根节点使用全屏 Flex 居中，宽屏浏览器下游戏与测试场面板保持水平居中，不会贴左显示。
+- `src/render.js` 在 React 模式下只绘制战场视觉，包括背景纵深、3D 金属城墙、分层人物精灵、悬浮幻形、僵尸模型、子弹拖尾和 Boss 光效；HUD、升级和结算由 React 浮层绘制。旧版入口仍可复用完整 Canvas 界面。
 - 人物为分层 PNG：先绘制步枪（握把对齐左手），再叠加背影身体，使手和头部压住枪身；步枪随瞄准旋转，枪口与 `combat.js` 生成点对齐。
 - 幻形悬浮在人物右上方、贴近右肩，避免与背包重叠。位置由 `src/config.js` 的 `skillRing.offsetX`（当前 64）与 `offsetY`（当前 -100）控制，同时也是核心技能的弹丸发射挂点。
 - Canvas 使用逻辑坐标，并根据设备像素比提升实际渲染分辨率；业务逻辑不需要因为高清屏或 Canvas 尺寸变化而改写。
 
 ## 当前已实现
 
+- **React 前端迁移（已实施）**：生产入口改为 React + Vite。React 负责首页、关卡选择、僵尸 / 技能图鉴、登录注册、账户中心、属性、角色、装备背包、装备强化、宝石、城墙、战斗 HUD、暂停、升级三选一、结算和测试场工具；Canvas 继续负责战场、玩家、敌人、弹体、技能实体、粒子和伤害表现。旧引擎通过 `Game.mount()` / `Game.destroy()` 安全挂载，UI 通过 10 Hz 快照桥同步，避免 React 每帧渲染战斗实体。
 - **账户系统（全栈）**：本地 FastAPI + SQLite 服务承载账户、登录会话、关卡进度与资源。首页菜单底部的「账户」按钮进入登录 / 注册界面（用户名 2–16 个中文 / 字母 / 数字 / 下划线，密码至少 6 位；密码以 PBKDF2-SHA256 加随机盐哈希存入数据库，**库里不存明文**，会话用 HttpOnly + SameSite=Strict Cookie，库中只存会话 token 的散列）。登录后进入账户中心：用户名、注册时间、通关进度、最近 5 关的最佳用时与击杀、资源区（金币 / 钻石 / 零件 / 六种部位图纸 / 钢材 / 稀土），以及「导入本机旧进度」「注销登录」「删除账户」（删除需重新输入密码）。**通关与失败都会上报**：胜利写入完成时间、刷新最佳用时 / 击杀并累加通关次数，失败只累加尝试次数，最佳值只取更优的一局。未登录或未连接数据库时顶栏提示「进度不会保存」，成绩只在本次会话内可见并在结算界面标注「成绩未保存」。
 
 - 竖屏战斗画面铺满浏览器高度，战场随屏幕比例纵向拉伸（逻辑高度 640–960 自适应）；玩家、城墙与幻形贴近底部，战场更长。
@@ -204,13 +235,15 @@
 - **飞鸟僵尸与飞鸟僵尸精英从第 8 关「环城高架」起正式进入关卡波次**（飞鸟覆盖 10/12 波、第 4 波固定飞鸟精英），定位是「只能靠步枪、冰雹、气刃、无人机、电链、空袭与射线处理」的压力单位：这一关完全由飞鸟、篮球与快跑僵尸组成，装甲车 / 燃油弹等贴地技能全程打不到空中的飞鸟（旋风加农已改为非贴地，龙卷风能卷住它们），只堆贴地技能的构筑会被明显针对。
 - 幻形技能已接入温压弹、干冰弹、装甲车、自动索敌的空投轰炸、电磁穿刺、高能射线、旋风加农、冰雹发生器、燃油弹、压缩气刃、无人机和跃迁电子。
 - 针对玩家本人的投掷攻击以及更复杂的地图互动仍属于后续内容。
-- 项目暂不依赖构建工具；人物和步枪使用 `assets/` 下的 PNG 精灵，敌人、装甲车、城墙和幻形仍由 Canvas 程序化绘制。
+- React 生产入口依赖 Vite 构建；旧版 `index.html` 仍可免构建回退运行。人物和步枪使用 `assets/` 下的 PNG 精灵，敌人、装甲车、城墙和幻形仍由 Canvas 程序化绘制。
 
 ## 本次修改后的检查方式
 
 在项目根目录执行：
 
 ```powershell
+npm --prefix frontend run build
+node tmp\check-react-ssr.mjs                                   # React 页面 SSR + 挂载 / 卸载冒烟
 Get-ChildItem src -Filter *.js | ForEach-Object { node --check $_.FullName }
 git diff --check
 node tmp\check-bomber.js                                       # 炸弹僵尸 / 撞线爆炸 / 低血加速

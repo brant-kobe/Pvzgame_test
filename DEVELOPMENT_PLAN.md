@@ -7,7 +7,7 @@
 
 ## 当前项目状态（本次对话更新）
 
-当前项目已经从单 HTML 原型整理为无构建工具依赖的模块化 Canvas 游戏，现有 20 个关卡均已实装并全部开放。第 14 关「冻土前线」为普通/分裂/寒霜兽三种小怪的 14 波关卡；第 15 关「熔毒荒原」为毒蜂/火焰/蜥蜴三种小怪的 15 波关卡，第 4 波固定蜥蜴精英，生命倍率 ×3；第 16 关「断线鸟巢」由蜥蜴/飞鸟/傀儡组成，共 15 波，第 4 波固定傀儡精英；第 17 关「寒蜂裂谷」由蜥蜴/毒蜂/寒霜兽组成，共 15 波，第 4 波固定毒蜂精英；第 18 关「霜影裂谷」沿用相同阵容与波次，第 4 波固定寒霜兽精英；第 19 关「傀儡雪原」由雪人/蜥蜴/傀儡组成，共 15 波，第 4 波固定傀儡精英；第 20 关「蜂球傀儡馆」由篮球/傀儡/毒蜂组成，共 15 波，第 4 波固定毒蜂精英。既有关卡的阵容、波次与数值见本节及 `config.levels`。首页另有独立测试场，用于快速验证配置中的敌人和技能，不参与正式关卡进度。
+当前项目已迁移为 React + Vite 前端：React 负责菜单、账户、关卡、图鉴、角色养成与战斗浮层，Canvas 2D 继续负责战场和高频实体表现；旧版免构建 Canvas 入口保留为离线回退。现有 20 个关卡均已实装并全部开放。第 14 关「冻土前线」为普通/分裂/寒霜兽三种小怪的 14 波关卡；第 15 关「熔毒荒原」为毒蜂/火焰/蜥蜴三种小怪的 15 波关卡，第 4 波固定蜥蜴精英，生命倍率 ×3；第 16 关「断线鸟巢」由蜥蜴/飞鸟/傀儡组成，共 15 波，第 4 波固定傀儡精英；第 17 关「寒蜂裂谷」由蜥蜴/毒蜂/寒霜兽组成，共 15 波，第 4 波固定毒蜂精英；第 18 关「霜影裂谷」沿用相同阵容与波次，第 4 波固定寒霜兽精英；第 19 关「傀儡雪原」由雪人/蜥蜴/傀儡组成，共 15 波，第 4 波固定傀儡精英；第 20 关「蜂球傀儡馆」由篮球/傀儡/毒蜂组成，共 15 波，第 4 波固定毒蜂精英。既有关卡的阵容、波次与数值见本节及 `config.levels`。首页另有独立测试场，用于快速验证配置中的敌人和技能，不参与正式关卡进度。
 
 敌人机制已经数据化到「可选配置字段」：护甲用 `armorCharges`、远程用 `ranged`、飞行用 `flying`、属性抗性用 `damageTakenByElement`、状态免疫与缩放用 `statusImmune` / `statusDurationScale`，近战/远程/飞行的停步位置统一由 `Game.getEnemyHoldY` 给出（`ranged` 优先于 `flying`，所以「远程 + 飞行」的毒蜂按 `standoff` 停步）。**负面状态已重构为「伤害性（燃烧 / 冻伤）/ 软控（减速 / 击退 / 牵引）/ 硬控（眩晕 / 冻结 / 麻痹）/ 削弱（重伤）」四类，硬控期间敌人完全无法移动与攻击**。**火焰僵尸、雪人僵尸、雷电僵尸、毒蜂、轮椅僵尸、寒霜兽与傀儡僵尸**是最近加入的单位族（连同各自的精英共 9 族 18 种形态；火焰僵尸免疫燃烧与冻结这一种硬控、怕冰；雪人僵尸冻结时间减半、怕火；雷电僵尸电系伤害与麻痹时间各减半，其精英**完全免疫电系伤害与麻痹**；毒蜂是首个「远程 + 飞行」组合，在 85 像素处悬停射出毒刺、弱风抗能量，其精英站到 113 像素并提高出手频率与针刺伤害；轮椅僵尸是首个「条件回血」单位，坐轮椅以 14 像素/秒推进、弱火，并在生命低于一半时持续回血、最多回到半血；寒霜兽是首个「六条状态免疫」单位，以全游戏最慢的 12 像素/秒推进、体型最大的乌龟造型，免疫冻结 / 麻痹 / 燃烧 / 冻伤，也是第一个推不动、拉不动的单位（免疫击退与牵引），代价是额外承受 200% 火系伤害；傀儡僵尸是首个**阈值召唤**单位，远程抛掷木偶、弱物理抗能量，生命跌破一半与四分之一时各脱手放出一只与普通僵尸同级的傀儡，其精英免疫能量伤害但不再召唤；蜥蜴僵尸是首个「四足爬行」单位，冰系 ×1.5 / 电系 ×0.5 且没有任何状态抗性；炸弹僵尸是首个**撞线爆炸**单位，免疫眩晕、火系 ×1.5、低于半血时移速 ×1.5，撞线分别爆炸 55 / 110 点后继续啃墙），其中**飞鸟僵尸与飞鸟僵尸精英**（免疫装甲车 / 燃油弹等贴地技能）已随第 8 关进入波次、**火焰僵尸与火焰僵尸精英**已随第 9 关「焦土防线」进入波次、**雪人僵尸与雪人僵尸精英**已随第 10 关「冰火交界」进入波次、**雷电僵尸与雷电僵尸精英**已随第 11 关「高压电厂」进入波次、**轮椅僵尸与轮椅僵尸精英**已随第 12 关「旧城疗养院」进入波次、**毒蜂与毒蜂精英**已随第 13 关「蜂巢天台」进入波次、**寒霜兽与寒霜兽精英**已随第 14 关「冻土前线」进入波次、**蜥蜴僵尸与蜥蜴僵尸精英**已随第 15 关「熔毒荒原」进入波次；傀儡僵尸与其精英已接入第 16 关。
 
@@ -1186,3 +1186,82 @@ menu ──「角色」──> character ──「属性」──> attributes（
 - 宝石图标在镶嵌浮层、背包方格与合成确认窗口中都是按品质（灰 / 绿 / 蓝 / 紫 / 红）着色的三角形。
 - 未登录 / 离线：不发任何请求、按钮置灰、顶栏与状态行给出提示；401 回 guest 并清空宝石与加成。
 - 旧宝石界面不可达（无菜单入口、无快捷键），`config.gemUI` 与相关函数不再存在。
+
+## 19. React 前端迁移（已实现）
+
+### 19.1 目标与边界
+
+- 保留 FastAPI、SQLAlchemy、SQLite、现有 `/api` 路径、Cookie 会话与数据库结构。
+- React 接管低频应用界面：首页、关卡、图鉴、账户、属性、角色、装备、宝石、城墙、测试场、HUD、暂停、升级和结算。
+- Canvas 继续负责战场背景、人物、敌人、弹体、技能实体、粒子、伤害表现和瞄准辅助。
+- 敌人、弹体、粒子和技能实体不进入 React state，不按实体创建组件。
+- 旧引擎继续使用 `window.Game` 兼容层，现有 `tmp/check-*.js` 可以继续回归；后续再单独做 ES Module 化。
+
+### 19.2 前端结构
+
+```text
+frontend/
+├── package.json
+├── vite.config.js
+├── index.html
+└── src/
+    ├── main.jsx
+    ├── app/App.jsx
+    ├── components/ui.jsx
+    ├── features/
+    │   ├── MenuScreen.jsx
+    │   ├── LevelSelectScreen.jsx
+    │   ├── CodexScreens.jsx
+    │   ├── AccountScreens.jsx
+    │   ├── CharacterScreens.jsx
+    │   ├── BattleOverlays.jsx
+    │   └── TestArenaPanel.jsx
+    └── game/
+        ├── engine.js
+        ├── GameCanvas.jsx
+        ├── actions.js
+        └── ui-store.js
+```
+
+`frontend/src/game/engine.js` 按旧依赖顺序导入 `src/` 下的引擎模块；`GameCanvas.jsx` 只负责挂载 Canvas；`ui-store.js` 以 10 Hz 生成不可变 UI 快照；`actions.js` 是 React 进入游戏命令层的唯一入口。
+
+### 19.3 引擎生命周期
+
+- 新增 `src/lifecycle.js`，公开 `Game.mount({ canvas })`、`Game.destroy()` 与 `Game.isMounted()`。
+- `Game.mount` 初始化 Canvas、输入、单局状态、账户加载、精灵加载和 `requestAnimationFrame`；`Game.destroy` 取消动画循环、定时器和事件监听。
+- `render.js` 改为通过 `Game.initializeView` 接收 Canvas，并增加 `Game.destroyView`；React 模式下只绘制战场，不绘制旧 Canvas 菜单、HUD 或结算。
+- `input.js` 改为通过 `Game.initializeInput` 绑定 DOM 与 Canvas 监听，并公开 `Game.destroyInput`；React 模式下 Canvas 指针只负责手动瞄准。
+- `state.js` 对可选 DOM 节点增加空值保护，React 页面不依赖旧版 `start-hint`。
+- React 不使用 StrictMode 双重挂载；生命周期仍保持可重复挂载与卸载。
+
+### 19.4 React 页面与输入
+
+- 首页、关卡选择与关卡简介、僵尸图鉴、技能图鉴、登录 / 注册、账户中心、属性、角色、装备背包、装备强化、宝石、城墙均由 React 渲染。
+- 战斗 HUD、暂停、升级三选一、胜利 / 失败 / 撤离结算和测试场工具由 React 渲染。
+- Canvas 上的指针仍用于战斗瞄准；技能槽长按预览由 React HUD 设置 `S.skillRangePreview`。
+- 账户、换装、强化、宝石操作和关卡开始全部经 `actions.js`；React 不直接逐帧读取或写入战斗实体。
+- 页面样式集中在 `frontend/src/styles.css`，保留既有深色街区视觉和 9:16 布局。`#root` 作为全屏 Flex 容器同时负责水平 / 垂直居中；桌面宽屏下游戏主体与测试场侧栏整体居中。
+
+### 19.5 后端与构建
+
+- Vite 开发服务器默认监听 `127.0.0.1:5173`，将 `/api`、`/assets`、`/pictures` 代理到 FastAPI。
+- 生产构建输出到 `frontend/dist`，JavaScript/CSS 使用 `app-assets/`，避免与游戏素材目录冲突。
+- FastAPI 检测到 `frontend/dist/index.html` 时返回 React 首页并挂载 `/app-assets`；同时继续托管 `/assets`、`/pictures` 和 `/api`。
+- 无构建产物时回退到旧版根 `index.html`，保留离线试玩与迁移回退能力。
+
+### 19.6 验证结果
+
+- `npm --prefix frontend run build` 通过，生产产物为 `frontend/dist/index.html`、React vendor chunk 与游戏引擎 chunk。
+- `Get-ChildItem src -Filter *.js | node --check` 全部通过。
+- `.venv\Scripts\python -m compileall server` 通过。
+- `tmp/check_db.py` 153 项、`tmp/check_api.py` 176 项通过；接口测试覆盖 React 首页、`/app-assets` 引用、生产模式不暴露 `src/`，以及 `/data`、`/server` 不可访问。
+- `tmp/check-accounts.js` 164 项、`tmp/check-character.js` 245 项、`tmp/check-equipment.js` 108 项、`tmp/check-wall.js` 61 项、`tmp/check-gems.js` 285 项、`tmp/check-rewards.js` 65 项与 `tmp/check-bomber.js` 全部通过。
+- `tmp/check-react-ssr.mjs` 18 项通过：15 个 React 页面 / 浮层 SSR，以及 `Game.mount`、`Game.destroy`、重复挂载生命周期。
+- 旧版 Canvas 描绘回归与 `trace-draw.js` 仍可用；React 页面当前依赖 Vite 构建与人工尺寸验收，不使用无头浏览器。
+
+### 19.7 后续整理
+
+- 把 `src/` 游戏模块逐步转为 ES Module，移除固定脚本顺序和 `window.Game` 兼容层。
+- 将 `accounts.js` 拆分为纯 API Client、领域 Store 与 React 表单状态。
+- 完成 React 页面在竖屏手机、桌面、输入法、长按取消和弹窗层级上的人工验收。
+- 回退入口稳定后，再删除旧 Canvas 菜单与固定坐标输入分支。

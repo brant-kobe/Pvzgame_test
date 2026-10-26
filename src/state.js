@@ -2,6 +2,10 @@
 (function (Game) {
   "use strict";
   var C = Game.config;
+  function setStartHint(display) {
+    var node = typeof document !== "undefined" ? document.getElementById("start-hint") : null;
+    if (node && node.style) node.style.display = display;
+  }
   Game.state = { screen: "menu", selectedLevel: 1, accountMode: "login", player: null, bullets: [], skillProjectiles: [], armoredCars: [], bombDrops: [], bombZones: [], electromagneticZones: [], tornadoes: [], drones: [], hailStorms: [], fuelShells: [], fuelPools: [], enemyShots: [], explosions: [], enemies: [], pendingSpawns: [], particles: [], texts: [], upgradeCards: [], wall: null, session: null, testArena: null, skillRangePreview: null, levelPreview: null, characterPart: "arm", characterTab: "gem", characterGemPage: 0, characterGems: null, characterGemDetail: null, characterGemReplace: null, characterEquipItem: null, characterEquipPage: 0, gemSynthesisOpen: false, gemSynthesisPage: 0, gemSynthesisFocus: 0, equipmentBagPart: "arm" };
   Game.reset = function () {
     var s = Game.state;
@@ -180,7 +184,7 @@
     s.wall.maxHp = 9999;
     s.wall.hp = s.wall.maxHp;
     s.screen = "testArena";
-    document.getElementById("start-hint").style.display = "none";
+    setStartHint("none");
   };
   Game.selectTestEnemy = function (offset) {
     var arena = Game.state.testArena, ids = Game.getTestEnemyIds();
@@ -221,9 +225,9 @@
     Game.state.selectedLevel = level.id;
     Game.reset();
     Game.state.screen = "playing";
-    document.getElementById("start-hint").style.display = "none";
+    setStartHint("none");
   };
-  Game.exitToMenu = function () { Game.reset(); Game.state.testArena = null; Game.state.screen = "menu"; document.getElementById("start-hint").style.display = "block"; };
+  Game.exitToMenu = function () { Game.reset(); Game.state.testArena = null; Game.state.screen = "menu"; setStartHint("block"); };
   Game.getProgress = function () { return Game.accounts.getProgress(); };
   Game.isLevelCompleted = function (levelId) { return Game.accounts.isCompleted(levelId); };
   Game.markLevelComplete = function (levelId, stats) {

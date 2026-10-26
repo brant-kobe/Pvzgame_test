@@ -2,10 +2,11 @@
 (function (Game) {
   "use strict";
   var C = Game.config, S = Game.state, U = Game.utils;
-  var canvas = document.getElementById("game"), ctx = canvas.getContext("2d"), pixelRatio = 1;
-  Game.view = { canvas: canvas, ctx: ctx };
+  var canvas = null, ctx = null, pixelRatio = 1, resizeBound = false;
+  Game.view = { canvas: null, ctx: null };
 
   function resizeCanvas() {
+    if (!canvas || !ctx) return;
     pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
     var rect = canvas.getBoundingClientRect(), displayWidth = rect.width || C.width, displayHeight = rect.height || C.height;
     C.height = U.clamp(Math.round(C.width * displayHeight / displayWidth), 640, 960);
@@ -14,6 +15,27 @@
     ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     if (Game.layoutWorld) Game.layoutWorld();
   }
+
+  Game.initializeView = function (nextCanvas) {
+    if (!nextCanvas || typeof nextCanvas.getContext !== "function") return false;
+    canvas = nextCanvas;
+    ctx = canvas.getContext("2d");
+    Game.view = { canvas: canvas, ctx: ctx };
+    if (!resizeBound && typeof window !== "undefined") {
+      window.addEventListener("resize", resizeCanvas);
+      resizeBound = true;
+    }
+    resizeCanvas();
+    return true;
+  };
+
+  Game.destroyView = function () {
+    if (resizeBound && typeof window !== "undefined") window.removeEventListener("resize", resizeCanvas);
+    resizeBound = false;
+    canvas = null;
+    ctx = null;
+    Game.view = { canvas: null, ctx: null };
+  };
 
   function panel(x, y, w, h, fill, stroke, radius) {
     ctx.save();
@@ -68,10 +90,13 @@
     }
   }
 
-  resizeCanvas();
-  window.addEventListener("resize", resizeCanvas);
+  if (typeof document !== "undefined") {
+    var bootCanvas = document.getElementById("game");
+    if (bootCanvas) Game.initializeView(bootCanvas);
+  }
 
   Game.draw = function () {
+    if (!ctx) return;
     Game.drawBackground();
     Game.drawRangeLines();
     Game.drawEnemies(null, "ground");
@@ -89,6 +114,7 @@
     Game.drawPlayer();
     Game.drawEffects();
     Game.drawRangePreview();
+    if (Game.uiMode === "react") return;
     Game.drawHud();
     Game.updateTestControls();
     if (S.screen === "menu") Game.drawMenu();
