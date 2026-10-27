@@ -539,3 +539,17 @@ git diff --check
 - 保留 `window.Game` 与旧 Canvas 菜单作为验收期兼容 / 离线回退路径；后续阶段再转为 ES Module 并移除旧菜单。
 - 修复 React 页面在宽屏浏览器中整体贴左的问题：`#root` 改为全屏 Flex 居中容器，游戏主体与测试场侧栏作为整体水平 / 垂直居中；重新执行生产构建通过。
 - 验证：`npm --prefix frontend run build` 通过；`src/*.js` 语法检查、`compileall server` 通过；`check_db.py` 153 项、`check_api.py` 176 项、`check-accounts.js` 164 项、`check-character.js` 245 项、`check-equipment.js` 108 项、`check-wall.js` 61 项、`check-gems.js` 285 项、`check-rewards.js` 65 项与 `check-bomber.js` 全部通过。`check_api.py` 已按构建存在 / 不存在分别验证 React 静态托管与旧版回退；新增 `tmp/check-react-ssr.mjs`，15 个 React 页面 / 浮层 SSR 与挂载、销毁、重复挂载共 18 项通过。
+
+## 2026-10-27 · React 界面阶段一：写实风格设计系统
+
+- rontend/src/styles.css 重写为 CSS 变量驱动的设计系统：表面/文字/强调/状态色、圆角、间距、阴影、字体变量，统一按钮、面板、弹窗、HUD、图鉴、养成、结算等组件的写实配色（黄铜强调 + 橄榄成功 + 锈红危险 + 钢蓝信息），移除霓虹发光，改为材质质感与内高光。
+- 无新增素材与依赖，布局与类名保持不变，React 组件未改。
+- 验证：
+pm --prefix frontend run build、
+ode tmp/check-react-ssr.mjs（18/18 通过）、git diff --check（仅 LF/CRLF 提示）。
+
+## 2026-10-27 · React 界面阶段二：主菜单与关卡入口结构化
+
+- MenuScreen.jsx 重排为顶部状态行、标题块、主按钮、双列次级入口、三列快捷入口、底部进度行；新增 .menu-topline、.menu-status-pill、.menu-primary、.menu-secondary、.menu-footer 样式。
+- LevelSelectScreen.jsx 关卡行改为编号/信息/波次徽章/状态四列，新增 .level-meta、.level-status 等样式；预览弹窗保持。
+- 无逻辑改动；构建与 SSR 检查 18/18 通过。

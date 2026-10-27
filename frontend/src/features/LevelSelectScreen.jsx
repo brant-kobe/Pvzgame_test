@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Button, Empty, formatTime, Screen } from "../components/ui.jsx";
+import { Button, Empty, Screen } from "../components/ui.jsx";
 import { actions, getConfig, getGame } from "../game/actions.js";
 
 export function LevelSelectScreen({ snapshot }) {
@@ -21,9 +21,13 @@ export function LevelSelectScreen({ snapshot }) {
           return (
             <div className={"level-row " + (isCompleted ? "completed" : "")} key={level.id}>
               <button className="level-main" onClick={function () { actions.startLevel(level.id); }}>
-                <b>{String(level.id).padStart(2, "0")}</b>
-                <span><strong>{level.name}</strong><small>{level.subtitle}</small></span>
-                <em>{isCompleted ? "已通关" : "›"}</em>
+                <b className="level-number">{String(level.id).padStart(2, "0")}</b>
+                <span className="level-info-block">
+                  <strong>{level.name}</strong>
+                  <small>{level.subtitle}</small>
+                </span>
+                <span className="level-meta">{level.waves.length} 波</span>
+                <em className="level-status">{isCompleted ? "已通关" : "›"}</em>
               </button>
               <button className="level-info" onClick={function () { setPreviewId(level.id); }}>?</button>
             </div>
